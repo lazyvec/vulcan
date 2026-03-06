@@ -93,7 +93,7 @@ max_warn = ''
 if work.get('ok'):
     h = work.get('hours_to_week_reset')
     if work['week_rem'] < max_warn_w and h is not None and h >= max_warn_h:
-        max_warn = f"⚠️ Max weekly low: {work['week_rem']}% remaining, {h:.1f}h to reset"
+        max_warn = f"⚠️ Max 주간 잔량 낮음: {work['week_rem']}% 남음, 리셋까지 {h:.1f}시간"
 
 lines = []
 lines.append('# Account Status (KST)')
