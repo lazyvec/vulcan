@@ -91,7 +91,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         <button
           type="button"
           onClick={onMenuClick}
-          className="rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-700 hover:text-white md:hidden"
+          className="rounded p-1.5 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] md:hidden"
         >
           <MenuIcon size={22} />
           <span className="sr-only">Open sidebar</span>

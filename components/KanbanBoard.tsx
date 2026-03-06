@@ -19,7 +19,7 @@ interface KanbanBoardProps {
 function Avatar({ agent }: { agent?: Agent }) {
   const initials = agent?.name.slice(0, 2).toUpperCase() ?? "?";
   return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-stone-600 bg-stone-800 text-xs font-bold text-stone-300">
+    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-bold text-[var(--color-muted-foreground)]">
       {initials}
     </div>
   );
@@ -105,21 +105,21 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
                 {laneTasks.map((task) => (
                   <article
                     key={task.id}
-                    className="group rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-sm transition-colors hover:border-stone-600"
+                    className="group rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-sm transition-colors hover:border-[var(--color-border)]"
                   >
                     <div className="flex items-start justify-between">
-                      <p className="flex-1 pr-2 text-sm font-medium text-stone-200">
+                      <p className="flex-1 pr-2 text-sm font-medium text-[var(--color-foreground)]">
                         {task.title}
                       </p>
                       <Avatar agent={agentMap.get(task.assigneeAgentId ?? "")} />
                     </div>
                     <div className="mt-3 flex items-center justify-between">
-                      <p className="text-xs text-stone-500">#{task.id.split("-")[0]}</p>
+                      <p className="text-xs text-[var(--color-tertiary)]">#{task.id.split("-")[0]}</p>
                       <div className="flex items-center gap-1">
                         {LANES.filter((target) => target.key !== task.lane).map((target) => (
                           <button
                             key={target.key}
-                            className="rounded border border-stone-700 bg-stone-800/50 p-1 text-stone-400 opacity-0 transition hover:bg-stone-700 hover:text-white group-hover:opacity-100"
+                            className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-[var(--color-tertiary)] opacity-0 transition hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] group-hover:opacity-100"
                             onClick={() => moveTask(task.id, target.key)}
                             title={`Move to ${target.label}`}
                             type="button"

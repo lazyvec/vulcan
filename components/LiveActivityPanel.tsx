@@ -44,7 +44,7 @@ function IconForType({ type }: { type: string }) {
   if (normalized.includes("message") || normalized.includes("ping")) {
     return <MessageSquare {...props} className={`${props.className} text-purple-400`} />;
   }
-  return <FileText {...props} className={`${props.className} text-stone-500`} />;
+  return <FileText {...props} className={`${props.className} text-[var(--color-tertiary)]`} />;
 }
 
 function rangeStart(range: ActivityRange) {
@@ -184,7 +184,7 @@ export function LiveActivityPanel({
                 >
                   <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-tertiary)]">
                     <span>{group}</span>
-                    <span className="text-xs font-normal text-stone-500">{items.length} events</span>
+                    <span className="text-xs font-normal text-[var(--color-tertiary)]">{items.length} events</span>
                   </p>
                   <div className="space-y-1.5">
                     {items.slice(0, 8).map((event) => (
@@ -209,8 +209,8 @@ export function LiveActivityPanel({
                         <div className="flex items-start gap-3 p-2.5">
                           <IconForType type={event.type} />
                           <div className="flex-1">
-                            <p className="text-sm text-stone-200">{event.summary}</p>
-                            <p className="mt-1 text-xs text-stone-500">
+                            <p className="text-sm text-[var(--color-foreground)]">{event.summary}</p>
+                            <p className="mt-1 text-xs text-[var(--color-tertiary)]">
                               {formatTime(event.ts)}
                             </p>
                           </div>

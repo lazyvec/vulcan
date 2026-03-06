@@ -17,9 +17,9 @@ function matches(item: MemoryItem, q: string) {
 
 function MemoryCard({ item }: { item: MemoryItem }) {
   return (
-    <article className="rounded-lg border border-stone-800 bg-stone-900/50 p-4 transition-colors hover:border-stone-700">
-      <h3 className="font-semibold text-stone-200">{item.title}</h3>
-      <p className="mt-1.5 text-sm text-stone-400">{item.content}</p>
+    <article className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-colors hover:border-[var(--color-border)]">
+      <h3 className="font-semibold text-[var(--color-foreground)]">{item.title}</h3>
+      <p className="mt-1.5 text-sm text-[var(--color-tertiary)]">{item.content}</p>
       {item.tags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {item.tags.map((tag) => (
@@ -63,15 +63,15 @@ export function MemoryBoard({ journal, longterm, initialQuery = "" }: MemoryBoar
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
         <section>
           <div className="mb-3 flex items-center gap-2">
-            <Clock size={18} className="text-stone-500" />
+            <Clock size={18} className="text-[var(--color-tertiary)]" />
             <h2 className="text-lg font-semibold">Daily Journal</h2>
           </div>
           <div className="space-y-3">
             {filteredJournal.length > 0 ? (
               filteredJournal.map((item) => <MemoryCard key={item.id} item={item} />)
             ) : (
-              <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-stone-800">
-                <p className="text-sm text-stone-500">No journal entries found.</p>
+              <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-[var(--color-border)]">
+                <p className="text-sm text-[var(--color-tertiary)]">No journal entries found.</p>
               </div>
             )}
           </div>
@@ -79,15 +79,15 @@ export function MemoryBoard({ journal, longterm, initialQuery = "" }: MemoryBoar
 
         <section>
           <div className="mb-3 flex items-center gap-2">
-            <Book size={18} className="text-stone-500" />
+            <Book size={18} className="text-[var(--color-tertiary)]" />
             <h2 className="text-lg font-semibold">Long-term Memory</h2>
           </div>
           <div className="space-y-3">
             {filteredLongterm.length > 0 ? (
               filteredLongterm.map((item) => <MemoryCard key={item.id} item={item} />)
             ) : (
-              <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-stone-800">
-                <p className="text-sm text-stone-500">No LTM items found.</p>
+              <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-[var(--color-border)]">
+                <p className="text-sm text-[var(--color-tertiary)]">No LTM items found.</p>
               </div>
             )}
           </div>

@@ -1,5 +1,7 @@
 # PROGRESS
 
+<!-- last-session --> **마지막 세션**: 2026-03-06 00:42 | 브랜치: `design/ux-overhaul-pass1`
+
 ## 2026-03-06: 디자인/UX 오버홀 Pass 1
 
 ### 변경 요약

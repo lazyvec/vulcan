@@ -56,25 +56,25 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
               className={`rounded-lg border p-4 text-left transition-colors ${
                 doc.id === selected?.id
                   ? "border-primary/80 bg-primary/10"
-                  : "border-stone-800 bg-stone-900/50 hover:border-stone-700"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border)]"
               }`}
             >
               <h3
                 className={`font-semibold ${
-                  doc.id === selected?.id ? "text-primary" : "text-stone-200"
+                  doc.id === selected?.id ? "text-primary" : "text-[var(--color-foreground)]"
                 }`}
               >
                 {doc.title}
               </h3>
-              <div className="mt-1.5 flex items-center gap-2 text-xs text-stone-500">
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-[var(--color-tertiary)]">
                 <Tag size={14} />
                 <span>{doc.tags.join(" · ")}</span>
               </div>
             </button>
           ))}
           {filtered.length === 0 && (
-            <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-stone-800">
-              <p className="text-sm text-stone-500">No documents found.</p>
+            <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-[var(--color-border)]">
+              <p className="text-sm text-[var(--color-tertiary)]">No documents found.</p>
             </div>
           )}
         </section>
@@ -82,26 +82,26 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
         <section className="vulcan-card min-h-[400px] p-5">
           {selected ? (
             <>
-              <h2 className="text-xl font-bold text-stone-100">{selected.title}</h2>
+              <h2 className="text-xl font-bold text-[var(--color-foreground)]">{selected.title}</h2>
               <div className="mt-2 flex flex-wrap gap-2">
                 {selected.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-block rounded-full bg-stone-700/50 px-3 py-1 text-xs font-medium text-stone-300"
+                    className="inline-block rounded-full bg-[var(--color-muted)] px-3 py-1 text-xs font-medium text-[var(--color-muted-foreground)]"
                   >
                     #{tag}
                   </span>
                 ))}
               </div>
-              <div className="prose prose-invert mt-6 max-w-none text-stone-300">
-                <pre className="mt-4 overflow-auto whitespace-pre-wrap rounded-lg border border-stone-800 bg-stone-900/70 p-4 font-mono text-sm text-stone-300">
+              <div className="prose prose-invert mt-6 max-w-none text-[var(--color-muted-foreground)]">
+                <pre className="mt-4 overflow-auto whitespace-pre-wrap rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 font-mono text-sm text-[var(--color-muted-foreground)]">
                   {selected.content}
                 </pre>
               </div>
             </>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-stone-500">Select a document to view its content.</p>
+              <p className="text-[var(--color-tertiary)]">Select a document to view its content.</p>
             </div>
           )}
         </section>

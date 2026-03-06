@@ -43,7 +43,7 @@ function StatusIcon({ status }: { status: AgentStatus }) {
   const props = { size: 16 };
   switch (status) {
     case "idle":
-      return <Coffee {...props} className="text-stone-500" />;
+      return <Coffee {...props} className="text-[var(--color-tertiary)]" />;
     case "writing":
       return <Pencil {...props} className="text-blue-400" />;
     case "researching":
@@ -100,10 +100,10 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
           {liveAgents.map((agent) => (
             <div
               key={agent.id}
-              className="rounded-lg border border-stone-800 bg-stone-900/50 p-3"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
             >
               <div className="flex items-center justify-between">
-                <span className="text-base font-semibold text-stone-200">{agent.name}</span>
+                <span className="text-base font-semibold text-[var(--color-foreground)]">{agent.name}</span>
                 <div
                   className={`flex size-7 items-center justify-center rounded-full text-xs font-bold ${
                     agent.status === "idle" ? "" : "status-glow"
@@ -113,14 +113,14 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
                   <StatusIcon status={agent.status} />
                 </div>
               </div>
-              <p className="mt-1 text-sm text-stone-400">{STATUS_LABELS[agent.status]}</p>
-              <p className="text-xs text-stone-500">{OFFICE_ZONES[agent.status]}</p>
+              <p className="mt-1 text-sm text-[var(--color-tertiary)]">{STATUS_LABELS[agent.status]}</p>
+              <p className="text-xs text-[var(--color-tertiary)]">{OFFICE_ZONES[agent.status]}</p>
             </div>
           ))}
         </div>
 
-        <div className="mt-auto rounded-lg border border-dashed border-stone-800 p-3">
-          <p className="mb-2 text-xs font-medium text-stone-500">
+        <div className="mt-auto rounded-lg border border-dashed border-[var(--color-border)] p-3">
+          <p className="mb-2 text-xs font-medium text-[var(--color-tertiary)]">
             Demo Controls (for {selectedAgentId})
           </p>
           <div className="flex flex-wrap gap-2">
@@ -128,7 +128,7 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
               <button
                 key={status}
                 type="button"
-                className="flex items-center gap-1.5 rounded-md border border-stone-700 bg-stone-800/60 px-2 py-1 text-xs text-stone-300 transition-colors hover:bg-stone-700"
+                className="flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
                 onClick={() => runDemo(status)}
               >
                 <StatusIcon status={status} />
