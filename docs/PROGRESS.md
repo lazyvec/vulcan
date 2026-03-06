@@ -2,6 +2,38 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 운영 안정화 (PM2 토큰 덮어쓰기 방지 + 재배포 검증)
+
+### 요약
+PM2 `startOrReload` 시 `OPENCLAW_GATEWAY_TOKEN=""`이 주입되어 Gateway 연결이 끊길 수 있는 재발 리스크를 제거했다.
+`ecosystem.config.js`를 수정해 토큰/패스워드가 실제로 있을 때만 env에 포함되도록 하드닝하고, 재배포 후 연결 상태를 다시 검증했다.
+
+### 완료 항목
+- ✅ `ecosystem.config.js`
+  - `gatewayAuthEnv` 추가
+  - `OPENCLAW_GATEWAY_TOKEN`, `OPENCLAW_GATEWAY_PASSWORD`를 빈 문자열 기본값에서 제거
+  - PM2 env/env_production에서 인증 env를 조건부 주입으로 변경
+- ✅ 재배포 및 상태 검증
+  - `pm2 startOrReload ecosystem.config.js --env production`
+  - `vulcan-api`, `vulcan-mc`, `vulcan-adapter` `online` 확인
+
+### 검증 결과
+- `node -e "require('./ecosystem.config.js')"` 성공
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+- `GET /api/health` → `gateway.connected=true`, `protocol=3`
+- `GET /api/gateway/status` → `connected=true`
+- `GET /api/agents?includeInactive=1` → 에이전트 5개 조회 성공
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- ✅ Phase 3 완료 + 운영 하드닝 반영
+- ▶️ 다음: Phase 4 태스크 시스템 고도화
+
 ## 2026-03-06: Phase 3 Batch 8 (Gateway Ops + pause/resume 마무리)
 
 ### 요약

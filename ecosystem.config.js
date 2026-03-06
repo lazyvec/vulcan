@@ -1,3 +1,12 @@
+const gatewayAuthEnv = {
+  ...(process.env.OPENCLAW_GATEWAY_TOKEN
+    ? { OPENCLAW_GATEWAY_TOKEN: process.env.OPENCLAW_GATEWAY_TOKEN }
+    : {}),
+  ...(process.env.OPENCLAW_GATEWAY_PASSWORD
+    ? { OPENCLAW_GATEWAY_PASSWORD: process.env.OPENCLAW_GATEWAY_PASSWORD }
+    : {}),
+};
+
 module.exports = {
   apps: [
     {
@@ -17,11 +26,10 @@ module.exports = {
         DATABASE_URL: "",
         REDIS_URL: "",
         OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",
-        OPENCLAW_GATEWAY_TOKEN: "",
-        OPENCLAW_GATEWAY_PASSWORD: "",
         VULCAN_GATEWAY_SCOPES: "operator.admin",
         VULCAN_GATEWAY_RECONNECT_BASE_MS: "1000",
         VULCAN_GATEWAY_RECONNECT_MAX_MS: "30000",
+        ...gatewayAuthEnv,
       },
       env_production: {
         NODE_ENV: "production",
@@ -30,11 +38,10 @@ module.exports = {
         DATABASE_URL: "",
         REDIS_URL: "",
         OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",
-        OPENCLAW_GATEWAY_TOKEN: "",
-        OPENCLAW_GATEWAY_PASSWORD: "",
         VULCAN_GATEWAY_SCOPES: "operator.admin",
         VULCAN_GATEWAY_RECONNECT_BASE_MS: "1000",
         VULCAN_GATEWAY_RECONNECT_MAX_MS: "30000",
+        ...gatewayAuthEnv,
       },
     },
     {
@@ -72,8 +79,6 @@ module.exports = {
         NODE_ENV: "production",
         VULCAN_INGEST_URL: "http://127.0.0.1:8787/api/adapter/ingest",
         OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",
-        OPENCLAW_GATEWAY_TOKEN: "",
-        OPENCLAW_GATEWAY_PASSWORD: "",
         VULCAN_GATEWAY_SCOPES: "operator.admin",
         VULCAN_GATEWAY_RECONNECT_BASE_MS: "1000",
         VULCAN_GATEWAY_RECONNECT_MAX_MS: "30000",
@@ -82,13 +87,12 @@ module.exports = {
         ADAPTER_MAX_EVENTS_PER_MIN: "40",
         ADAPTER_MAX_BATCH: "12",
         ADAPTER_DRY_RUN: "0",
+        ...gatewayAuthEnv,
       },
       env_production: {
         NODE_ENV: "production",
         VULCAN_INGEST_URL: "http://127.0.0.1:8787/api/adapter/ingest",
         OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",
-        OPENCLAW_GATEWAY_TOKEN: "",
-        OPENCLAW_GATEWAY_PASSWORD: "",
         VULCAN_GATEWAY_SCOPES: "operator.admin",
         VULCAN_GATEWAY_RECONNECT_BASE_MS: "1000",
         VULCAN_GATEWAY_RECONNECT_MAX_MS: "30000",
@@ -97,6 +101,7 @@ module.exports = {
         ADAPTER_MAX_EVENTS_PER_MIN: "40",
         ADAPTER_MAX_BATCH: "12",
         ADAPTER_DRY_RUN: "0",
+        ...gatewayAuthEnv,
       },
     },
   ],
