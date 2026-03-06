@@ -36,12 +36,13 @@ Vulcan Mission Control의 전반적인 디자인/UX를 개선. 기능 변경 없
 - `npm run build`: 통과
 - `npm run lint`: 통과 (경고 0)
 
-### 남은 과제 (Pass 2)
-- PWA 정식 아이콘 (192x192, 512x512 PNG) 생성
-- Sidebar "Warm Obsidian" 라벨 검토
-
-### 완료된 Pass 2 항목
+### Pass 2 완료
 - ✅ `stone-*` 하드코딩 → 디자인 토큰 변수 통일
 - ✅ OfficeView selectedAgentId setter 복원 (에이전트 카드 클릭 선택)
 - ✅ select 요소 aria-label 추가 (KanbanBoard, LiveActivityPanel)
 - ✅ Service Worker 구현 (캐시 우선/네트워크 우선 전략)
+- ✅ PWA 아이콘 정식 마감 (favicon.ico, apple-touch-icon, 192/512 PNG)
+- ✅ Sidebar "Warm Obsidian" 라벨 제거
+- ✅ Sidebar 네비게이션 브랜드 톤 마감 (active accent bar, hover 상태)
+- ✅ README.md 전면 재작성
+- ✅ BRAND.md 토큰/상태/아이콘 문서화
