@@ -1,6 +1,6 @@
 # Phase 3 E2E Report (Direct / Delegate / Session Send)
 
-- Date: 2026-03-06 (UTC)
+- Date: 2026-03-06 (KST)
 - Scope: `direct`, `delegate(aegis)`, `session_send`, response receipt
 - Environment: OpenClaw gateway (local), Telegram DM channel
 
@@ -13,7 +13,7 @@
 | session_send | PARTIAL PASS | Works on warmed/active session keys; can timeout on newly spawned session |
 | response receipt | PASS (warmed session) | `pong2 ✅`, `pong3 ✅` received |
 
-## 2) Timeline (UTC)
+## 2) Timeline (KST)
 
 | Time | Event | Outcome |
 |---|---|---|
