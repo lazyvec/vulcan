@@ -37,8 +37,9 @@ function resolveMigrationsPath() {
   }
 
   const cwd = process.cwd();
+  // Keep SQLite runtime migrations separate from PostgreSQL drizzle artifacts.
   const candidates = [
-    path.join(cwd, "drizzle"),
+    path.join(cwd, "drizzle-sqlite"),
     path.join(cwd, "apps", "web", "drizzle"),
     path.resolve(cwd, "../web/drizzle"),
   ];

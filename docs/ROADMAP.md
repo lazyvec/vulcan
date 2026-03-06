@@ -1,6 +1,6 @@
 # Vulcan Roadmap
 
-> **현재 상태**: M0 완료 + Phase 0 완료 → Phase 1 진행중
+> **현재 상태**: M0 완료 + Phase 0 완료 + Phase 1 완료 → Phase 2 준비
 > **실행 체크리스트**: `docs/WORK_PLAN.md`
 
 ## 목표 아키텍처
@@ -44,7 +44,7 @@ M0을 깨뜨리지 않고 분리 가능 구조로 준비.
 - Drizzle Kit 마이그레이션 도입
 - Store 인터페이스 추상화
 
-## Phase 1: PostgreSQL + Redis + Hono 백엔드 (7-10일)
+## Phase 1: PostgreSQL + Redis + Hono 백엔드 (7-10일, 완료)
 
 프로덕션급 데이터 인프라 + 독립 백엔드 서비스.
 

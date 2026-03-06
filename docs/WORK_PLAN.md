@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 1 — PostgreSQL + Redis + Hono (진행중)
+## 현재 Phase: 2 — WebSocket + Gateway RPC (진행준비)
 
-> M0 + Phase 0 완료. Phase 1 작업부터 이어서 진행.
+> M0 + Phase 0 + Phase 1 완료. Phase 2 작업부터 이어서 진행.
 
 ---
 
@@ -18,11 +18,11 @@
 - [x] Store 인터페이스 추상화 (`lib/store.ts` → 인터페이스 + SQLite 구현체)
 - [x] 검증: `pnpm install && pnpm -r build` 성공, 기존 기능 동작 확인
 
-## Phase 1: PostgreSQL + Redis + Hono (7-10일) — 의존성: Phase 0
+## Phase 1: PostgreSQL + Redis + Hono (7-10일) — 의존성: Phase 0 (완료: 2026-03-06)
 
-- [ ] Drizzle 스키마 PostgreSQL 전환 (`sqliteTable` → `pgTable`, UUID, timestamp)
-- [ ] 외래키 제약조건 추가
-- [ ] SQLite → PostgreSQL 원타임 데이터 마이그레이션 스크립트
+- [x] Drizzle 스키마 PostgreSQL 전환 (`sqliteTable` → `pgTable`, UUID, timestamp)
+- [x] 외래키 제약조건 추가
+- [x] SQLite → PostgreSQL 원타임 데이터 마이그레이션 스크립트
 - [x] Redis 설정 (`ioredis` + `bullmq`) — API 패키지 의존성/큐 초기화 코드 도입
 - [x] `event-stream.ts` in-memory → Redis Pub/Sub 교체 (REDIS_URL 설정 시 팬아웃)
 - [x] Hono 백엔드 서비스 구축 (`apps/api/`) — 기존 12개 API 포팅

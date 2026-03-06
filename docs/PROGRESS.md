@@ -2,6 +2,37 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 1 PostgreSQL 전환 마무리 (완료)
+
+### 요약
+Phase 1의 남은 PostgreSQL 전환 항목을 마무리했다.
+PostgreSQL 마이그레이션 정합성을 보정하고, SQLite → PostgreSQL 데이터 이관 경로를 임시 DB에서 실증했다.
+
+### 완료 항목
+- ✅ PostgreSQL Drizzle 스키마 보정 (`docs.created_at`, `docs.updated_at` 컬럼명 정합성)
+- ✅ 초기 PostgreSQL 마이그레이션 SQL 보정 (`pgcrypto` 확장 + 컬럼명 정합성)
+- ✅ SQLite → PostgreSQL 이관 스크립트 개선
+  - `--dry-run`에서 `DATABASE_URL` 없이 실행 가능
+  - SQLite 파일 존재 여부 검증 + 경로 출력
+- ✅ SQLite 런타임 마이그레이션 경로 회귀 수정
+  - `apps/api/drizzle`(PostgreSQL)와 SQLite 마이그레이션 경로 충돌 분리
+
+### 검증 결과
+- `pnpm --filter @vulcan/api exec node --input-type=module ...` (clean DB 생성 후 Drizzle migration 적용) 성공
+  - public 테이블 7종 생성 확인 (`agents/projects/tasks/events/memory_items/docs/schedules`)
+- `env -u DATABASE_URL pnpm --filter @vulcan/api migrate:sqlite-to-pg -- --dry-run` 성공
+- `pnpm --filter @vulcan/api exec node --input-type=module ...` (임시 DB에서 실제 `sqlite-to-postgres` 실행) 성공
+  - row count 검증: `agents 5 / projects 3 / tasks 4 / events 106 / memory_items 4 / docs 3 / schedules 3`
+- `pnpm build` 성공
+- `pnpm lint` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- 🔜 **다음 작업: Phase 2 — WebSocket + Gateway RPC**
+
 ## 2026-03-06: Phase 1 Kickoff (Hono API + 연결 상태)
 
 ### 요약

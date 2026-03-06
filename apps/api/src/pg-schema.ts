@@ -9,7 +9,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-const nowTs = () => timestamp({ withTimezone: false }).defaultNow().notNull();
+const nowTs = (columnName: string) =>
+  timestamp(columnName, { withTimezone: false }).defaultNow().notNull();
 
 export const agentsPgTable = pgTable("agents", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -118,8 +119,8 @@ export const docsPgTable = pgTable("docs", {
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
   format: text("format").notNull().default("markdown"),
   content: text("content").notNull(),
-  createdAt: nowTs(),
-  updatedAt: nowTs(),
+  createdAt: nowTs("created_at"),
+  updatedAt: nowTs("updated_at"),
 });
 
 export const schedulesPgTable = pgTable(
