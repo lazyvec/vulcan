@@ -14,8 +14,21 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Vulcan Mission Control",
-  description: "OpenClaw 강화용 Mission Control GUI",
+  description: "Mission Control for Hermes",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32 16x16" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Vulcan",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({
