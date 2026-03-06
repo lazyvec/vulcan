@@ -33,10 +33,12 @@ import {
 } from "./event-stream";
 import { getRuntimeInfo } from "./runtime-info";
 import { getCommandQueue } from "./queue";
+import { getGatewayRpcClient } from "./gateway-rpc";
 
 const app = new Hono();
 const WS_PATH = "/api/ws";
 let wsClientCount = 0;
+const gatewayRpcClient = getGatewayRpcClient();
 const applyApiCors = cors({
   origin: process.env.VULCAN_CORS_ORIGIN ?? "*",
   allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
@@ -53,6 +55,42 @@ function sendWsMessage(
   } catch {
     // Ignore best-effort send errors after disconnect.
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getGatewayQueryParams(url: string): Record<string, unknown> {
+  const query = new URL(url).searchParams;
+  const params: Record<string, unknown> = {};
+  for (const key of query.keys()) {
+    const values = query.getAll(key).map((value) => value.trim()).filter(Boolean);
+    if (values.length === 0) {
+      continue;
+    }
+    params[key] = values.length === 1 ? values[0] : values;
+  }
+  return params;
+}
+
+async function parseGatewayParams(c: { req: { json: () => Promise<unknown> } }) {
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return { ok: false as const, error: "invalid JSON payload" };
+  }
+
+  if (!isRecord(payload)) {
+    return { ok: false as const, error: "JSON object payload is required" };
+  }
+
+  return { ok: true as const, payload };
 }
 
 app.use("*", logger());
@@ -228,6 +266,155 @@ app.get("/api/docs", (c) => {
 
 app.get("/api/schedule", (c) => c.json({ schedules: getSchedules() }));
 
+app.get("/api/gateway/status", (c) => {
+  return c.json({ gateway: gatewayRpcClient.getStatus() });
+});
+
+app.post("/api/gateway/rpc", async (c) => {
+  const parsed = await parseGatewayParams(c);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  const { method, params } = parsed.payload;
+  if (typeof method !== "string" || !method.trim()) {
+    return c.json({ error: "method must be a non-empty string" }, 400);
+  }
+
+  try {
+    const result = await gatewayRpcClient.call(method, params ?? {});
+    return c.json({ ok: true, result });
+  } catch (error) {
+    return c.json(
+      {
+        ok: false,
+        error: getErrorMessage(error),
+      },
+      502,
+    );
+  }
+});
+
+app.get("/api/gateway/agents", async (c) => {
+  try {
+    const params = getGatewayQueryParams(c.req.url);
+    const agents = await gatewayRpcClient.agentsList(params);
+    return c.json({ agents });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.post("/api/gateway/chat/send", async (c) => {
+  const parsed = await parseGatewayParams(c);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  try {
+    const result = await gatewayRpcClient.chatSend(parsed.payload);
+    return c.json({ result });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.post("/api/gateway/chat/abort", async (c) => {
+  const parsed = await parseGatewayParams(c);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  try {
+    const result = await gatewayRpcClient.chatAbort(parsed.payload);
+    return c.json({ result });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.get("/api/gateway/sessions", async (c) => {
+  try {
+    const params = getGatewayQueryParams(c.req.url);
+    const sessions = await gatewayRpcClient.sessionsList(params);
+    return c.json({ sessions });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.patch("/api/gateway/sessions", async (c) => {
+  const parsed = await parseGatewayParams(c);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  try {
+    const result = await gatewayRpcClient.sessionsPatch(parsed.payload);
+    return c.json({ result });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.post("/api/gateway/sessions/reset", async (c) => {
+  const parsed = await parseGatewayParams(c);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  try {
+    const result = await gatewayRpcClient.sessionsReset(parsed.payload);
+    return c.json({ result });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.get("/api/gateway/config", async (c) => {
+  try {
+    const params = getGatewayQueryParams(c.req.url);
+    const config = await gatewayRpcClient.configGet(params);
+    return c.json({ config });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.patch("/api/gateway/config", async (c) => {
+  const parsed = await parseGatewayParams(c);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  try {
+    const result = await gatewayRpcClient.configPatch(parsed.payload);
+    return c.json({ result });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.get("/api/gateway/cron", async (c) => {
+  try {
+    const params = getGatewayQueryParams(c.req.url);
+    const cron = await gatewayRpcClient.cronList(params);
+    return c.json({ cron });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.get("/api/gateway/cron/status", async (c) => {
+  try {
+    const params = getGatewayQueryParams(c.req.url);
+    const status = await gatewayRpcClient.cronStatus(params);
+    return c.json({ status });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
 app.get(
   WS_PATH,
   upgradeWebSocket(() => {
@@ -392,6 +579,7 @@ async function checkRedis() {
 
 app.get("/api/health", async (c) => {
   const runtime = getRuntimeInfo();
+  const gateway = gatewayRpcClient.getStatus();
 
   let sqliteOk = true;
   let sqliteError: string | undefined;
@@ -416,6 +604,7 @@ app.get("/api/health", async (c) => {
     },
     postgres,
     redis,
+    gateway,
     sseOk: true,
     streamSubscribers: getSubscriberCount(),
     sseSubscribers: getSubscriberCount(),

@@ -2,6 +2,45 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 2 Batch 2 (Gateway RPC 클라이언트 + v3 핸드셰이크)
+
+### 요약
+Phase 2의 두 번째 배치로 OpenClaw Gateway RPC 연결을 API에 내장했다.
+챌린지 기반(v3) 인증 핸드셰이크와 지수 백오프 재연결을 구현하고, `agents/chat/sessions/config/cron` 네임스페이스 호출을 위한 래퍼/엔드포인트를 추가했다.
+
+### 완료 항목
+- ✅ `apps/api/src/gateway-rpc/*` 신규 모듈 추가
+  - `connect.challenge` 기반 v3 서명 핸드셰이크
+  - `agents.*`, `chat.*`, `sessions.*`, `config.*`, `cron.*` 래퍼
+  - 자동 재연결(지수 백오프), 상태 스냅샷(`getStatus`)
+- ✅ Hono API에 Gateway 제어 엔드포인트 추가
+  - `/api/gateway/status`
+  - `/api/gateway/rpc`
+  - `/api/gateway/agents`
+  - `/api/gateway/chat/send`, `/api/gateway/chat/abort`
+  - `/api/gateway/sessions`, `/api/gateway/sessions/reset`
+  - `/api/gateway/config`
+  - `/api/gateway/cron`, `/api/gateway/cron/status`
+- ✅ `/api/health` 응답에 Gateway 연결 상태 포함
+- ✅ 운영 설정 반영
+  - `apps/api/.env.example`: Gateway URL/인증/재연결 정책 변수 추가
+  - `ecosystem.config.js`: API 프로세스 Gateway env 반영
+- ✅ Gateway mock 통합 테스트 추가
+  - 정상 핸드셰이크 + `agents.list`
+  - 재연결 시나리오
+  - challenge timeout 시나리오
+
+### 검증 결과
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 범위 경계 (다음 배치)
+- ⏭️ Phase 2 잔여:
+  - Redis Pub/Sub 팬아웃 (Gateway 이벤트 → 모든 클라이언트)
+  - 로그 파일 폴링 어댑터를 Gateway 이벤트 직접 수신으로 대체
+
 ## 2026-03-06: Phase 2 Batch 1 (WebSocket 실시간 경로 전환)
 
 ### 요약

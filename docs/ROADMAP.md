@@ -1,6 +1,6 @@
 # Vulcan Roadmap
 
-> **현재 상태**: M0 완료 + Phase 0 완료 + Phase 1 완료 → Phase 2 진행중 (Batch 1 완료)
+> **현재 상태**: M0 완료 + Phase 0 완료 + Phase 1 완료 → Phase 2 진행중 (Batch 1~2 완료)
 > **실행 체크리스트**: `docs/WORK_PLAN.md`
 
 ## 목표 아키텍처

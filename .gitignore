@@ -31,6 +31,7 @@
 /data/
 apps/web/data/
 apps/web/test-results/
+apps/api/.vulcan/
 README.orig.md
 
 # debug

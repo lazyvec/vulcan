@@ -8,6 +8,7 @@
     "start": "tsx src/server.ts",
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
+    "test:gateway-rpc": "tsx --test src/gateway-rpc/client.test.ts",
     "db:generate:pg": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate:pg": "drizzle-kit migrate --config drizzle.config.ts",
     "migrate:sqlite-to-pg": "tsx scripts/sqlite-to-postgres.ts"
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^20",
     "@types/pg": "^8.15.6",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "^0.31.5",
     "tsx": "^4.21.0",
     "typescript": "5.9.3"
