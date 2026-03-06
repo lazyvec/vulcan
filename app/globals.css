@@ -153,6 +153,25 @@ a {
   animation: pulseWarm 2.6s infinite;
 }
 
+.sidebar-nav-item {
+  color: var(--color-muted-foreground);
+  background: transparent;
+}
+
+.sidebar-nav-item:hover {
+  color: var(--color-foreground);
+  background: var(--color-muted);
+}
+
+.sidebar-nav-active {
+  color: var(--color-primary) !important;
+  background: var(--color-primary-12) !important;
+}
+
+.sidebar-nav-active:hover {
+  background: color-mix(in oklab, var(--color-primary) 16%, transparent 84%) !important;
+}
+
 .status-glow {
   box-shadow:
     0 0 0 1px color-mix(in oklab, var(--color-primary) 35%, transparent 65%),

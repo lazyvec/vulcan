@@ -35,7 +35,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
         </p>
       </div>
 
-      <nav className="flex flex-col gap-2">
+      <nav className="flex flex-col gap-1">
         {NAV_ITEMS.map((item, index) => {
           const active = pathname === item.href;
           return (
@@ -43,14 +43,14 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className="fade-in-up rounded-[var(--radius-control)] px-3 py-2 text-sm font-medium transition-colors"
-              style={{
-                animationDelay: `${index * 45}ms`,
-                color: active ? "var(--color-primary)" : "var(--color-muted-foreground)",
-                borderColor: active ? "var(--color-primary)" : "transparent",
-                background: active ? "var(--color-primary-12)" : "transparent",
-              }}
+              className={`sidebar-nav-item fade-in-up relative rounded-[var(--radius-control)] px-3 py-2 text-sm font-medium transition-colors ${
+                active ? "sidebar-nav-active" : ""
+              }`}
+              style={{ animationDelay: `${index * 45}ms` }}
             >
+              {active && (
+                <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]" />
+              )}
               {item.label}
             </Link>
           );
