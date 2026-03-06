@@ -27,10 +27,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       }}
     >
       <div className="mb-8 px-2">
-        <p className="text-xs uppercase tracking-[0.22em] text-[var(--color-muted-foreground)]">
-          Warm Obsidian
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold text-[var(--color-foreground)]">
+        <h1 className="text-2xl font-semibold text-[var(--color-foreground)]">
           Vulcan
         </h1>
         <p className="mt-2 text-sm text-[var(--color-tertiary)]">
