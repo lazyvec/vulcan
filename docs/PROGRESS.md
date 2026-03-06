@@ -2,6 +2,36 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 Batch 5 (`sessions.spawn/send` 명시 API 연동)
+
+### 요약
+Phase 3 다섯 번째 배치로 Gateway 세션 계열 메서드를 명시 API로 노출했다.
+기존 generic RPC(`/api/gateway/rpc`)와 별개로 `sessions.spawn/send`를 전용 엔드포인트로 제공해 UI/자동화에서 안전하게 호출할 수 있는 경로를 확보했다.
+
+### 완료 항목
+- ✅ `apps/api/src/gateway-rpc/client.ts`
+  - `sessionsSpawn(params)`
+  - `sessionsSend(params)`
+- ✅ `apps/api/src/server.ts`
+  - `POST /api/gateway/sessions/spawn`
+  - `POST /api/gateway/sessions/send`
+
+### 검증 결과
+- `pnpm --filter @vulcan/api lint` 성공
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm --filter @vulcan/api test:gateway-event-adapter` 성공 (4/4)
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- 🚧 Phase 3 진행중 (Batch 5 완료)
+  - 다음 핵심: `sessions.spawn/send`를 에이전트 제어 UI/위임 플로우에 직접 연결
+
 ## 2026-03-06: Phase 3 Batch 4 (오피스 커맨드 이력/재시도 UI 연결)
 
 ### 요약

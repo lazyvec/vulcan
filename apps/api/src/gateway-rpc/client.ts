@@ -300,6 +300,14 @@ export class GatewayRpcClient {
     return this.request("sessions.list", params);
   }
 
+  sessionsSpawn(params: Record<string, unknown>) {
+    return this.request("sessions.spawn", params);
+  }
+
+  sessionsSend(params: Record<string, unknown>) {
+    return this.request("sessions.send", params);
+  }
+
   sessionsPatch(params: Record<string, unknown>) {
     return this.request("sessions.patch", params);
   }

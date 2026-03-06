@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 3 — 에이전트 생명주기 관리 (진행중: Batch 4 완료)
+## 현재 Phase: 3 — 에이전트 생명주기 관리 (진행중: Batch 5 완료)
 
-> M0 + Phase 0 + Phase 1 + Phase 2 완료. Phase 3 Batch 4(오피스 커맨드 이력/재시도 UI 연결) 완료.
+> M0 + Phase 0 + Phase 1 + Phase 2 완료. Phase 3 Batch 5(`sessions.spawn/send` 명시 API 연동) 완료.
 
 ---
 
@@ -56,6 +56,7 @@
   - [ ] `agents.list/create/delete` — 에이전트 CRUD (현재: list/create/update 연동 + delete는 soft-delete 정책)
   - [x] `chat.send` — 메시지/지시 전송
   - [ ] `sessions.spawn/send` — 하위 에이전트 위임/통신
+    - [x] `/api/gateway/sessions/spawn`, `/api/gateway/sessions/send` 명시 엔드포인트 추가
   - [ ] `config.patch` — 설정 변경
   - [ ] `cron.*` — 예약 작업
 - [x] 이중 제어 모드 API: `/delegate` (Hermes 경유) + `/command` (직접)

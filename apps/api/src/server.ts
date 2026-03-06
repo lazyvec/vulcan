@@ -1154,6 +1154,34 @@ app.get("/api/gateway/sessions", async (c) => {
   }
 });
 
+app.post("/api/gateway/sessions/spawn", async (c) => {
+  const parsed = await parseGatewayParams(c);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  try {
+    const result = await gatewayRpcClient.sessionsSpawn(parsed.payload);
+    return c.json({ result });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
+app.post("/api/gateway/sessions/send", async (c) => {
+  const parsed = await parseGatewayParams(c);
+  if (!parsed.ok) {
+    return c.json({ error: parsed.error }, 400);
+  }
+
+  try {
+    const result = await gatewayRpcClient.sessionsSend(parsed.payload);
+    return c.json({ result });
+  } catch (error) {
+    return c.json({ error: getErrorMessage(error) }, 502);
+  }
+});
+
 app.patch("/api/gateway/sessions", async (c) => {
   const parsed = await parseGatewayParams(c);
   if (!parsed.ok) {
