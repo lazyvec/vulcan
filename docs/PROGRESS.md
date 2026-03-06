@@ -2,6 +2,42 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 Batch 3 (커맨드 조회/재시도 API)
+
+### 요약
+Phase 3 세 번째 배치로 커맨드 운영 가시성을 추가했다.
+`agent_commands`를 조회/단건 조회할 수 있는 API를 추가하고, 실패 커맨드를 새 커맨드로 재큐잉하는 retry API를 도입했다.
+
+### 완료 항목
+- ✅ `apps/api/src/store.ts` 확장
+  - `getAgentCommands(filters)` 추가
+  - `getAgentCommandById(id)` 추가
+- ✅ `apps/api/src/server.ts` API 추가
+  - `GET /api/agent-commands` (`agentId`, `status`, `limit` 필터)
+  - `GET /api/agent-commands/:id`
+  - `POST /api/agent-commands/:id/retry` (failed 전용)
+- ✅ 재시도 정책 구현
+  - 원본 row overwrite 없이 신규 command row 생성
+  - Redis 큐 사용 시 `202 queued`
+  - Redis 미사용 시 inline 실행 폴백
+  - retry 감사 로그(`agent.command.retry*`, `agent.delegate.retry*`) 기록
+
+### 검증 결과
+- `pnpm --filter @vulcan/api lint` 성공
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm --filter @vulcan/api test:gateway-event-adapter` 성공 (4/4)
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- 🚧 Phase 3 진행중 (Batch 3 완료)
+  - 다음 핵심: 에이전트 제어 UI 연결 + `sessions.spawn/send` 경로 고도화
+
 ## 2026-03-06: Phase 3 Batch 2 (BullMQ 커맨드/헬스체크 워커)
 
 ### 요약

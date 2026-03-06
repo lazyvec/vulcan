@@ -15,7 +15,11 @@ import {
   taskLanePatchSchema,
   updateAgentInputSchema,
 } from "@vulcan/shared/schemas";
-import type { RealtimeServerMessage } from "@vulcan/shared/types";
+import type {
+  AgentCommand,
+  AgentCommandStatus,
+  RealtimeServerMessage,
+} from "@vulcan/shared/types";
 import {
   appendAuditLog,
   appendEvent,
@@ -24,6 +28,8 @@ import {
   createAgentCommand,
   deactivateAgent,
   getAgentById,
+  getAgentCommandById,
+  getAgentCommands,
   getAgents,
   getAuditLogs,
   getDocs,
@@ -182,6 +188,43 @@ function buildDelegateRelayMessage(input: {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function isAgentCommandStatus(value: string): value is AgentCommandStatus {
+  return value === "queued" || value === "sent" || value === "failed";
+}
+
+function parseAgentCommandPayload(command: AgentCommand): CommandQueueJobData | null {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(command.payloadJson);
+  } catch {
+    return null;
+  }
+
+  if (!isRecord(payload) || typeof payload.message !== "string" || !payload.message.trim()) {
+    return null;
+  }
+
+  if (command.mode === "delegate") {
+    return {
+      commandId: command.id,
+      mode: command.mode,
+      agentId: command.agentId,
+      message: payload.message.trim(),
+      taskLabel: typeof payload.taskLabel === "string" ? payload.taskLabel : undefined,
+      metadata: isRecord(payload.metadata) ? payload.metadata : undefined,
+    };
+  }
+
+  return {
+    commandId: command.id,
+    mode: command.mode,
+    agentId: command.agentId,
+    message: payload.message.trim(),
+    to: typeof payload.to === "string" ? payload.to : undefined,
+    metadata: isRecord(payload.metadata) ? payload.metadata : undefined,
+  };
 }
 
 async function executeCommandQueueJob(payload: CommandQueueJobData) {
@@ -729,6 +772,133 @@ app.post("/api/agents/:id/command", async (c) => {
 
     return c.json({ error: getErrorMessage(error), command: failed ?? command }, 502);
   }
+});
+
+app.get("/api/agent-commands", (c) => {
+  const agentId = c.req.query("agentId");
+  const statusRaw = c.req.query("status");
+  const limitRaw = Number(c.req.query("limit") ?? "80");
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 300) : 80;
+
+  let statusFilter: "all" | AgentCommandStatus = "all";
+  if (statusRaw && statusRaw !== "all") {
+    if (!isAgentCommandStatus(statusRaw)) {
+      return c.json({ error: "invalid status filter" }, 400);
+    }
+    statusFilter = statusRaw;
+  }
+
+  const commands = getAgentCommands({
+    agentId: agentId?.trim() ? agentId.trim() : undefined,
+    status: statusFilter,
+    limit,
+  });
+  return c.json({ commands });
+});
+
+app.get("/api/agent-commands/:id", (c) => {
+  const command = getAgentCommandById(c.req.param("id"));
+  if (!command) {
+    return c.json({ error: "agent command not found" }, 404);
+  }
+  return c.json({ command });
+});
+
+app.post("/api/agent-commands/:id/retry", async (c) => {
+  const sourceId = c.req.param("id");
+  const sourceCommand = getAgentCommandById(sourceId);
+  if (!sourceCommand) {
+    return c.json({ error: "agent command not found" }, 404);
+  }
+
+  if (sourceCommand.status !== "failed") {
+    return c.json({ error: "only failed commands can be retried" }, 409);
+  }
+
+  const targetAgent = getAgentById(sourceCommand.agentId);
+  if (!targetAgent) {
+    return c.json({ error: "target agent not found" }, 404);
+  }
+  if (targetAgent.isActive === false) {
+    return c.json({ error: "target agent is inactive" }, 409);
+  }
+
+  const payload = parseAgentCommandPayload(sourceCommand);
+  if (!payload) {
+    return c.json({ error: "invalid command payload for retry" }, 400);
+  }
+
+  const retryActionBase =
+    sourceCommand.mode === "delegate" ? "agent.delegate.retry" : "agent.command.retry";
+
+  const retryCommand = createAgentCommand({
+    agentId: sourceCommand.agentId,
+    mode: sourceCommand.mode,
+    command: sourceCommand.command,
+    payloadJson: sourceCommand.payloadJson,
+    requestedBy: "human-retry",
+  });
+  const retryPayload: CommandQueueJobData = {
+    ...payload,
+    commandId: retryCommand.id,
+  };
+
+  try {
+    const queued = await enqueueCommandJob(retryPayload);
+    if (queued) {
+      writeAudit({
+        action: `${retryActionBase}.queued`,
+        entityType: "agent_command",
+        entityId: retryCommand.id,
+        before: sourceCommand,
+        after: retryCommand,
+        metadata: {
+          queue: "bullmq",
+          retryOf: sourceId,
+        },
+      });
+
+      return c.json({ command: retryCommand, queued: true }, 202);
+    }
+  } catch (error) {
+    const failed = updateAgentCommand(retryCommand.id, {
+      status: "failed",
+      error: getErrorMessage(error),
+      executedAt: Date.now(),
+    });
+
+    writeAudit({
+      action: `${retryActionBase}.enqueue_failed`,
+      entityType: "agent_command",
+      entityId: retryCommand.id,
+      before: sourceCommand,
+      after: failed ?? retryCommand,
+      metadata: {
+        queue: "bullmq",
+        retryOf: sourceId,
+        error: getErrorMessage(error),
+      },
+    });
+
+    return c.json({ error: getErrorMessage(error), command: failed ?? retryCommand }, 502);
+  }
+
+  await executeCommandQueueJob(retryPayload);
+  const finished = getAgentCommandById(retryCommand.id) ?? retryCommand;
+
+  writeAudit({
+    action: `${retryActionBase}.inline`,
+    entityType: "agent_command",
+    entityId: retryCommand.id,
+    before: sourceCommand,
+    after: finished,
+    metadata: {
+      queue: "inline",
+      retryOf: sourceId,
+    },
+  });
+
+  return c.json({ command: finished, queued: false });
 });
 
 app.get("/api/projects", (c) => c.json({ projects: getProjects() }));

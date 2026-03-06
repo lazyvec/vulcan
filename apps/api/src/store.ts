@@ -593,6 +593,43 @@ export function updateAgentCommand(
   return row ? mapAgentCommand(row) : null;
 }
 
+export function getAgentCommandById(id: string): AgentCommand | null {
+  ensureSchema();
+  const row = db.select().from(agentCommandsTable).where(eq(agentCommandsTable.id, id)).get();
+  return row ? mapAgentCommand(row) : null;
+}
+
+export function getAgentCommands(filters?: {
+  agentId?: string;
+  status?: AgentCommandStatus | "all";
+  limit?: number;
+}): AgentCommand[] {
+  ensureSchema();
+  const conditions = [];
+
+  if (filters?.agentId) {
+    conditions.push(eq(agentCommandsTable.agentId, filters.agentId));
+  }
+
+  if (filters?.status && filters.status !== "all") {
+    conditions.push(eq(agentCommandsTable.status, filters.status));
+  }
+
+  const limit =
+    typeof filters?.limit === "number" && Number.isFinite(filters.limit) && filters.limit > 0
+      ? Math.min(filters.limit, 300)
+      : 80;
+
+  return db
+    .select()
+    .from(agentCommandsTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(agentCommandsTable.createdAt))
+    .limit(limit)
+    .all()
+    .map(mapAgentCommand);
+}
+
 export function appendAuditLog(input: {
   id?: string;
   actor?: string;

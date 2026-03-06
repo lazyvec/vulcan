@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 3 — 에이전트 생명주기 관리 (진행중: Batch 2 완료)
+## 현재 Phase: 3 — 에이전트 생명주기 관리 (진행중: Batch 3 완료)
 
-> M0 + Phase 0 + Phase 1 + Phase 2 완료. Phase 3 Batch 2(BullMQ 커맨드/헬스체크 워커) 완료.
+> M0 + Phase 0 + Phase 1 + Phase 2 완료. Phase 3 Batch 3(커맨드 조회/재시도 API) 완료.
 
 ---
 
@@ -60,6 +60,7 @@
   - [ ] `cron.*` — 예약 작업
 - [x] 이중 제어 모드 API: `/delegate` (Hermes 경유) + `/command` (직접)
 - [x] BullMQ 워커: 커맨드 큐, 헬스체크 큐
+- [x] 커맨드 이력/운영 API: `/api/agent-commands`, `/api/agent-commands/:id`, `/api/agent-commands/:id/retry`
 - [ ] 프론트엔드 에이전트 관리 UI (제어 패널, 상세 뷰, 확인 다이얼로그)
 - [x] 감사 로깅 (모든 mutation 자동 기록)
 - [ ] 검증: UI에서 에이전트 일시정지/재시작, Hermes 경유 위임 동작
