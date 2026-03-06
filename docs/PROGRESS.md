@@ -2,6 +2,46 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 Batch 6 (Team 제어 패널 + inactive 포함 조회)
+
+### 요약
+Phase 3 여섯 번째 배치로 에이전트 제어 UI를 Team 화면에 본격 연결했다.
+inactive 에이전트까지 조회할 수 있도록 API를 확장하고, Team 제어 패널에서 direct/delegate/session/deactivate/reactivate를 실행할 수 있게 했다.
+
+### 완료 항목
+- ✅ `apps/api/src/store.ts`
+  - `getAgents({ includeInactive })` 옵션 지원
+- ✅ `apps/api/src/server.ts`
+  - `GET /api/agents?includeInactive=1` 지원
+- ✅ `apps/web/lib/api-server.ts`
+  - `getAgents({ includeInactive })` 지원
+- ✅ `apps/web/components/TeamControlBoard.tsx` 신규 추가
+  - 대상 에이전트 선택
+  - direct/delegate 호출
+  - `sessions.send`/`sessions.spawn` 호출
+  - deactivate/reactivate 액션
+  - refresh/오류/성공 상태 처리
+- ✅ `apps/web/app/(layout)/team/page.tsx`
+  - 기존 read-only 카드 뷰 → 제어 패널 컴포넌트 연결
+
+### 검증 결과
+- `pnpm --filter @vulcan/web lint` 성공
+- `pnpm --filter @vulcan/web build` 성공
+- `pnpm --filter @vulcan/api lint` 성공
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm --filter @vulcan/api test:gateway-event-adapter` 성공 (4/4)
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- 🚧 Phase 3 진행중 (Batch 6 완료)
+  - 다음 핵심: Team/Office 제어 패널의 입력 스키마 고도화 + confirm dialog/승인 UX
+
 ## 2026-03-06: Phase 3 Batch 5 (`sessions.spawn/send` 명시 API 연동)
 
 ### 요약

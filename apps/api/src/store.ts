@@ -198,12 +198,12 @@ function mapAuditLog(row: typeof auditLogTable.$inferSelect): AuditLogItem {
   };
 }
 
-export function getAgents(): Agent[] {
+export function getAgents(options?: { includeInactive?: boolean }): Agent[] {
   ensureSchema();
   return db
     .select()
     .from(agentsTable)
-    .where(eq(agentsTable.isActive, 1))
+    .where(options?.includeInactive ? undefined : eq(agentsTable.isActive, 1))
     .orderBy(agentsTable.name)
     .all()
     .map(mapAgent);

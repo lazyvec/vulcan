@@ -23,8 +23,15 @@ async function requestJson<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function getAgents() {
-  const data = await requestJson<{ agents: Agent[] }>("/api/agents");
+export async function getAgents(options?: { includeInactive?: boolean }) {
+  const params = new URLSearchParams();
+  if (options?.includeInactive) {
+    params.set("includeInactive", "1");
+  }
+  const suffix = params.toString();
+  const data = await requestJson<{ agents: Agent[] }>(
+    suffix ? `/api/agents?${suffix}` : "/api/agents",
+  );
   return data.agents;
 }
 

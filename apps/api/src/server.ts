@@ -342,7 +342,12 @@ app.onError((error, c) => {
   return c.json({ error: "internal server error" }, 500);
 });
 
-app.get("/api/agents", (c) => c.json({ agents: getAgents() }));
+app.get("/api/agents", (c) => {
+  const includeInactiveRaw = c.req.query("includeInactive") ?? "";
+  const includeInactive =
+    includeInactiveRaw === "1" || includeInactiveRaw.toLowerCase() === "true";
+  return c.json({ agents: getAgents({ includeInactive }) });
+});
 
 app.post("/api/agents", async (c) => {
   let payload: unknown;
