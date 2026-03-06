@@ -12,6 +12,7 @@ export const agentStatusSchema = z.enum([
 export const taskLaneSchema = z.enum(["backlog", "in_progress", "review"]);
 
 const nullableIdSchema = z.string().min(1).nullable();
+const jsonRecordSchema = z.record(z.string(), z.unknown());
 
 export const ingestEventInputSchema = z.object({
   id: z.string().min(1).optional(),
@@ -49,6 +50,50 @@ export const taskLanePatchSchema = z.object({
 });
 
 export const createEventSchema = ingestEventInputSchema;
+
+export const createAgentInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  name: z.string().min(1),
+  mission: z.string().min(1),
+  roleTags: z.array(z.string().min(1)).optional(),
+  avatarKey: z.string().min(1).optional(),
+  status: agentStatusSchema.optional(),
+  skills: z.array(z.string().min(1)).optional(),
+  capabilities: z.array(z.string().min(1)).optional(),
+  config: jsonRecordSchema.optional(),
+  gatewayId: nullableIdSchema.optional(),
+  isActive: z.boolean().optional(),
+  gatewayWorkspace: z.string().min(1).optional(),
+});
+
+export const updateAgentInputSchema = z.object({
+  name: z.string().min(1).optional(),
+  mission: z.string().min(1).optional(),
+  roleTags: z.array(z.string().min(1)).optional(),
+  avatarKey: z.string().min(1).optional(),
+  status: agentStatusSchema.optional(),
+  skills: z.array(z.string().min(1)).optional(),
+  capabilities: z.array(z.string().min(1)).optional(),
+  config: jsonRecordSchema.optional(),
+  gatewayId: nullableIdSchema.optional(),
+  isActive: z.boolean().optional(),
+  gatewayWorkspace: z.string().min(1).optional(),
+  model: z.string().min(1).optional(),
+});
+
+export const delegateCommandInputSchema = z.object({
+  message: z.string().min(1),
+  taskLabel: z.string().min(1).optional(),
+  metadata: jsonRecordSchema.optional(),
+  idempotencyKey: z.string().min(1).optional(),
+});
+
+export const directCommandInputSchema = z.object({
+  message: z.string().min(1),
+  to: z.string().min(1).optional(),
+  metadata: jsonRecordSchema.optional(),
+  idempotencyKey: z.string().min(1).optional(),
+});
 
 export const realtimeMessageTypeSchema = z.enum([
   "event",
@@ -89,3 +134,7 @@ export const realtimeServerMessageSchema = z.union([
 
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
+export type CreateAgentInput = z.infer<typeof createAgentInputSchema>;
+export type UpdateAgentInput = z.infer<typeof updateAgentInputSchema>;
+export type DelegateCommandInput = z.infer<typeof delegateCommandInputSchema>;
+export type DirectCommandInput = z.infer<typeof directCommandInputSchema>;

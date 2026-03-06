@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: M0 완료 + Phase 0 완료 + Phase 1 완료 + Phase 2 완료 → Phase 3 준비중
+> **현재 Phase**: M0 완료 + Phase 0 완료 + Phase 1 완료 + Phase 2 완료 → Phase 3 진행중 (Batch 1 완료)
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -22,10 +22,12 @@
 
 ## 설계 나침반
 
-### 현재 (Phase 2 완료)
+### 현재 (Phase 3 Batch 1 완료)
 - **분리 진행**: Next.js(UI) + Hono(API) + SQLite + SSE/WebSocket
 - **API 연결**: Web `/api/*` rewrite → Hono API
 - **어댑터 패턴**: OpenClaw Gateway 이벤트 → Hono `/api/adapter/ingest` → DB → SSE/WebSocket
+- **생명주기 API 기본형**: `/api/agents` CRUD(soft deactivate), `/delegate`, `/command`, `/api/gateways`, `/api/audit`
+- **감사 로깅**: 주요 mutation 경로 자동 기록
 
 ### 목표 (Phase 1~)
 - **분리 아키텍처**: Next.js (UI) + Hono (API + WebSocket + Worker) + PostgreSQL + Redis
@@ -40,11 +42,12 @@
 
 ## 시스템 흐름
 
-### 현재 (Phase 2 완료)
+### 현재 (Phase 3 Batch 1 완료)
 - **데이터 수집**: gateway-adapter → Hono `POST /api/adapter/ingest` → DB + SSE/WebSocket
 - **실시간**: Hono `GET /api/stream` (SSE) | `GET /api/events?since=` (폴링)
 - **UI**: Next.js는 API fetch 중심 UI 레이어로 동작
 - **태스크**: Kanban 3-lane → Hono `PATCH /api/tasks/:id` → 상태 변경
+- **생명주기**: 에이전트 생성/수정/비활성화 + Hermes 경유 위임 + 직접 커맨드 + 감사 로그 조회
 
 ### 목표 (Phase 2~)
 - **양방향**: Hono API ↔ Gateway RPC ↔ OpenClaw 에이전트
@@ -69,7 +72,7 @@
 | 0 | Foundation (모노레포 + 공유 패키지) | — | 완료 |
 | 1 | PostgreSQL + Redis + Hono | 0 | 완료 |
 | 2 | WebSocket + Gateway RPC | 1 | 완료 |
-| 3 | 에이전트 생명주기 관리 | 2 | 대기 |
+| 3 | 에이전트 생명주기 관리 | 2 | 진행중 (Batch 1 완료) |
 | 4 | 태스크 시스템 고도화 | 3 | 대기 |
 | 5 | 스킬 마켓플레이스 | 3 | 대기 |
 | 6 | Activity/Audit + 메트릭스 | 3, 4 | 대기 |

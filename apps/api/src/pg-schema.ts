@@ -21,6 +21,11 @@ export const agentsPgTable = pgTable("agents", {
   status: text("status").notNull(),
   statusSince: timestamp("status_since", { withTimezone: false }).notNull(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: false }).notNull(),
+  skills: jsonb("skills").$type<string[]>().notNull().default([]),
+  configJson: jsonb("config_json").$type<Record<string, unknown>>().notNull().default({}),
+  isActive: integer("is_active").notNull().default(1),
+  gatewayId: text("gateway_id"),
+  capabilities: jsonb("capabilities").$type<string[]>().notNull().default([]),
 });
 
 export const projectsPgTable = pgTable(
@@ -140,5 +145,69 @@ export const schedulesPgTable = pgTable(
       columns: [table.ownerAgentId],
       foreignColumns: [agentsPgTable.id],
     }).onDelete("set null"),
+  }),
+);
+
+export const gatewaysPgTable = pgTable(
+  "gateways",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    protocol: text("protocol").notNull().default("ws-rpc-v3"),
+    status: text("status").notNull().default("unknown"),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: false }),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
+  },
+  (table) => ({
+    idxGatewaysUpdated: index("idx_gateways_updated").on(table.updatedAt),
+  }),
+);
+
+export const agentCommandsPgTable = pgTable(
+  "agent_commands",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: uuid("agent_id").notNull(),
+    mode: text("mode").notNull(),
+    command: text("command").notNull(),
+    payloadJson: jsonb("payload_json").$type<Record<string, unknown>>().notNull().default({}),
+    status: text("status").notNull().default("queued"),
+    gatewayCommandId: text("gateway_command_id"),
+    error: text("error"),
+    requestedBy: text("requested_by").notNull().default("human"),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
+    executedAt: timestamp("executed_at", { withTimezone: false }),
+  },
+  (table) => ({
+    idxAgentCommandsAgent: index("idx_agent_commands_agent").on(table.agentId, table.createdAt),
+    idxAgentCommandsStatus: index("idx_agent_commands_status").on(table.status, table.updatedAt),
+    fkAgentCommandsAgent: foreignKey({
+      name: "fk_agent_commands_agent",
+      columns: [table.agentId],
+      foreignColumns: [agentsPgTable.id],
+    }).onDelete("cascade"),
+  }),
+);
+
+export const auditLogPgTable = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ts: nowTs("ts"),
+    actor: text("actor").notNull().default("human"),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id"),
+    source: text("source").notNull().default("api"),
+    beforeJson: jsonb("before_json").$type<Record<string, unknown>>().notNull().default({}),
+    afterJson: jsonb("after_json").$type<Record<string, unknown>>().notNull().default({}),
+    metadataJson: jsonb("metadata_json").$type<Record<string, unknown>>().notNull().default({}),
+  },
+  (table) => ({
+    idxAuditLogTs: index("idx_audit_log_ts").on(table.ts),
+    idxAuditLogEntity: index("idx_audit_log_entity").on(table.entityType, table.entityId, table.ts),
   }),
 );

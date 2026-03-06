@@ -17,6 +17,11 @@ export interface Agent {
   status: AgentStatus;
   statusSince: number;
   lastSeenAt: number;
+  skills?: string[];
+  config?: Record<string, unknown>;
+  isActive?: boolean;
+  gatewayId?: string | null;
+  capabilities?: string[];
 }
 
 export interface Project {
@@ -91,6 +96,48 @@ export interface IngestEventInput {
   type: string;
   summary: string;
   payloadJson?: string;
+}
+
+export interface GatewayInfo {
+  id: string;
+  name: string;
+  url: string;
+  protocol: string;
+  status: string;
+  lastSeenAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type AgentCommandMode = "delegate" | "direct";
+export type AgentCommandStatus = "queued" | "sent" | "failed";
+
+export interface AgentCommand {
+  id: string;
+  agentId: string;
+  mode: AgentCommandMode;
+  command: string;
+  payloadJson: string;
+  status: AgentCommandStatus;
+  gatewayCommandId: string | null;
+  error: string | null;
+  requestedBy: string;
+  createdAt: number;
+  updatedAt: number;
+  executedAt: number | null;
+}
+
+export interface AuditLogItem {
+  id: string;
+  ts: number;
+  actor: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  source: string;
+  beforeJson: string;
+  afterJson: string;
+  metadataJson: string;
 }
 
 export type RealtimeMessageType = "event" | "command" | "ack" | "error";

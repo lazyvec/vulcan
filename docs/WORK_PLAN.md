@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 3 — 에이전트 생명주기 관리 (시작 준비)
+## 현재 Phase: 3 — 에이전트 생명주기 관리 (진행중: Batch 1 완료)
 
-> M0 + Phase 0 + Phase 1 + Phase 2 완료. 다음 작업은 Phase 3 핵심(에이전트 생명주기 관리)으로 전환.
+> M0 + Phase 0 + Phase 1 + Phase 2 완료. Phase 3 Batch 1(데이터 모델/생명주기 API 기본형/감사 로그) 완료.
 
 ---
 
@@ -50,18 +50,18 @@
 
 ## Phase 3: 에이전트 생명주기 관리 (10-14일) — 의존성: Phase 2
 
-- [ ] 에이전트 데이터 모델 확장 (skills, config, is_active, gateway_id, capabilities)
-- [ ] 신규 테이블: `gateways`, `agent_commands`, `audit_log`
+- [x] 에이전트 데이터 모델 확장 (skills, config, is_active, gateway_id, capabilities)
+- [x] 신규 테이블: `gateways`, `agent_commands`, `audit_log`
 - [ ] Gateway RPC 통합
-  - [ ] `agents.list/create/delete` — 에이전트 CRUD
-  - [ ] `chat.send` — 메시지/지시 전송
+  - [ ] `agents.list/create/delete` — 에이전트 CRUD (현재: list/create/update 연동 + delete는 soft-delete 정책)
+  - [x] `chat.send` — 메시지/지시 전송
   - [ ] `sessions.spawn/send` — 하위 에이전트 위임/통신
   - [ ] `config.patch` — 설정 변경
   - [ ] `cron.*` — 예약 작업
-- [ ] 이중 제어 모드 API: `/delegate` (Hermes 경유) + `/command` (직접)
+- [x] 이중 제어 모드 API: `/delegate` (Hermes 경유) + `/command` (직접)
 - [ ] BullMQ 워커: 커맨드 큐, 헬스체크 큐
 - [ ] 프론트엔드 에이전트 관리 UI (제어 패널, 상세 뷰, 확인 다이얼로그)
-- [ ] 감사 로깅 (모든 mutation 자동 기록)
+- [x] 감사 로깅 (모든 mutation 자동 기록)
 - [ ] 검증: UI에서 에이전트 일시정지/재시작, Hermes 경유 위임 동작
 
 ## Phase 4: 태스크 시스템 고도화 (7-10일) — 의존성: Phase 3 | 병렬: Phase 5

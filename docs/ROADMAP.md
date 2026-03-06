@@ -1,6 +1,6 @@
 # Vulcan Roadmap
 
-> **현재 상태**: M0 완료 + Phase 0 완료 + Phase 1 완료 + Phase 2 완료 → Phase 3 준비중
+> **현재 상태**: M0 완료 + Phase 0 완료 + Phase 1 완료 + Phase 2 완료 → Phase 3 진행중 (Batch 1 완료)
 > **실행 체크리스트**: `docs/WORK_PLAN.md`
 
 ## 목표 아키텍처
@@ -53,7 +53,7 @@ M0을 깨뜨리지 않고 분리 가능 구조로 준비.
 - Hono 백엔드 서비스 (기존 12개 API 포팅)
 - Next.js API Routes 제거 → 프론트엔드 전용
 
-## Phase 2: WebSocket + OpenClaw Gateway RPC (5-7일)
+## Phase 2: WebSocket + OpenClaw Gateway RPC (5-7일, 완료)
 
 양방향 통신 기반 + OpenClaw 직접 연결.
 
@@ -65,6 +65,8 @@ M0을 깨뜨리지 않고 분리 가능 구조로 준비.
 ## Phase 3: 에이전트 생명주기 관리 (10-14일)
 
 핵심 패러다임 전환: 관찰 → 양방향 제어.
+
+진행 상태: **Batch 1 완료** (데이터 모델 확장 + 생명주기 API 기본형 + 감사 로그)
 
 - 에이전트 CRUD + 제어 API (pause/resume/restart/command)
 - 이중 제어 모드: Hermes 경유 위임 + 직접 제어

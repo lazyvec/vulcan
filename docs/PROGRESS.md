@@ -2,6 +2,55 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 Batch 1 (에이전트 생명주기 API 기본형 + 감사 로그)
+
+### 요약
+Phase 3의 첫 배치로 에이전트 생명주기 관리의 백엔드 기반을 구축했다.
+에이전트 모델/스키마를 확장하고 `gateways`, `agent_commands`, `audit_log` 테이블을 도입했으며, 생명주기 API(`create/update/deactivate/delegate/command`)와 mutation 감사 로깅을 연결했다.
+
+### 완료 항목
+- ✅ 공유 타입/스키마 확장 (`@vulcan/shared`)
+  - `Agent` 확장 필드: `skills`, `config`, `isActive`, `gatewayId`, `capabilities`
+  - 입력 검증 스키마: `createAgent`, `updateAgent`, `delegate`, `command`
+- ✅ API DB 스키마 확장 (`sqlite + pg`)
+  - `agents` 컬럼 확장
+  - 신규 테이블: `gateways`, `agent_commands`, `audit_log`
+- ✅ SQLite 레거시 DB 업그레이드 보강
+  - 기존 DB에서도 신규 컬럼/테이블이 자동 생성되도록 bootstrap 보강
+  - 마이그레이션 저널 존재 시에도 보강 로직이 실행되도록 `ensureSchema` 수정
+- ✅ Store 계층 기능 추가
+  - agent CRUD(soft deactivate 포함), gateway upsert/list, command 이력, audit append/list
+- ✅ Gateway RPC 연동 보강
+  - `agentsCreate`, `agentsUpdate`, `agentsDelete` 래퍼 추가
+- ✅ 생명주기 API 추가
+  - `POST /api/agents`
+  - `PUT /api/agents/:id`
+  - `DELETE /api/agents/:id` (soft delete)
+  - `POST /api/agents/:id/delegate`
+  - `POST /api/agents/:id/command`
+  - `GET /api/gateways`
+  - `GET /api/audit?limit=`
+- ✅ mutation 감사 로깅 적용
+  - `PATCH /api/tasks/:id`
+  - `POST /api/events`
+  - `POST /api/adapter/ingest`
+  - 신규 생명주기 엔드포인트
+
+### 검증 결과
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm --filter @vulcan/api test:gateway-event-adapter` 성공 (4/4)
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- 🚧 Phase 3 진행중 (Batch 1 완료)
+  - 다음 핵심: BullMQ 워커/제어 UI/고급 Gateway 제어 통합
+
 ## 2026-03-06: Phase 2 Batch 3 (Gateway 이벤트 어댑터 전환 + 팬아웃 정합화)
 
 ### 요약

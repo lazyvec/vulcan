@@ -6,24 +6,38 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { streamSSE } from "hono/streaming";
 import {
+  createAgentInputSchema,
   createEventSchema,
+  delegateCommandInputSchema,
+  directCommandInputSchema,
   ingestPayloadSchema,
   realtimeClientMessageSchema,
   taskLanePatchSchema,
+  updateAgentInputSchema,
 } from "@vulcan/shared/schemas";
 import type { RealtimeServerMessage } from "@vulcan/shared/types";
 import {
+  appendAuditLog,
   appendEvent,
   countRecords,
+  createAgent,
+  createAgentCommand,
+  deactivateAgent,
+  getAgentById,
   getAgents,
+  getAuditLogs,
   getDocs,
   getEventsSince,
+  getGateways,
   getLatestEvents,
   getMemoryItems,
   getProjects,
   getSchedules,
   getTasks,
+  updateAgent,
+  updateAgentCommand,
   updateTaskLane,
+  upsertGateway,
 } from "./store";
 import { ensureSchema, getSqlite } from "./db";
 import {
@@ -41,7 +55,7 @@ let wsClientCount = 0;
 const gatewayRpcClient = getGatewayRpcClient();
 const applyApiCors = cors({
   origin: process.env.VULCAN_CORS_ORIGIN ?? "*",
-  allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
+  allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
 });
 const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
@@ -63,6 +77,59 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function stringifyJson(value: unknown): string {
+  try {
+    return JSON.stringify(value ?? {});
+  } catch {
+    return "{}";
+  }
+}
+
+function extractIssueItems(error: {
+  issues: Array<{ path: PropertyKey[]; message: string }>;
+}) {
+  return error.issues.map((issue) => ({
+    path: issue.path.map((segment) => String(segment)).join("."),
+    message: issue.message,
+  }));
+}
+
+function writeAudit(input: {
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  before?: unknown;
+  after?: unknown;
+  metadata?: unknown;
+}) {
+  try {
+    appendAuditLog({
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId ?? null,
+      beforeJson: stringifyJson(input.before),
+      afterJson: stringifyJson(input.after),
+      metadataJson: stringifyJson(input.metadata),
+    });
+  } catch (error) {
+    console.error("[vulcan-api] audit write failed", error);
+  }
+}
+
+function extractGatewayCommandId(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const row = payload as Record<string, unknown>;
+  if (typeof row.runId === "string" && row.runId.trim()) {
+    return row.runId.trim();
+  }
+  if (typeof row.id === "string" && row.id.trim()) {
+    return row.id.trim();
+  }
+  return null;
 }
 
 function getGatewayQueryParams(url: string): Record<string, unknown> {
@@ -120,6 +187,347 @@ app.onError((error, c) => {
 
 app.get("/api/agents", (c) => c.json({ agents: getAgents() }));
 
+app.post("/api/agents", async (c) => {
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = createAgentInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "invalid agent payload",
+        issues: extractIssueItems(parsed.error),
+      },
+      400,
+    );
+  }
+
+  const agent = createAgent({
+    id: parsed.data.id,
+    name: parsed.data.name,
+    mission: parsed.data.mission,
+    roleTags: parsed.data.roleTags,
+    avatarKey: parsed.data.avatarKey,
+    status: parsed.data.status,
+    skills: parsed.data.skills,
+    capabilities: parsed.data.capabilities,
+    config: parsed.data.config,
+    gatewayId: parsed.data.gatewayId ?? null,
+    isActive: parsed.data.isActive,
+  });
+
+  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null = null;
+  if (parsed.data.gatewayWorkspace) {
+    try {
+      const result = await gatewayRpcClient.agentsCreate({
+        name: parsed.data.name,
+        workspace: parsed.data.gatewayWorkspace,
+        avatar: parsed.data.avatarKey,
+      });
+      gatewayResult = { ok: true, result };
+    } catch (error) {
+      gatewayResult = { ok: false, error: getErrorMessage(error) };
+    }
+  }
+
+  writeAudit({
+    action: "agent.create",
+    entityType: "agent",
+    entityId: agent.id,
+    after: agent,
+    metadata: {
+      gatewayWorkspace: parsed.data.gatewayWorkspace ?? null,
+      gatewayResult,
+    },
+  });
+
+  return c.json({ agent, gateway: gatewayResult }, 201);
+});
+
+app.put("/api/agents/:id", async (c) => {
+  const agentId = c.req.param("id");
+  const before = getAgentById(agentId);
+  if (!before) {
+    return c.json({ error: "agent not found" }, 404);
+  }
+
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = updateAgentInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "invalid agent update payload",
+        issues: extractIssueItems(parsed.error),
+      },
+      400,
+    );
+  }
+
+  const updated = updateAgent(agentId, {
+    name: parsed.data.name,
+    mission: parsed.data.mission,
+    roleTags: parsed.data.roleTags,
+    avatarKey: parsed.data.avatarKey,
+    status: parsed.data.status,
+    skills: parsed.data.skills,
+    capabilities: parsed.data.capabilities,
+    config: parsed.data.config,
+    gatewayId: parsed.data.gatewayId ?? undefined,
+    isActive: parsed.data.isActive,
+  });
+
+  if (!updated) {
+    return c.json({ error: "agent update failed" }, 500);
+  }
+
+  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null = null;
+  const shouldSyncGateway =
+    typeof parsed.data.name === "string" ||
+    typeof parsed.data.avatarKey === "string" ||
+    typeof parsed.data.model === "string" ||
+    typeof parsed.data.gatewayWorkspace === "string";
+
+  if (shouldSyncGateway) {
+    try {
+      const result = await gatewayRpcClient.agentsUpdate({
+        agentId,
+        name: parsed.data.name,
+        avatar: parsed.data.avatarKey,
+        model: parsed.data.model,
+        workspace: parsed.data.gatewayWorkspace,
+      });
+      gatewayResult = { ok: true, result };
+    } catch (error) {
+      gatewayResult = { ok: false, error: getErrorMessage(error) };
+    }
+  }
+
+  writeAudit({
+    action: "agent.update",
+    entityType: "agent",
+    entityId: agentId,
+    before,
+    after: updated,
+    metadata: {
+      gatewayResult,
+    },
+  });
+
+  return c.json({ agent: updated, gateway: gatewayResult });
+});
+
+app.delete("/api/agents/:id", async (c) => {
+  const agentId = c.req.param("id");
+  const before = getAgentById(agentId);
+  if (!before) {
+    return c.json({ error: "agent not found" }, 404);
+  }
+
+  const agent = deactivateAgent(agentId);
+  if (!agent) {
+    return c.json({ error: "agent deactivate failed" }, 500);
+  }
+
+  writeAudit({
+    action: "agent.deactivate",
+    entityType: "agent",
+    entityId: agentId,
+    before,
+    after: agent,
+    metadata: { mode: "soft-delete" },
+  });
+
+  return c.json({ agent });
+});
+
+app.post("/api/agents/:id/delegate", async (c) => {
+  const targetAgentId = c.req.param("id");
+  const targetAgent = getAgentById(targetAgentId);
+  if (!targetAgent) {
+    return c.json({ error: "target agent not found" }, 404);
+  }
+  if (targetAgent.isActive === false) {
+    return c.json({ error: "target agent is inactive" }, 409);
+  }
+
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = delegateCommandInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "invalid delegate payload",
+        issues: extractIssueItems(parsed.error),
+      },
+      400,
+    );
+  }
+
+  const command = createAgentCommand({
+    id: parsed.data.idempotencyKey,
+    agentId: targetAgentId,
+    mode: "delegate",
+    command: "chat.send",
+    payloadJson: stringifyJson(parsed.data),
+  });
+
+  const relayMessage = [
+    "[VULCAN_DELEGATE]",
+    `targetAgentId=${targetAgentId}`,
+    parsed.data.taskLabel ? `taskLabel=${parsed.data.taskLabel}` : null,
+    "",
+    parsed.data.message,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const gatewayResult = await gatewayRpcClient.chatSend({
+      to: "hermes",
+      message: relayMessage,
+      idempotencyKey: command.id,
+    });
+    const done = updateAgentCommand(command.id, {
+      status: "sent",
+      gatewayCommandId: extractGatewayCommandId(gatewayResult),
+      executedAt: Date.now(),
+      error: null,
+    });
+
+    writeAudit({
+      action: "agent.delegate",
+      entityType: "agent_command",
+      entityId: command.id,
+      after: done ?? command,
+      metadata: {
+        targetAgentId,
+        via: "hermes",
+        gatewayResult,
+      },
+    });
+
+    return c.json({ command: done ?? command, gateway: gatewayResult });
+  } catch (error) {
+    const failed = updateAgentCommand(command.id, {
+      status: "failed",
+      error: getErrorMessage(error),
+      executedAt: Date.now(),
+    });
+
+    writeAudit({
+      action: "agent.delegate.failed",
+      entityType: "agent_command",
+      entityId: command.id,
+      after: failed ?? command,
+      metadata: {
+        targetAgentId,
+        via: "hermes",
+        error: getErrorMessage(error),
+      },
+    });
+
+    return c.json({ error: getErrorMessage(error), command: failed ?? command }, 502);
+  }
+});
+
+app.post("/api/agents/:id/command", async (c) => {
+  const agentId = c.req.param("id");
+  const agent = getAgentById(agentId);
+  if (!agent) {
+    return c.json({ error: "agent not found" }, 404);
+  }
+  if (agent.isActive === false) {
+    return c.json({ error: "agent is inactive" }, 409);
+  }
+
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = directCommandInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: "invalid command payload",
+        issues: extractIssueItems(parsed.error),
+      },
+      400,
+    );
+  }
+
+  const command = createAgentCommand({
+    id: parsed.data.idempotencyKey,
+    agentId,
+    mode: "direct",
+    command: "chat.send",
+    payloadJson: stringifyJson(parsed.data),
+  });
+
+  try {
+    const gatewayResult = await gatewayRpcClient.chatSend({
+      to: parsed.data.to ?? agentId,
+      message: parsed.data.message,
+      idempotencyKey: command.id,
+    });
+    const done = updateAgentCommand(command.id, {
+      status: "sent",
+      gatewayCommandId: extractGatewayCommandId(gatewayResult),
+      executedAt: Date.now(),
+      error: null,
+    });
+
+    writeAudit({
+      action: "agent.command",
+      entityType: "agent_command",
+      entityId: command.id,
+      after: done ?? command,
+      metadata: {
+        target: parsed.data.to ?? agentId,
+        gatewayResult,
+      },
+    });
+
+    return c.json({ command: done ?? command, gateway: gatewayResult });
+  } catch (error) {
+    const failed = updateAgentCommand(command.id, {
+      status: "failed",
+      error: getErrorMessage(error),
+      executedAt: Date.now(),
+    });
+
+    writeAudit({
+      action: "agent.command.failed",
+      entityType: "agent_command",
+      entityId: command.id,
+      after: failed ?? command,
+      metadata: {
+        target: parsed.data.to ?? agentId,
+        error: getErrorMessage(error),
+      },
+    });
+
+    return c.json({ error: getErrorMessage(error), command: failed ?? command }, 502);
+  }
+});
+
 app.get("/api/projects", (c) => c.json({ projects: getProjects() }));
 
 app.get("/api/tasks", (c) => {
@@ -147,15 +555,13 @@ app.patch("/api/tasks/:id", async (c) => {
     return c.json(
       {
         error: "invalid task lane payload",
-        issues: parsed.error.issues.map((issue) => ({
-          path: issue.path.join("."),
-          message: issue.message,
-        })),
+        issues: extractIssueItems(parsed.error),
       },
       400,
     );
   }
 
+  const beforeTask = getTasks({ lane: "all" }).find((task) => task.id === c.req.param("id")) ?? null;
   const task = updateTaskLane(c.req.param("id"), parsed.data.lane);
   if (!task) {
     return c.json({ error: "task not found" }, 404);
@@ -172,6 +578,15 @@ app.patch("/api/tasks/:id", async (c) => {
   });
 
   publishEvent(event);
+
+  writeAudit({
+    action: "task.move",
+    entityType: "task",
+    entityId: task.id,
+    before: beforeTask,
+    after: task,
+    metadata: { lane: parsed.data.lane },
+  });
 
   return c.json({ task });
 });
@@ -197,10 +612,7 @@ app.post("/api/events", async (c) => {
     return c.json(
       {
         error: "invalid event payload",
-        issues: parsed.error.issues.map((issue) => ({
-          path: issue.path.join("."),
-          message: issue.message,
-        })),
+        issues: extractIssueItems(parsed.error),
       },
       400,
     );
@@ -218,6 +630,13 @@ app.post("/api/events", async (c) => {
 
   publishEvent(event);
 
+  writeAudit({
+    action: "event.create",
+    entityType: "event",
+    entityId: event.id,
+    after: event,
+  });
+
   return c.json({ event });
 });
 
@@ -234,10 +653,7 @@ app.post("/api/adapter/ingest", async (c) => {
     return c.json(
       {
         error: "invalid ingest payload",
-        issues: parsed.error.issues.map((issue) => ({
-          path: issue.path.join("."),
-          message: issue.message,
-        })),
+        issues: extractIssueItems(parsed.error),
       },
       400,
     );
@@ -249,6 +665,13 @@ app.post("/api/adapter/ingest", async (c) => {
     const row = appendEvent(event);
     publishEvent(row);
     return row;
+  });
+
+  writeAudit({
+    action: "adapter.ingest",
+    entityType: "event_batch",
+    entityId: null,
+    metadata: { ingested: inserted.length },
   });
 
   return c.json({ ingested: inserted.length, events: inserted });
@@ -265,9 +688,24 @@ app.get("/api/docs", (c) => {
 });
 
 app.get("/api/schedule", (c) => c.json({ schedules: getSchedules() }));
+app.get("/api/gateways", (c) => c.json({ gateways: getGateways() }));
+app.get("/api/audit", (c) => {
+  const limit = Number(c.req.query("limit") ?? "80");
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 300) : 80;
+  return c.json({ logs: getAuditLogs(safeLimit) });
+});
 
 app.get("/api/gateway/status", (c) => {
-  return c.json({ gateway: gatewayRpcClient.getStatus() });
+  const gateway = gatewayRpcClient.getStatus();
+  const gatewayRow = upsertGateway({
+    id: "openclaw-main",
+    name: "OpenClaw Gateway",
+    url: gateway.url,
+    protocol: "ws-rpc-v3",
+    status: gateway.connected ? "connected" : gateway.connecting ? "connecting" : "disconnected",
+    lastSeenAt: gateway.lastConnectedAt,
+  });
+  return c.json({ gateway, gatewayRow });
 });
 
 app.post("/api/gateway/rpc", async (c) => {
@@ -580,6 +1018,14 @@ async function checkRedis() {
 app.get("/api/health", async (c) => {
   const runtime = getRuntimeInfo();
   const gateway = gatewayRpcClient.getStatus();
+  const gatewayRow = upsertGateway({
+    id: "openclaw-main",
+    name: "OpenClaw Gateway",
+    url: gateway.url,
+    protocol: "ws-rpc-v3",
+    status: gateway.connected ? "connected" : gateway.connecting ? "connecting" : "disconnected",
+    lastSeenAt: gateway.lastConnectedAt,
+  });
 
   let sqliteOk = true;
   let sqliteError: string | undefined;
@@ -605,6 +1051,7 @@ app.get("/api/health", async (c) => {
     postgres,
     redis,
     gateway,
+    gatewayRow,
     sseOk: true,
     streamSubscribers: getSubscriberCount(),
     sseSubscribers: getSubscriberCount(),

@@ -62,6 +62,20 @@ export const db = drizzle(sqlite);
 
 let schemaReady = false;
 
+function tableHasColumn(tableName: string, columnName: string) {
+  const rows = sqlite
+    .prepare(`PRAGMA table_info(${tableName})`)
+    .all() as Array<{ name?: string }>;
+  return rows.some((row) => row.name === columnName);
+}
+
+function ensureColumn(tableName: string, columnName: string, columnDefinition: string) {
+  if (tableHasColumn(tableName, columnName)) {
+    return;
+  }
+  sqlite.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnDefinition};`);
+}
+
 function ensureLegacyBootstrap() {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS agents (
@@ -72,7 +86,12 @@ function ensureLegacyBootstrap() {
       avatar_key TEXT NOT NULL DEFAULT 'seed',
       status TEXT NOT NULL,
       status_since INTEGER NOT NULL,
-      last_seen_at INTEGER NOT NULL
+      last_seen_at INTEGER NOT NULL,
+      skills TEXT NOT NULL DEFAULT '[]',
+      config_json TEXT NOT NULL DEFAULT '{}',
+      is_active INTEGER NOT NULL DEFAULT 1,
+      gateway_id TEXT,
+      capabilities TEXT NOT NULL DEFAULT '[]'
     );
 
     CREATE TABLE IF NOT EXISTS projects (
@@ -137,10 +156,60 @@ function ensureLegacyBootstrap() {
       owner_agent_id TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS gateways (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      protocol TEXT NOT NULL DEFAULT 'ws-rpc-v3',
+      status TEXT NOT NULL DEFAULT 'unknown',
+      last_seen_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_commands (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      command TEXT NOT NULL,
+      payload_json TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'queued',
+      gateway_command_id TEXT,
+      error TEXT,
+      requested_by TEXT NOT NULL DEFAULT 'human',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      executed_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id TEXT PRIMARY KEY,
+      ts INTEGER NOT NULL,
+      actor TEXT NOT NULL DEFAULT 'human',
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT,
+      source TEXT NOT NULL DEFAULT 'api',
+      before_json TEXT NOT NULL DEFAULT '{}',
+      after_json TEXT NOT NULL DEFAULT '{}',
+      metadata_json TEXT NOT NULL DEFAULT '{}'
+    );
+
     CREATE INDEX IF NOT EXISTS idx_events_ts ON events (ts DESC);
     CREATE INDEX IF NOT EXISTS idx_tasks_lane ON tasks (lane);
     CREATE INDEX IF NOT EXISTS idx_projects_updated ON projects (updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_gateways_updated ON gateways (updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_agent_commands_agent ON agent_commands (agent_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_agent_commands_status ON agent_commands (status, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log (ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log (entity_type, entity_id, ts DESC);
   `);
+
+  ensureColumn("agents", "skills", "skills TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn("agents", "config_json", "config_json TEXT NOT NULL DEFAULT '{}'");
+  ensureColumn("agents", "is_active", "is_active INTEGER NOT NULL DEFAULT 1");
+  ensureColumn("agents", "gateway_id", "gateway_id TEXT");
+  ensureColumn("agents", "capabilities", "capabilities TEXT NOT NULL DEFAULT '[]'");
 }
 
 export function ensureSchema() {
@@ -154,9 +223,11 @@ export function ensureSchema() {
 
   if (hasMigrationJournal) {
     migrate(db, { migrationsFolder: MIGRATIONS_PATH });
-  } else {
-    ensureLegacyBootstrap();
   }
+
+  // Keep legacy SQLite databases forward-compatible even when
+  // migrations exist but don't yet include newer Phase tables/columns.
+  ensureLegacyBootstrap();
 
   schemaReady = true;
 }

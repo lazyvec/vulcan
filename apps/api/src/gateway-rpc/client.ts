@@ -272,6 +272,18 @@ export class GatewayRpcClient {
     return this.request("agents.list", params);
   }
 
+  agentsCreate(params: Record<string, unknown>) {
+    return this.request("agents.create", params);
+  }
+
+  agentsUpdate(params: Record<string, unknown>) {
+    return this.request("agents.update", params);
+  }
+
+  agentsDelete(params: Record<string, unknown>) {
+    return this.request("agents.delete", params);
+  }
+
   chatSend(params: Record<string, unknown>) {
     return this.request("chat.send", params);
   }

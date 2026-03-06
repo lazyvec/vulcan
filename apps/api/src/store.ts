@@ -3,9 +3,14 @@ import { and, desc, eq, gt, like, or, sql } from "drizzle-orm";
 import { statusFromEventType } from "@vulcan/shared/constants";
 import type {
   Agent,
+  AgentCommand,
+  AgentCommandMode,
+  AgentCommandStatus,
   AgentStatus,
+  AuditLogItem,
   DocItem,
   EventItem,
+  GatewayInfo,
   IngestEventInput,
   MemoryItem,
   Project,
@@ -15,9 +20,12 @@ import type {
 } from "@vulcan/shared/types";
 import { db, ensureSchema } from "./db";
 import {
+  agentCommandsTable,
   agentsTable,
+  auditLogTable,
   docsTable,
   eventsTable,
+  gatewaysTable,
   memoryItemsTable,
   projectsTable,
   schedulesTable,
@@ -38,6 +46,21 @@ function parseStringArray(raw: string | null | undefined): string[] {
   }
 }
 
+function parseJsonRecord(raw: string | null | undefined): Record<string, unknown> {
+  if (!raw) {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
 function mapAgent(row: typeof agentsTable.$inferSelect): Agent {
   return {
     id: row.id,
@@ -48,6 +71,11 @@ function mapAgent(row: typeof agentsTable.$inferSelect): Agent {
     status: row.status as AgentStatus,
     statusSince: row.statusSince,
     lastSeenAt: row.lastSeenAt,
+    skills: parseStringArray(row.skills),
+    config: parseJsonRecord(row.configJson),
+    isActive: row.isActive !== 0,
+    gatewayId: row.gatewayId,
+    capabilities: parseStringArray(row.capabilities),
   };
 }
 
@@ -125,9 +153,229 @@ function mapSchedule(row: typeof schedulesTable.$inferSelect): Schedule {
   };
 }
 
+function mapGateway(row: typeof gatewaysTable.$inferSelect): GatewayInfo {
+  return {
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    protocol: row.protocol,
+    status: row.status,
+    lastSeenAt: row.lastSeenAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapAgentCommand(row: typeof agentCommandsTable.$inferSelect): AgentCommand {
+  return {
+    id: row.id,
+    agentId: row.agentId,
+    mode: row.mode as AgentCommandMode,
+    command: row.command,
+    payloadJson: row.payloadJson,
+    status: row.status as AgentCommandStatus,
+    gatewayCommandId: row.gatewayCommandId,
+    error: row.error,
+    requestedBy: row.requestedBy,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    executedAt: row.executedAt,
+  };
+}
+
+function mapAuditLog(row: typeof auditLogTable.$inferSelect): AuditLogItem {
+  return {
+    id: row.id,
+    ts: row.ts,
+    actor: row.actor,
+    action: row.action,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    source: row.source,
+    beforeJson: row.beforeJson,
+    afterJson: row.afterJson,
+    metadataJson: row.metadataJson,
+  };
+}
+
 export function getAgents(): Agent[] {
   ensureSchema();
-  return db.select().from(agentsTable).orderBy(agentsTable.name).all().map(mapAgent);
+  return db
+    .select()
+    .from(agentsTable)
+    .where(eq(agentsTable.isActive, 1))
+    .orderBy(agentsTable.name)
+    .all()
+    .map(mapAgent);
+}
+
+export function getAgentById(id: string): Agent | null {
+  ensureSchema();
+  const row = db.select().from(agentsTable).where(eq(agentsTable.id, id)).get();
+  return row ? mapAgent(row) : null;
+}
+
+type MutableAgentFields = {
+  name?: string;
+  mission?: string;
+  roleTags?: string[];
+  avatarKey?: string;
+  status?: AgentStatus;
+  skills?: string[];
+  capabilities?: string[];
+  config?: Record<string, unknown>;
+  gatewayId?: string | null;
+  isActive?: boolean;
+};
+
+export function createAgent(
+  input: {
+    id?: string;
+    name: string;
+    mission: string;
+  } & MutableAgentFields,
+): Agent {
+  ensureSchema();
+  const now = Date.now();
+  const row: typeof agentsTable.$inferInsert = {
+    id: input.id ?? randomUUID(),
+    name: input.name,
+    mission: input.mission,
+    roleTags: JSON.stringify(input.roleTags ?? []),
+    avatarKey: input.avatarKey ?? "seed",
+    status: input.status ?? "idle",
+    statusSince: now,
+    lastSeenAt: now,
+    skills: JSON.stringify(input.skills ?? []),
+    configJson: JSON.stringify(input.config ?? {}),
+    isActive: input.isActive === false ? 0 : 1,
+    gatewayId: input.gatewayId ?? null,
+    capabilities: JSON.stringify(input.capabilities ?? []),
+  };
+
+  db.insert(agentsTable).values(row).run();
+
+  const created = db.select().from(agentsTable).where(eq(agentsTable.id, row.id)).get();
+  if (!created) {
+    throw new Error("failed to create agent");
+  }
+  return mapAgent(created);
+}
+
+export function updateAgent(id: string, input: MutableAgentFields): Agent | null {
+  ensureSchema();
+  const existing = db.select().from(agentsTable).where(eq(agentsTable.id, id)).get();
+  if (!existing) {
+    return null;
+  }
+
+  const nextValues: Partial<typeof agentsTable.$inferInsert> = {};
+  if (typeof input.name === "string") {
+    nextValues.name = input.name;
+  }
+  if (typeof input.mission === "string") {
+    nextValues.mission = input.mission;
+  }
+  if (typeof input.avatarKey === "string") {
+    nextValues.avatarKey = input.avatarKey;
+  }
+  if (typeof input.status === "string") {
+    nextValues.status = input.status;
+    nextValues.statusSince = Date.now();
+    nextValues.lastSeenAt = Date.now();
+  }
+  if (Array.isArray(input.roleTags)) {
+    nextValues.roleTags = JSON.stringify(input.roleTags);
+  }
+  if (Array.isArray(input.skills)) {
+    nextValues.skills = JSON.stringify(input.skills);
+  }
+  if (Array.isArray(input.capabilities)) {
+    nextValues.capabilities = JSON.stringify(input.capabilities);
+  }
+  if (input.config && typeof input.config === "object") {
+    nextValues.configJson = JSON.stringify(input.config);
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "gatewayId")) {
+    nextValues.gatewayId = input.gatewayId ?? null;
+  }
+  if (typeof input.isActive === "boolean") {
+    nextValues.isActive = input.isActive ? 1 : 0;
+  }
+
+  if (Object.keys(nextValues).length > 0) {
+    db.update(agentsTable).set(nextValues).where(eq(agentsTable.id, id)).run();
+  }
+
+  const updated = db.select().from(agentsTable).where(eq(agentsTable.id, id)).get();
+  return updated ? mapAgent(updated) : null;
+}
+
+export function deactivateAgent(id: string): Agent | null {
+  ensureSchema();
+  const now = Date.now();
+  db.update(agentsTable)
+    .set({ isActive: 0, status: "idle", statusSince: now })
+    .where(eq(agentsTable.id, id))
+    .run();
+  const row = db.select().from(agentsTable).where(eq(agentsTable.id, id)).get();
+  return row ? mapAgent(row) : null;
+}
+
+export function getGateways(): GatewayInfo[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(gatewaysTable)
+    .orderBy(desc(gatewaysTable.updatedAt))
+    .all()
+    .map(mapGateway);
+}
+
+export function upsertGateway(input: {
+  id: string;
+  name: string;
+  url: string;
+  protocol?: string;
+  status: string;
+  lastSeenAt?: number | null;
+}): GatewayInfo {
+  ensureSchema();
+  const now = Date.now();
+  const existing = db.select().from(gatewaysTable).where(eq(gatewaysTable.id, input.id)).get();
+
+  if (existing) {
+    db.update(gatewaysTable)
+      .set({
+        name: input.name,
+        url: input.url,
+        protocol: input.protocol ?? existing.protocol,
+        status: input.status,
+        lastSeenAt: input.lastSeenAt ?? existing.lastSeenAt,
+        updatedAt: now,
+      })
+      .where(eq(gatewaysTable.id, input.id))
+      .run();
+  } else {
+    db.insert(gatewaysTable)
+      .values({
+        id: input.id,
+        name: input.name,
+        url: input.url,
+        protocol: input.protocol ?? "ws-rpc-v3",
+        status: input.status,
+        lastSeenAt: input.lastSeenAt ?? null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+  }
+
+  const row = db.select().from(gatewaysTable).where(eq(gatewaysTable.id, input.id)).get();
+  if (!row) {
+    throw new Error("failed to upsert gateway");
+  }
+  return mapGateway(row);
 }
 
 export function getProjects(): Project[] {
@@ -276,6 +524,118 @@ export function getSchedules(): Schedule[] {
     .map(mapSchedule);
 }
 
+export function createAgentCommand(input: {
+  id?: string;
+  agentId: string;
+  mode: AgentCommandMode;
+  command: string;
+  payloadJson?: string;
+  status?: AgentCommandStatus;
+  requestedBy?: string;
+}): AgentCommand {
+  ensureSchema();
+  const now = Date.now();
+  const row: typeof agentCommandsTable.$inferInsert = {
+    id: input.id ?? randomUUID(),
+    agentId: input.agentId,
+    mode: input.mode,
+    command: input.command,
+    payloadJson: input.payloadJson ?? "{}",
+    status: input.status ?? "queued",
+    gatewayCommandId: null,
+    error: null,
+    requestedBy: input.requestedBy ?? "human",
+    createdAt: now,
+    updatedAt: now,
+    executedAt: null,
+  };
+  db.insert(agentCommandsTable).values(row).run();
+  const created = db
+    .select()
+    .from(agentCommandsTable)
+    .where(eq(agentCommandsTable.id, row.id))
+    .get();
+  if (!created) {
+    throw new Error("failed to create agent command");
+  }
+  return mapAgentCommand(created);
+}
+
+export function updateAgentCommand(
+  id: string,
+  input: {
+    status?: AgentCommandStatus;
+    gatewayCommandId?: string | null;
+    error?: string | null;
+    executedAt?: number | null;
+  },
+): AgentCommand | null {
+  ensureSchema();
+  const updateSet: Partial<typeof agentCommandsTable.$inferInsert> = {
+    updatedAt: Date.now(),
+  };
+
+  if (input.status) {
+    updateSet.status = input.status;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "gatewayCommandId")) {
+    updateSet.gatewayCommandId = input.gatewayCommandId ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "error")) {
+    updateSet.error = input.error ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "executedAt")) {
+    updateSet.executedAt = input.executedAt ?? null;
+  }
+
+  db.update(agentCommandsTable).set(updateSet).where(eq(agentCommandsTable.id, id)).run();
+  const row = db.select().from(agentCommandsTable).where(eq(agentCommandsTable.id, id)).get();
+  return row ? mapAgentCommand(row) : null;
+}
+
+export function appendAuditLog(input: {
+  id?: string;
+  actor?: string;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  source?: string;
+  beforeJson?: string;
+  afterJson?: string;
+  metadataJson?: string;
+}): AuditLogItem {
+  ensureSchema();
+  const row: typeof auditLogTable.$inferInsert = {
+    id: input.id ?? randomUUID(),
+    ts: Date.now(),
+    actor: input.actor ?? "human",
+    action: input.action,
+    entityType: input.entityType,
+    entityId: input.entityId ?? null,
+    source: input.source ?? "api",
+    beforeJson: input.beforeJson ?? "{}",
+    afterJson: input.afterJson ?? "{}",
+    metadataJson: input.metadataJson ?? "{}",
+  };
+  db.insert(auditLogTable).values(row).run();
+  const created = db.select().from(auditLogTable).where(eq(auditLogTable.id, row.id)).get();
+  if (!created) {
+    throw new Error("failed to append audit log");
+  }
+  return mapAuditLog(created);
+}
+
+export function getAuditLogs(limit = 80): AuditLogItem[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(auditLogTable)
+    .orderBy(desc(auditLogTable.ts))
+    .limit(limit)
+    .all()
+    .map(mapAuditLog);
+}
+
 export function countRecords() {
   ensureSchema();
 
@@ -286,11 +646,20 @@ export function countRecords() {
     .all();
   const [tasksCount] = db.select({ count: sql<number>`count(*)` }).from(tasksTable).all();
   const [eventsCount] = db.select({ count: sql<number>`count(*)` }).from(eventsTable).all();
+  const [gatewaysCount] = db.select({ count: sql<number>`count(*)` }).from(gatewaysTable).all();
+  const [commandsCount] = db
+    .select({ count: sql<number>`count(*)` })
+    .from(agentCommandsTable)
+    .all();
+  const [auditCount] = db.select({ count: sql<number>`count(*)` }).from(auditLogTable).all();
 
   return {
     agents: agentsCount?.count ?? 0,
     projects: projectsCount?.count ?? 0,
     tasks: tasksCount?.count ?? 0,
     events: eventsCount?.count ?? 0,
+    gateways: gatewaysCount?.count ?? 0,
+    commands: commandsCount?.count ?? 0,
+    auditLogs: auditCount?.count ?? 0,
   };
 }

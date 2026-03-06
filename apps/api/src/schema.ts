@@ -9,6 +9,11 @@ export const agentsTable = sqliteTable("agents", {
   status: text("status").notNull(),
   statusSince: integer("status_since").notNull(),
   lastSeenAt: integer("last_seen_at").notNull(),
+  skills: text("skills").notNull().default("[]"),
+  configJson: text("config_json").notNull().default("{}"),
+  isActive: integer("is_active").notNull().default(1),
+  gatewayId: text("gateway_id"),
+  capabilities: text("capabilities").notNull().default("[]"),
 });
 
 export const projectsTable = sqliteTable(
@@ -90,3 +95,62 @@ export const schedulesTable = sqliteTable("schedules", {
   nextRunAt: integer("next_run_at"),
   ownerAgentId: text("owner_agent_id"),
 });
+
+export const gatewaysTable = sqliteTable(
+  "gateways",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    protocol: text("protocol").notNull().default("ws-rpc-v3"),
+    status: text("status").notNull().default("unknown"),
+    lastSeenAt: integer("last_seen_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => ({
+    idxGatewaysUpdated: index("idx_gateways_updated").on(table.updatedAt),
+  }),
+);
+
+export const agentCommandsTable = sqliteTable(
+  "agent_commands",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    mode: text("mode").notNull(),
+    command: text("command").notNull(),
+    payloadJson: text("payload_json").notNull().default("{}"),
+    status: text("status").notNull().default("queued"),
+    gatewayCommandId: text("gateway_command_id"),
+    error: text("error"),
+    requestedBy: text("requested_by").notNull().default("human"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    executedAt: integer("executed_at"),
+  },
+  (table) => ({
+    idxAgentCommandsAgent: index("idx_agent_commands_agent").on(table.agentId, table.createdAt),
+    idxAgentCommandsStatus: index("idx_agent_commands_status").on(table.status, table.updatedAt),
+  }),
+);
+
+export const auditLogTable = sqliteTable(
+  "audit_log",
+  {
+    id: text("id").primaryKey(),
+    ts: integer("ts").notNull(),
+    actor: text("actor").notNull().default("human"),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id"),
+    source: text("source").notNull().default("api"),
+    beforeJson: text("before_json").notNull().default("{}"),
+    afterJson: text("after_json").notNull().default("{}"),
+    metadataJson: text("metadata_json").notNull().default("{}"),
+  },
+  (table) => ({
+    idxAuditLogTs: index("idx_audit_log_ts").on(table.ts),
+    idxAuditLogEntity: index("idx_audit_log_entity").on(table.entityType, table.entityId, table.ts),
+  }),
+);
