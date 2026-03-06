@@ -2,6 +2,36 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `design/ux-overhaul-pass1`
 
+## 2026-03-06: 고도화 로드맵 v2 수립
+
+### 요약
+openclaw-mission-control 참조 분석 → Vulcan 고도화 방향 확정.
+**관찰 전용 → 완전한 양방향 제어 플랫폼**으로의 패러다임 전환.
+
+### 확정된 설계 결정
+| 항목 | 결정 |
+|------|------|
+| Vulcan ↔ OpenClaw | Gateway WebSocket RPC (`ws://127.0.0.1:18789`) |
+| 에이전트 모델 | 단일 Gateway 내 멀티 에이전트 |
+| 제어 계층 | Hermes 경유 위임 + 직접 제어 (이중 모드) |
+| Telegram | 별도 봇 불필요. 기존 채널로 알림 전송 |
+| DB | PostgreSQL + Redis 전환 |
+| 백엔드 | Hono (TypeScript) 분리 |
+| 철학 | "사용자가 Vulcan으로 제어. Hermes가 오케스트레이션." |
+
+### 현재 상태
+- ✅ M0 기능 완료 (관찰, 칸반, 메모리, 문서, PWA)
+- ✅ 디자인/UX 오버홀 Pass 1 + Pass 2 완료
+- ✅ 고도화 로드맵 v2 수립 완료
+- 🔜 **다음 작업: Phase 0 — Foundation (모노레포 + 공유 패키지)**
+
+### 산출물
+- `docs/ROADMAP.md` — 전체 로드맵 (Phase 0~10)
+- `docs/WORK_PLAN.md` — 실행 체크리스트
+- `docs/Vulcan_PRODUCT_MASTER.md` — 제품 정의 개정 (v2)
+
+---
+
 ## 2026-03-06: 디자인/UX 오버홀 Pass 1
 
 ### 변경 요약
@@ -26,23 +56,12 @@ Vulcan Mission Control의 전반적인 디자인/UX를 개선. 기능 변경 없
 | `package.json` | lucide-react, framer-motion, @tailwindcss/typography 추가 |
 | `tailwind.config.ts` | 신규 생성 (typography 플러그인) |
 
-### 디자인 결정
-- **색상**: Atrium 중립 팔레트(#1A1917 base) 차용, Vulcan 포인트 컬러(#e07a40) 유지
-- **모바일**: 사이드바 → 슬라이드 오버레이 + 햄버거 메뉴
-- **PWA**: manifest.json + viewport-fit=cover
-- **실시간성**: framer-motion으로 이벤트 진입 애니메이션
-
-### 검증 결과
-- `npm run build`: 통과
-- `npm run lint`: 통과 (경고 0)
-
 ### Pass 2 완료
 - ✅ `stone-*` 하드코딩 → 디자인 토큰 변수 통일
-- ✅ OfficeView selectedAgentId setter 복원 (에이전트 카드 클릭 선택)
-- ✅ select 요소 aria-label 추가 (KanbanBoard, LiveActivityPanel)
-- ✅ Service Worker 구현 (캐시 우선/네트워크 우선 전략)
-- ✅ PWA 아이콘 정식 마감 (favicon.ico, apple-touch-icon, 192/512 PNG)
-- ✅ Sidebar "Warm Obsidian" 라벨 제거
-- ✅ Sidebar 네비게이션 브랜드 톤 마감 (active accent bar, hover 상태)
+- ✅ OfficeView selectedAgentId setter 복원
+- ✅ select 요소 aria-label 추가
+- ✅ Service Worker 구현
+- ✅ PWA 아이콘 정식 마감
+- ✅ Sidebar 브랜드 톤 마감
 - ✅ README.md 전면 재작성
 - ✅ BRAND.md 토큰/상태/아이콘 문서화
