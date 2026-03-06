@@ -120,6 +120,8 @@ pm2 startOrReload ecosystem.config.js --env production
 | `POST` | `/api/events` | 이벤트 수동 생성 |
 | `POST` | `/api/adapter/ingest` | OpenClaw 어댑터 인제스트 |
 | `GET` | `/api/agents` | 에이전트 목록 |
+| `POST` | `/api/agents/:id/pause` | 에이전트 일시정지 |
+| `POST` | `/api/agents/:id/resume` | 에이전트 재개 |
 | `GET` | `/api/projects` | 프로젝트 목록 |
 | `GET/PATCH` | `/api/tasks` | 태스크 CRUD |
 | `GET` | `/api/memory` | 메모리 아이템 |
@@ -127,6 +129,9 @@ pm2 startOrReload ecosystem.config.js --env production
 | `GET` | `/api/schedule` | 스케줄 목록 |
 | `GET` | `/api/gateway/status` | Gateway 연결 상태 |
 | `POST` | `/api/gateway/rpc` | Gateway RPC 호출 |
+| `PATCH` | `/api/gateway/config` | Gateway 설정 패치 |
+| `GET` | `/api/gateway/cron` | Gateway cron 목록 |
+| `GET` | `/api/gateway/cron/status` | Gateway cron 상태 |
 
 ## OpenClaw 연동
 

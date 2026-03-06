@@ -2,6 +2,46 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 Batch 8 (Gateway Ops + pause/resume 마무리)
+
+### 요약
+Phase 3의 마지막 배치로 Gateway 운영 제어와 에이전트 일시정지/재개 흐름을 Team 화면에 통합했다.
+`config.patch`, `cron.*`, `pause/resume` 경로를 UI/API 양쪽에서 연결해 에이전트 생명주기 관리 Phase를 닫았다.
+
+### 완료 항목
+- ✅ `apps/api/src/server.ts`
+  - `POST /api/agents/:id/pause` 추가
+  - `POST /api/agents/:id/resume` 추가
+  - pause/resume 시 Gateway `sessions.patch` best-effort 호출 + 감사로그 기록
+- ✅ `apps/web/components/TeamControlBoard.tsx`
+  - lifecycle 액션에 `Pause/Resume` 추가
+  - paused 상태 표시(`agent.config.paused`) 반영
+  - Gateway Ops 패널 추가
+    - `GET /api/gateway/status`
+    - `GET /api/gateway/config`, `PATCH /api/gateway/config`
+    - `GET /api/gateway/cron`, `GET /api/gateway/cron/status`
+  - config patch JSON 입력 검증/오류 처리
+- ✅ 문서 동기화
+  - `CLAUDE.md`, `docs/WORK_PLAN.md`, `docs/ROADMAP.md`를 Phase 3 완료 기준으로 갱신
+
+### 검증 결과
+- `pnpm --filter @vulcan/api lint` 성공
+- `pnpm --filter @vulcan/web lint` 성공
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm --filter @vulcan/api test:gateway-event-adapter` 성공 (4/4)
+- `pnpm --filter @vulcan/web build` 성공
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- ✅ Phase 3 완료 (Batch 8)
+- ▶️ 다음: Phase 4 태스크 시스템 고도화
+
 ## 2026-03-06: Phase 3 Batch 7 (Mission Control UX 리파인: Tasks/Team/Office)
 
 ### 요약

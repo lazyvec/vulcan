@@ -36,6 +36,26 @@ function confirmAction(message: string) {
   return window.confirm(message);
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function toPrettyJson(value: unknown) {
+  try {
+    return JSON.stringify(value ?? {}, null, 2);
+  } catch {
+    return "{}";
+  }
+}
+
+function isPaused(agent: Agent | null) {
+  const config = asRecord(agent?.config);
+  return config?.paused === true;
+}
+
 async function fetchErrorMessage(response: Response) {
   try {
     const data = (await response.json()) as { error?: string };
@@ -61,10 +81,27 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
   const [notice, setNotice] = useState<string>("");
   const [error, setError] = useState<string>("");
 
+  const [gatewayBusy, setGatewayBusy] = useState(false);
+  const [gatewayNotice, setGatewayNotice] = useState("");
+  const [gatewayError, setGatewayError] = useState("");
+  const [gatewayStatus, setGatewayStatus] = useState<unknown>(null);
+  const [cronList, setCronList] = useState<unknown>(null);
+  const [cronStatus, setCronStatus] = useState<unknown>(null);
+  const [gatewayConfigText, setGatewayConfigText] = useState("{}");
+
   const selectedAgent = useMemo(
     () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
     [agents, selectedAgentId],
   );
+
+  const selectedAgentInactive = selectedAgent?.isActive === false;
+  const selectedAgentPaused = isPaused(selectedAgent);
+
+  const gatewayStatusRecord = useMemo(() => asRecord(gatewayStatus), [gatewayStatus]);
+  const gatewayConnected = gatewayStatusRecord?.connected === true;
+  const gatewayConnecting = gatewayStatusRecord?.connecting === true;
+  const gatewayUrl =
+    typeof gatewayStatusRecord?.url === "string" ? gatewayStatusRecord.url : "unknown";
 
   useEffect(() => {
     if (!agents.length) {
@@ -104,6 +141,52 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
     setAgents(nextAgents);
   }
 
+  async function refreshGatewayOps() {
+    setGatewayBusy(true);
+    setGatewayError("");
+    setGatewayNotice("");
+    try {
+      const [statusRes, configRes, cronRes, cronStatusRes] = await Promise.all([
+        fetch("/api/gateway/status"),
+        fetch("/api/gateway/config"),
+        fetch("/api/gateway/cron"),
+        fetch("/api/gateway/cron/status"),
+      ]);
+
+      if (!statusRes.ok) {
+        throw new Error(await fetchErrorMessage(statusRes));
+      }
+      if (!configRes.ok) {
+        throw new Error(await fetchErrorMessage(configRes));
+      }
+      if (!cronRes.ok) {
+        throw new Error(await fetchErrorMessage(cronRes));
+      }
+      if (!cronStatusRes.ok) {
+        throw new Error(await fetchErrorMessage(cronStatusRes));
+      }
+
+      const statusPayload = (await statusRes.json()) as { gateway?: unknown };
+      const configPayload = (await configRes.json()) as { config?: unknown };
+      const cronPayload = (await cronRes.json()) as { cron?: unknown };
+      const cronStatusPayload = (await cronStatusRes.json()) as { status?: unknown };
+
+      setGatewayStatus(statusPayload.gateway ?? null);
+      setCronList(cronPayload.cron ?? null);
+      setCronStatus(cronStatusPayload.status ?? null);
+      setGatewayConfigText(toPrettyJson(configPayload.config ?? {}));
+      setGatewayNotice("Gateway 정보를 갱신했어요.");
+    } catch (gatewayLoadError) {
+      setGatewayError(`Gateway 조회 실패: ${toErrorMessage(gatewayLoadError)}`);
+    } finally {
+      setGatewayBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshGatewayOps();
+  }, []);
+
   function validateInputs(options?: { requireTaskLabel?: boolean }) {
     const trimmedMessage = message.trim();
     const normalizedTaskLabel = normalizeTaskLabel(taskLabel);
@@ -124,6 +207,42 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
     };
   }
 
+  async function patchGatewayConfig() {
+    let parsedConfig: unknown;
+    try {
+      parsedConfig = JSON.parse(gatewayConfigText);
+    } catch {
+      setGatewayError("Gateway Config JSON 형식이 올바르지 않아요.");
+      return;
+    }
+
+    if (!asRecord(parsedConfig)) {
+      setGatewayError("Gateway Config는 JSON object 형태여야 해요.");
+      return;
+    }
+
+    setGatewayBusy(true);
+    setGatewayError("");
+    setGatewayNotice("");
+
+    try {
+      const response = await fetch("/api/gateway/config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsedConfig),
+      });
+      if (!response.ok) {
+        throw new Error(await fetchErrorMessage(response));
+      }
+      await refreshGatewayOps();
+      setGatewayNotice("Gateway config.patch 요청을 보냈어요.");
+    } catch (gatewayPatchError) {
+      setGatewayError(`Gateway config.patch 실패: ${toErrorMessage(gatewayPatchError)}`);
+    } finally {
+      setGatewayBusy(false);
+    }
+  }
+
   async function performAction(label: string, action: () => Promise<void>) {
     setBusyAction(label);
     setError("");
@@ -137,6 +256,42 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
     } finally {
       setBusyAction(null);
     }
+  }
+
+  async function pauseAgent() {
+    if (!selectedAgent) return;
+    if (!confirmAction(`${selectedAgent.name}를 일시정지할까요?`)) {
+      return;
+    }
+
+    await performAction("Pause", async () => {
+      const response = await fetch(`/api/agents/${selectedAgent.id}/pause`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: message.trim().slice(0, 120) || undefined,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await fetchErrorMessage(response));
+      }
+    });
+  }
+
+  async function resumeAgent() {
+    if (!selectedAgent) return;
+    if (!confirmAction(`${selectedAgent.name}를 재개할까요?`)) {
+      return;
+    }
+
+    await performAction("Resume", async () => {
+      const response = await fetch(`/api/agents/${selectedAgent.id}/resume`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error(await fetchErrorMessage(response));
+      }
+    });
   }
 
   async function deactivateAgent() {
@@ -255,8 +410,6 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
     });
   }
 
-  const selectedAgentInactive = selectedAgent?.isActive === false;
-
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.4fr)]">
       <article className="vulcan-card p-4">
@@ -287,7 +440,10 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
             </div>
             <p className="text-xs text-[var(--color-muted-foreground)]">{selectedAgent.mission}</p>
             <p className="mt-1 text-xs text-[var(--color-tertiary)]">
-              Zone: {OFFICE_ZONES[selectedAgent.status]} · Active: {selectedAgent.isActive === false ? "No" : "Yes"}
+              Zone: {OFFICE_ZONES[selectedAgent.status]} · Active: {selectedAgentInactive ? "No" : "Yes"}
+            </p>
+            <p className="mt-1 text-xs text-[var(--color-tertiary)]">
+              Paused: {selectedAgentPaused ? "Yes" : "No"}
             </p>
           </div>
         ) : null}
@@ -339,7 +495,7 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
             <button
               type="button"
               className={actionButtonClassName()}
-              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive}
+              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive || selectedAgentPaused}
               onClick={() => void sendDirectCommand()}
             >
               Direct Command
@@ -347,7 +503,7 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
             <button
               type="button"
               className={actionButtonClassName()}
-              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive}
+              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive || selectedAgentPaused}
               onClick={() => void sendDelegateCommand()}
             >
               Delegate via Hermes
@@ -363,7 +519,7 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
             <button
               type="button"
               className={actionButtonClassName()}
-              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive}
+              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive || selectedAgentPaused}
               onClick={() => void sendSessionMessage()}
             >
               Session Send
@@ -371,7 +527,7 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
             <button
               type="button"
               className={actionButtonClassName()}
-              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive}
+              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive || selectedAgentPaused}
               onClick={() => void spawnSessionTask()}
             >
               Session Spawn
@@ -384,6 +540,22 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
             Lifecycle Actions
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              className={actionButtonClassName()}
+              disabled={!selectedAgent || selectedAgentInactive || selectedAgentPaused || Boolean(busyAction)}
+              onClick={() => void pauseAgent()}
+            >
+              Pause
+            </button>
+            <button
+              type="button"
+              className={actionButtonClassName()}
+              disabled={!selectedAgent || selectedAgentInactive || !selectedAgentPaused || Boolean(busyAction)}
+              onClick={() => void resumeAgent()}
+            >
+              Resume
+            </button>
             <button
               type="button"
               className={actionButtonClassName()}
@@ -416,6 +588,63 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
           </div>
         </article>
 
+        <article className="vulcan-card p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Gateway Ops</h3>
+            <button
+              type="button"
+              className="rounded border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)]"
+              onClick={() => void refreshGatewayOps()}
+              disabled={gatewayBusy}
+            >
+              {gatewayBusy ? "Loading..." : "Refresh"}
+            </button>
+          </div>
+
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="vulcan-chip">
+              {gatewayConnected ? "Connected" : gatewayConnecting ? "Connecting" : "Disconnected"}
+            </span>
+            <span className="vulcan-chip">{gatewayUrl}</span>
+          </div>
+
+          <label className="block">
+            <span className="mb-1 block text-xs text-[var(--color-tertiary)]">config.patch payload</span>
+            <textarea
+              value={gatewayConfigText}
+              onChange={(event) => setGatewayConfigText(event.target.value)}
+              className="vulcan-input min-h-[120px] w-full resize-y font-mono text-[11px]"
+            />
+          </label>
+
+          <button
+            type="button"
+            className="mt-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => void patchGatewayConfig()}
+            disabled={gatewayBusy}
+          >
+            Apply config.patch
+          </button>
+
+          <div className="mt-3 grid gap-2 lg:grid-cols-2">
+            <div>
+              <p className="mb-1 text-xs text-[var(--color-tertiary)]">cron.list</p>
+              <pre className="max-h-36 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-background)] p-2 text-[10px] text-[var(--color-muted-foreground)]">
+                {toPrettyJson(cronList)}
+              </pre>
+            </div>
+            <div>
+              <p className="mb-1 text-xs text-[var(--color-tertiary)]">cron.status</p>
+              <pre className="max-h-36 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-background)] p-2 text-[10px] text-[var(--color-muted-foreground)]">
+                {toPrettyJson(cronStatus)}
+              </pre>
+            </div>
+          </div>
+
+          {gatewayNotice ? <p className="mt-2 text-xs text-green-300">{gatewayNotice}</p> : null}
+          {gatewayError ? <p className="mt-2 text-xs text-red-300">{gatewayError}</p> : null}
+        </article>
+
         {groupedActiveByStatus.map((section) => (
           <article key={section.status} className="vulcan-card p-3">
             <div className="mb-3 flex items-center justify-between">
@@ -427,6 +656,7 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
             <div className="grid gap-2 md:grid-cols-2">
               {section.agents.map((agent) => {
                 const selected = agent.id === selectedAgentId;
+                const paused = isPaused(agent);
                 return (
                   <button
                     key={agent.id}
@@ -449,6 +679,7 @@ export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
                       Zone: {OFFICE_ZONES[agent.status]}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1">
+                      {paused ? <span className="vulcan-chip text-[10px]">Paused</span> : null}
                       {agent.roleTags.map((tag) => (
                         <span key={tag} className="vulcan-chip text-[11px]">
                           {tag}

@@ -227,6 +227,16 @@ function parseAgentCommandPayload(command: AgentCommand): CommandQueueJobData | 
   };
 }
 
+function mergeAgentConfig(
+  base: Record<string, unknown> | undefined,
+  patch: Record<string, unknown>,
+) {
+  return {
+    ...(base ?? {}),
+    ...patch,
+  };
+}
+
 async function executeCommandQueueJob(payload: CommandQueueJobData) {
   const actionBase = payload.mode === "delegate" ? "agent.delegate" : "agent.command";
   const target = payload.mode === "delegate" ? "hermes" : payload.to ?? payload.agentId;
@@ -510,6 +520,112 @@ app.delete("/api/agents/:id", async (c) => {
   });
 
   return c.json({ agent });
+});
+
+app.post("/api/agents/:id/pause", async (c) => {
+  const agentId = c.req.param("id");
+  const before = getAgentById(agentId);
+  if (!before) {
+    return c.json({ error: "agent not found" }, 404);
+  }
+
+  let reason: string | undefined;
+  try {
+    const payload = await c.req.json().catch(() => undefined);
+    if (isRecord(payload) && typeof payload.reason === "string" && payload.reason.trim()) {
+      reason = payload.reason.trim();
+    }
+  } catch {
+    // Ignore optional payload parsing errors.
+  }
+
+  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null = null;
+  try {
+    const result = await gatewayRpcClient.sessionsPatch({
+      agentId,
+      sessionId: agentId,
+      paused: true,
+      state: "paused",
+      reason: reason ?? "human_pause",
+    });
+    gatewayResult = { ok: true, result };
+  } catch (error) {
+    gatewayResult = { ok: false, error: getErrorMessage(error) };
+  }
+
+  const agent = updateAgent(agentId, {
+    status: "idle",
+    config: mergeAgentConfig(before.config, {
+      paused: true,
+      pausedAt: Date.now(),
+      pauseReason: reason ?? null,
+    }),
+  });
+
+  if (!agent) {
+    return c.json({ error: "agent pause failed" }, 500);
+  }
+
+  writeAudit({
+    action: "agent.pause",
+    entityType: "agent",
+    entityId: agentId,
+    before,
+    after: agent,
+    metadata: {
+      reason: reason ?? null,
+      gatewayResult,
+    },
+  });
+
+  return c.json({ agent, gateway: gatewayResult });
+});
+
+app.post("/api/agents/:id/resume", async (c) => {
+  const agentId = c.req.param("id");
+  const before = getAgentById(agentId);
+  if (!before) {
+    return c.json({ error: "agent not found" }, 404);
+  }
+
+  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null = null;
+  try {
+    const result = await gatewayRpcClient.sessionsPatch({
+      agentId,
+      sessionId: agentId,
+      paused: false,
+      state: "active",
+    });
+    gatewayResult = { ok: true, result };
+  } catch (error) {
+    gatewayResult = { ok: false, error: getErrorMessage(error) };
+  }
+
+  const agent = updateAgent(agentId, {
+    status: "idle",
+    config: mergeAgentConfig(before.config, {
+      paused: false,
+      resumedAt: Date.now(),
+      pauseReason: null,
+    }),
+  });
+
+  if (!agent) {
+    return c.json({ error: "agent resume failed" }, 500);
+  }
+
+  writeAudit({
+    action: "agent.resume",
+    entityType: "agent",
+    entityId: agentId,
+    before,
+    after: agent,
+    metadata: {
+      gatewayResult,
+    },
+  });
+
+  return c.json({ agent, gateway: gatewayResult });
 });
 
 app.post("/api/agents/:id/delegate", async (c) => {
