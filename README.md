@@ -5,8 +5,8 @@
 <h1 align="center">Vulcan Mission Control</h1>
 
 <p align="center">
-  <strong>The forge behind the messenger.</strong><br/>
-  Hermes가 달리는 동안, Vulcan은 대장간에서 지켜본다.
+  <strong>The god who forges what the messenger carries.</strong><br/>
+  Hermes가 달리는 동안, Vulcan은 화로 앞에서 지켜본다.
 </p>
 
 <p align="center">
@@ -17,8 +17,8 @@
 
 ## Philosophy
 
-> **Vulcan** — 로마 신화의 대장장이 신. 보이지 않는 곳에서 도구를 벼린다.
-> 화려하지 않지만 모든 신의 무기가 이 대장간에서 태어났다.
+> **Vulcan** — 불과 기술의 신. 올림푸스의 무기는 모두 그의 손에서 태어났다.
+> 전장에 나서지 않지만, 전장을 만드는 자. 관찰하고, 벼리고, 넘겨준다.
 
 > **Hermes** — 경계를 넘나드는 전령. 자율적으로 사고하고, 실행하고, 보고한다.
 > OpenClaw라는 이름 아래 코드를 쓰고, 조사하고, 동기화하는 에이전트.
@@ -173,7 +173,7 @@ Vulcan의 시각 언어: **Calm Intelligence**
 | Accent (Hearth) | `#e07a40` | 포인트, CTA |
 | Foreground | `#fafaf9` | 본문 텍스트 |
 
-> Hearth — 대장간의 화덕. Vulcan의 유일한 따뜻한 색.
+> Hearth — Vulcan이 다스리는 불. 유일한 따뜻한 색.
 
 ## Guardrails
 
