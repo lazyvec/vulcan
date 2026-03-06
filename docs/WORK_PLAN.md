@@ -24,7 +24,7 @@
 - [ ] 외래키 제약조건 추가
 - [ ] SQLite → PostgreSQL 원타임 데이터 마이그레이션 스크립트
 - [x] Redis 설정 (`ioredis` + `bullmq`) — API 패키지 의존성/큐 초기화 코드 도입
-- [ ] `event-stream.ts` in-memory → Redis Pub/Sub 교체
+- [x] `event-stream.ts` in-memory → Redis Pub/Sub 교체 (REDIS_URL 설정 시 팬아웃)
 - [x] Hono 백엔드 서비스 구축 (`apps/api/`) — 기존 12개 API 포팅
 - [x] 미들웨어: CORS, 보안 헤더, 에러 핸들링, 로깅
 - [x] Health endpoint: PostgreSQL + Redis 연결 상태

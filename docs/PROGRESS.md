@@ -13,6 +13,7 @@ Phase 1의 첫 배치를 구현했다.
 - ✅ API 포팅: agents/projects/tasks/events/stream/adapter/memory/docs/schedule/health
 - ✅ 미들웨어 적용: CORS, 보안 헤더, 로깅, 공통 에러 응답
 - ✅ Health 확장: SQLite + PostgreSQL + Redis 상태 리포트
+- ✅ 이벤트 스트림 in-memory → Redis Pub/Sub 전환 (REDIS_URL 기반)
 - ✅ Next.js API Route 제거 + `/api/*` → Hono rewrite 연결
 - ✅ Web 서버 컴포넌트 데이터 로드를 Store 직접 호출 → Hono API fetch로 전환
 - ✅ PM2 설정에 `vulcan-api` 프로세스 추가
