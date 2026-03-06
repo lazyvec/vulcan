@@ -60,7 +60,7 @@ function StatusIcon({ status }: { status: AgentStatus }) {
 }
 
 export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
-  const [selectedAgentId] = useState<string>(
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(
     agents[0]?.id ?? "hermes"
   );
   const [liveAgents, setLiveAgents] = useState<Agent[]>(agents);
@@ -98,9 +98,15 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
 
         <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {liveAgents.map((agent) => (
-            <div
+            <button
               key={agent.id}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+              type="button"
+              onClick={() => setSelectedAgentId(agent.id)}
+              className={`rounded-lg border p-3 text-left transition-colors ${
+                selectedAgentId === agent.id
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-muted)]"
+              }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-base font-semibold text-[var(--color-foreground)]">{agent.name}</span>
@@ -115,7 +121,7 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
               </div>
               <p className="mt-1 text-sm text-[var(--color-tertiary)]">{STATUS_LABELS[agent.status]}</p>
               <p className="text-xs text-[var(--color-tertiary)]">{OFFICE_ZONES[agent.status]}</p>
-            </div>
+            </button>
           ))}
         </div>
 

@@ -152,6 +152,7 @@ export function LiveActivityPanel({
         </span>
         <select
           className="vulcan-input w-auto"
+          aria-label="Select time range"
           value={range}
           onChange={(event) => setRange(event.target.value as ActivityRange)}
         >

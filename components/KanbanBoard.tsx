@@ -73,6 +73,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
           />
           <select
             className="vulcan-input w-auto"
+            aria-label="Filter by agent"
             value={assigneeFilter}
             onChange={(event) => setAssigneeFilter(event.target.value)}
           >
