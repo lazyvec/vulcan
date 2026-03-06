@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LiveActivityPanel } from "@/components/LiveActivityPanel";
 import {
   OFFICE_ZONES,
@@ -75,15 +75,46 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatDateTime(ts: number) {
+  return new Date(ts).toLocaleString("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
-  const [selectedAgentId, setSelectedAgentId] = useState<string>(
-    agents[0]?.id ?? "hermes"
-  );
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(agents[0]?.id ?? "hermes");
   const [liveAgents, setLiveAgents] = useState<Agent[]>(agents);
   const [commands, setCommands] = useState<AgentCommand[]>([]);
   const [commandsLoading, setCommandsLoading] = useState(false);
   const [commandsError, setCommandsError] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  const selectedAgent = useMemo(
+    () => liveAgents.find((agent) => agent.id === selectedAgentId) ?? null,
+    [liveAgents, selectedAgentId],
+  );
+
+  useEffect(() => {
+    if (!liveAgents.length) {
+      setSelectedAgentId("");
+      return;
+    }
+    if (!liveAgents.some((agent) => agent.id === selectedAgentId)) {
+      setSelectedAgentId(liveAgents[0].id);
+    }
+  }, [liveAgents, selectedAgentId]);
+
+  const agentsByStatus = useMemo(
+    () =>
+      STATUS_SEQUENCE.map((status) => ({
+        status,
+        agents: liveAgents.filter((agent) => agent.status === status),
+      })),
+    [liveAgents],
+  );
 
   function handleIncomingEvent(event: EventItem) {
     if (!event.agentId) return;
@@ -92,8 +123,8 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
       prev.map((agent) =>
         agent.id === event.agentId
           ? { ...agent, status, statusSince: event.ts, lastSeenAt: event.ts }
-          : agent
-      )
+          : agent,
+      ),
     );
   }
 
@@ -107,7 +138,7 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
     setCommandsError(null);
     try {
       const response = await fetch(
-        `/api/agent-commands?agentId=${encodeURIComponent(agentId)}&limit=20`
+        `/api/agent-commands?agentId=${encodeURIComponent(agentId)}&limit=20`,
       );
       if (!response.ok) {
         throw new Error(`failed to load commands (${response.status})`);
@@ -154,6 +185,10 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
   }, [selectedAgentId]);
 
   async function runDemo(status: AgentStatus) {
+    if (!selectedAgentId) {
+      return;
+    }
+
     await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -168,116 +203,209 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-      <section className="vulcan-card flex flex-col p-4">
-        <h2 className="mb-4 text-lg font-semibold">Agent Status</h2>
-
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {liveAgents.map((agent) => (
-            <button
-              key={agent.id}
-              type="button"
-              onClick={() => setSelectedAgentId(agent.id)}
-              className={`rounded-lg border p-3 text-left transition-colors ${
-                selectedAgentId === agent.id
-                  ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-muted)]"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-base font-semibold text-[var(--color-foreground)]">{agent.name}</span>
-                <div
-                  className={`flex size-7 items-center justify-center rounded-full text-xs font-bold ${
-                    agent.status === "idle" ? "" : "status-glow"
-                  }`}
-                  style={{ borderColor: STATUS_COLORS[agent.status] }}
-                >
-                  <StatusIcon status={agent.status} />
-                </div>
-              </div>
-              <p className="mt-1 text-sm text-[var(--color-tertiary)]">{STATUS_LABELS[agent.status]}</p>
-              <p className="text-xs text-[var(--color-tertiary)]">{OFFICE_ZONES[agent.status]}</p>
-            </button>
-          ))}
+    <div className="grid gap-4 2xl:grid-cols-[1.8fr_1fr]">
+      <section className="vulcan-card p-4">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <h2 className="mr-auto text-lg font-semibold text-[var(--color-foreground)]">Office Floor</h2>
+          <span className="vulcan-chip text-xs">Agents {liveAgents.length}</span>
+          <span className="vulcan-chip text-xs">
+            Selected {selectedAgent?.name ?? "none"}
+          </span>
         </div>
 
-        <div className="mt-auto rounded-lg border border-dashed border-[var(--color-border)] p-3">
-          <p className="mb-2 text-xs font-medium text-[var(--color-tertiary)]">
-            Demo Controls (for {selectedAgentId})
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {STATUS_SEQUENCE.map((status) => (
-              <button
-                key={status}
-                type="button"
-                data-testid={`office-demo-${status}`}
-                className="flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-                onClick={() => runDemo(status)}
-              >
-                <StatusIcon status={status} />
-                {STATUS_LABELS[status]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-[var(--color-tertiary)]">
-              Recent Commands (for {selectedAgentId})
-            </p>
-            <button
-              type="button"
-              className="rounded border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)]"
-              onClick={() => void loadCommands(selectedAgentId)}
-              disabled={commandsLoading}
-            >
-              {commandsLoading ? "Loading..." : "Refresh"}
-            </button>
-          </div>
-
-          {commandsError ? (
-            <p className="mb-2 text-xs text-red-300">{commandsError}</p>
-          ) : null}
-
-          <div className="space-y-2">
-            {commands.map((command) => (
-              <article
-                key={command.id}
-                className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-2"
-              >
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <p className="truncate text-xs font-medium text-[var(--color-foreground)]">
-                    {command.mode === "delegate" ? "Delegate via Hermes" : "Direct Command"}
-                  </p>
-                  <span
-                    className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${COMMAND_STATUS_COLORS[command.status]}`}
-                  >
-                    {COMMAND_STATUS_LABELS[command.status]}
-                  </span>
-                </div>
-                <p className="text-[11px] text-[var(--color-tertiary)]">
-                  {formatTime(command.createdAt)} · {command.id}
+        <div className="grid gap-4 xl:grid-cols-[1.45fr_1fr]">
+          <div className="space-y-3">
+            <article className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/70 p-3">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-tertiary)]">
+                  Zone Board
                 </p>
-                {command.error ? (
-                  <p className="mt-1 line-clamp-2 text-[11px] text-red-300">{command.error}</p>
-                ) : null}
-                {command.status === "failed" ? (
-                  <button
-                    type="button"
-                    className="mt-2 rounded border border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => void retryCommand(command.id)}
-                    disabled={retryingId === command.id}
+                <p className="text-xs text-[var(--color-tertiary)]">status → office zone mapping</p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {agentsByStatus.map((zone) => (
+                  <article
+                    key={zone.status}
+                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5"
                   >
-                    {retryingId === command.id ? "Retrying..." : "Retry"}
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <StatusIcon status={zone.status} />
+                        <p className="text-xs font-semibold text-[var(--color-foreground)]">
+                          {STATUS_LABELS[zone.status]}
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-[var(--color-tertiary)]">
+                        {zone.agents.length}
+                      </span>
+                    </div>
+                    <p className="mb-2 text-[11px] text-[var(--color-tertiary)]">{OFFICE_ZONES[zone.status]}</p>
+                    <div className="space-y-1.5">
+                      {zone.agents.length > 0 ? (
+                        zone.agents.map((agent) => (
+                          <button
+                            key={agent.id}
+                            type="button"
+                            onClick={() => setSelectedAgentId(agent.id)}
+                            className={`flex w-full items-center justify-between rounded border px-2 py-1 text-left text-xs transition-colors ${
+                              selectedAgentId === agent.id
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
+                                : "border-[var(--color-border)] bg-[var(--color-background)] hover:bg-[var(--color-muted)]"
+                            }`}
+                          >
+                            <span className="truncate text-[var(--color-foreground)]">{agent.name}</span>
+                            <span className="text-[10px] text-[var(--color-tertiary)]">
+                              {formatTime(agent.lastSeenAt)}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="text-[11px] text-[var(--color-tertiary)]">No agents in this zone</p>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/70 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-tertiary)]">
+                Agent Roster
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {liveAgents.map((agent) => (
+                  <button
+                    key={agent.id}
+                    type="button"
+                    onClick={() => setSelectedAgentId(agent.id)}
+                    className={`rounded border p-2.5 text-left transition-colors ${
+                      selectedAgentId === agent.id
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
+                        : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-muted)]"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-[var(--color-foreground)]">{agent.name}</p>
+                    <p className="text-xs" style={{ color: STATUS_COLORS[agent.status] }}>
+                      {STATUS_LABELS[agent.status]}
+                    </p>
                   </button>
-                ) : null}
-              </article>
-            ))}
-            {!commandsLoading && commands.length === 0 ? (
-              <p className="text-xs text-[var(--color-tertiary)]">No command history yet.</p>
-            ) : null}
+                ))}
+              </div>
+            </article>
           </div>
+
+          <aside className="space-y-3">
+            <article className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-[var(--color-foreground)]">Selected Agent</h3>
+                {selectedAgent ? (
+                  <span className="vulcan-chip text-xs" style={{ color: STATUS_COLORS[selectedAgent.status] }}>
+                    {STATUS_LABELS[selectedAgent.status]}
+                  </span>
+                ) : null}
+              </div>
+              {selectedAgent ? (
+                <>
+                  <p className="text-sm font-semibold text-[var(--color-foreground)]">{selectedAgent.name}</p>
+                  <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{selectedAgent.mission}</p>
+                  <p className="mt-2 text-[11px] text-[var(--color-tertiary)]">
+                    Zone: {OFFICE_ZONES[selectedAgent.status]}
+                  </p>
+                  <p className="text-[11px] text-[var(--color-tertiary)]">
+                    Last Seen: {formatDateTime(selectedAgent.lastSeenAt)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {selectedAgent.roleTags.map((tag) => (
+                      <span key={tag} className="vulcan-chip text-[11px]">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-[var(--color-tertiary)]">No agent selected</p>
+              )}
+            </article>
+
+            <article className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-[var(--color-tertiary)]">
+                  Recent Commands (for {selectedAgentId || "none"})
+                </p>
+                <button
+                  type="button"
+                  className="rounded border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)]"
+                  onClick={() => void loadCommands(selectedAgentId)}
+                  disabled={commandsLoading}
+                >
+                  {commandsLoading ? "Loading..." : "Refresh"}
+                </button>
+              </div>
+
+              {commandsError ? <p className="mb-2 text-xs text-red-300">{commandsError}</p> : null}
+
+              <div className="space-y-2">
+                {commands.map((command) => (
+                  <article
+                    key={command.id}
+                    className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-2"
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <p className="truncate text-xs font-medium text-[var(--color-foreground)]">
+                        {command.mode === "delegate" ? "Delegate via Hermes" : "Direct Command"}
+                      </p>
+                      <span
+                        className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${COMMAND_STATUS_COLORS[command.status]}`}
+                      >
+                        {COMMAND_STATUS_LABELS[command.status]}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[var(--color-tertiary)]">
+                      {formatTime(command.createdAt)} · {command.id}
+                    </p>
+                    {command.error ? (
+                      <p className="mt-1 line-clamp-2 text-[11px] text-red-300">{command.error}</p>
+                    ) : null}
+                    {command.status === "failed" ? (
+                      <button
+                        type="button"
+                        className="mt-2 rounded border border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => void retryCommand(command.id)}
+                        disabled={retryingId === command.id}
+                      >
+                        {retryingId === command.id ? "Retrying..." : "Retry"}
+                      </button>
+                    ) : null}
+                  </article>
+                ))}
+                {!commandsLoading && commands.length === 0 ? (
+                  <p className="text-xs text-[var(--color-tertiary)]">No command history yet.</p>
+                ) : null}
+              </div>
+            </article>
+
+            <article className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-background)] p-3">
+              <p className="mb-2 text-xs font-medium text-[var(--color-tertiary)]">
+                Demo Controls (for {selectedAgentId || "none"})
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {STATUS_SEQUENCE.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    data-testid={`office-demo-${status}`}
+                    className="flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-xs text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+                    onClick={() => void runDemo(status)}
+                    disabled={!selectedAgentId}
+                  >
+                    <StatusIcon status={status} />
+                    {STATUS_LABELS[status]}
+                  </button>
+                ))}
+              </div>
+            </article>
+          </aside>
         </div>
       </section>
 

@@ -2,6 +2,45 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 Batch 7 (Mission Control UX 리파인: Tasks/Team/Office)
+
+### 요약
+Phase 3 일곱 번째 배치로 테마는 유지한 채 레이아웃/UX 밀도를 끌어올렸다.
+특히 사용자 피드백 기준으로 조악했던 Tasks Kanban, Team(Agents), Office 화면의 정보 위계를 정리하고, Team lifecycle 액션에 confirm 단계를 추가했다.
+
+### 완료 항목
+- ✅ `apps/web/components/KanbanBoard.tsx`
+  - 상단 요약/필터 바 재구성 (검색 + assignee + 총량)
+  - lane 헤더 메타(아이콘/설명/카운트) 강화
+  - 카드 메타(업데이트 시간/담당자) 가독성 개선
+  - lane 이동 UX를 select 기반으로 정리 + optimistic rollback 보강
+- ✅ `apps/web/components/TeamControlBoard.tsx`
+  - 좌측 제어 패널/우측 상태별 roster 2패널 구조로 재배치
+  - active/inactive 상태 가시성 강화
+  - `deactivate/reactivate` confirm 단계 추가
+  - `message/taskLabel` 입력 검증 강화 (taskLabel 규칙 검증)
+- ✅ `apps/web/components/OfficeView.tsx`
+  - Zone Board(상태→오피스 존) 중심 레이아웃 재구성
+  - Selected Agent 상세/command history 우선순위 재정렬
+  - Agent roster와 demo controls를 보조 패널화해 운영 동선 정리
+- ✅ 문서 동기화
+  - `CLAUDE.md`, `docs/WORK_PLAN.md`, `docs/ROADMAP.md`를 Batch 7 기준으로 갱신
+
+### 검증 결과
+- `pnpm --filter @vulcan/web lint` 성공
+- `pnpm --filter @vulcan/web build` 성공
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- 🚧 Phase 3 진행중 (Batch 7 완료)
+  - 다음 핵심: Gateway RPC 통합 잔여(`config.patch`, `cron.*`) + 에이전트 pause/resume 검증 UX
+
 ## 2026-03-06: Phase 3 Batch 6 (Team 제어 패널 + inactive 포함 조회)
 
 ### 요약
