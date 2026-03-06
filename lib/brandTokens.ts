@@ -1,15 +1,15 @@
 export const BRAND_THEME = {
-  name: "Warm Obsidian",
+  name: "Warm Obsidian (Atrium Neutrals)",
   tone: "Calm Intelligence",
   colors: {
-    background: "#0c0a09",
-    card: "#1c1917",
-    muted: "#292524",
-    border: "#44403c",
+    background: "#1a1917",
+    surface: "#252422",
+    muted: "#2d2b29",
+    border: "hsl(34 6% 24%)",
     primary: "#e07a40",
     primaryHover: "#e8955e",
-    foreground: "#fafaf9",
-    mutedForeground: "#a8a29e",
+    foreground: "#f5f4f2",
+    mutedForeground: "#bfbab4",
   },
   radius: {
     control: 8,

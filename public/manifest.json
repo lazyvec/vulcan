@@ -1,0 +1,16 @@
+{
+  "name": "Vulcan Mission Control",
+  "short_name": "Vulcan",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1917",
+  "theme_color": "#1a1917",
+  "description": "Mission Control for Hermes",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

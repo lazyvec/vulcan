@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { DocItem } from "@/lib/types";
+import { Tag } from "lucide-react";
 
 interface DocsExplorerProps {
   docs: DocItem[];
@@ -14,65 +15,97 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) {
-      return docs;
-    }
-
-    return docs.filter((doc) => {
-      return (
+    if (!q) return docs;
+    return docs.filter(
+      (doc) =>
         doc.title.toLowerCase().includes(q) ||
         doc.tags.join(" ").toLowerCase().includes(q) ||
         doc.content.toLowerCase().includes(q)
-      );
-    });
+    );
   }, [docs, query]);
 
-  const selected = filtered.find((item) => item.id === selectedId) ?? filtered[0];
+  // Derive effective selection: if current selectedId is not in filtered, fall back to first
+  const effectiveSelectedId = useMemo(() => {
+    if (filtered.length === 0) return "";
+    if (filtered.find((d) => d.id === selectedId)) return selectedId;
+    return filtered[0].id;
+  }, [filtered, selectedId]);
+
+  const selected = useMemo(
+    () => filtered.find((item) => item.id === effectiveSelectedId) ?? filtered[0],
+    [filtered, effectiveSelectedId]
+  );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_1.6fr]">
-      <section className="vulcan-card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Docs List</h2>
+    <div>
+      <div className="mb-4">
         <input
-          className="vulcan-input mb-3"
+          className="vulcan-input max-w-sm"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="docs / tags 검색"
+          placeholder="Search docs..."
         />
-        <div className="space-y-2">
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+        <section className="flex flex-col gap-3">
           {filtered.map((doc) => (
             <button
               type="button"
               key={doc.id}
               onClick={() => setSelectedId(doc.id)}
-              className="w-full rounded-[var(--radius-control)] border px-3 py-2 text-left"
-              style={{
-                borderColor: doc.id === selected?.id ? "var(--color-primary)" : "var(--color-border)",
-                background: doc.id === selected?.id ? "var(--color-primary-12)" : "rgba(41,37,36,0.35)",
-              }}
+              className={`rounded-lg border p-4 text-left transition-colors ${
+                doc.id === selected?.id
+                  ? "border-primary/80 bg-primary/10"
+                  : "border-stone-800 bg-stone-900/50 hover:border-stone-700"
+              }`}
             >
-              <p className="text-sm font-medium">{doc.title}</p>
-              <p className="text-xs text-[var(--color-muted-foreground)]">{doc.tags.join(" · ")}</p>
+              <h3
+                className={`font-semibold ${
+                  doc.id === selected?.id ? "text-primary" : "text-stone-200"
+                }`}
+              >
+                {doc.title}
+              </h3>
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-stone-500">
+                <Tag size={14} />
+                <span>{doc.tags.join(" · ")}</span>
+              </div>
             </button>
           ))}
-        </div>
-      </section>
+          {filtered.length === 0 && (
+            <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-stone-800">
+              <p className="text-sm text-stone-500">No documents found.</p>
+            </div>
+          )}
+        </section>
 
-      <section className="vulcan-card p-4">
-        {selected ? (
-          <>
-            <h2 className="text-lg font-semibold">{selected.title}</h2>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              {selected.tags.map((tag) => `#${tag}`).join(" ")}
-            </p>
-            <pre className="mt-4 overflow-auto whitespace-pre-wrap rounded-[var(--radius-card)] border p-4 text-sm font-[var(--font-geist-mono)] text-[var(--color-foreground)]">
-              {selected.content}
-            </pre>
-          </>
-        ) : (
-          <p className="text-sm text-[var(--color-muted-foreground)]">문서를 선택해주세요.</p>
-        )}
-      </section>
+        <section className="vulcan-card min-h-[400px] p-5">
+          {selected ? (
+            <>
+              <h2 className="text-xl font-bold text-stone-100">{selected.title}</h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {selected.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-block rounded-full bg-stone-700/50 px-3 py-1 text-xs font-medium text-stone-300"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+              <div className="prose prose-invert mt-6 max-w-none text-stone-300">
+                <pre className="mt-4 overflow-auto whitespace-pre-wrap rounded-lg border border-stone-800 bg-stone-900/70 p-4 font-mono text-sm text-stone-300">
+                  {selected.content}
+                </pre>
+              </div>
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-stone-500">Select a document to view its content.</p>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

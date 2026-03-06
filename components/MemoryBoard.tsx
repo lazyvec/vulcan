@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { MemoryItem } from "@/lib/types";
+import { Book, Clock } from "lucide-react";
 
 interface MemoryBoardProps {
   journal: MemoryItem[];
@@ -14,9 +15,29 @@ function matches(item: MemoryItem, q: string) {
   return target.includes(q);
 }
 
+function MemoryCard({ item }: { item: MemoryItem }) {
+  return (
+    <article className="rounded-lg border border-stone-800 bg-stone-900/50 p-4 transition-colors hover:border-stone-700">
+      <h3 className="font-semibold text-stone-200">{item.title}</h3>
+      <p className="mt-1.5 text-sm text-stone-400">{item.content}</p>
+      {item.tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {item.tags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary/80"
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
+
 export function MemoryBoard({ journal, longterm, initialQuery = "" }: MemoryBoardProps) {
   const [query, setQuery] = useState(initialQuery);
-
   const normalized = query.trim().toLowerCase();
 
   const filteredJournal = useMemo(
@@ -30,61 +51,48 @@ export function MemoryBoard({ journal, longterm, initialQuery = "" }: MemoryBoar
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <section className="vulcan-card p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="mr-auto text-sm font-semibold">Daily Journal</h2>
-          <input
-            className="vulcan-input w-48"
-            placeholder="memory 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          {filteredJournal.length ? (
-            filteredJournal.map((item) => (
-              <article
-                key={item.id}
-                className="rounded-[var(--radius-control)] border p-3"
-                style={{ borderColor: "var(--color-border)", background: "rgba(41,37,36,0.45)" }}
-              >
-                <p className="text-sm font-medium">{item.title}</p>
-                <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{item.content}</p>
-              </article>
-            ))
-          ) : (
-            <p className="text-sm text-[var(--color-muted-foreground)]">No recent activity</p>
-          )}
-        </div>
-      </section>
+    <div>
+      <div className="mb-4">
+        <input
+          className="vulcan-input max-w-sm"
+          placeholder="Search all memories..."
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <Clock size={18} className="text-stone-500" />
+            <h2 className="text-lg font-semibold">Daily Journal</h2>
+          </div>
+          <div className="space-y-3">
+            {filteredJournal.length > 0 ? (
+              filteredJournal.map((item) => <MemoryCard key={item.id} item={item} />)
+            ) : (
+              <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-stone-800">
+                <p className="text-sm text-stone-500">No journal entries found.</p>
+              </div>
+            )}
+          </div>
+        </section>
 
-      <section className="vulcan-card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Long-term Memory</h2>
-        <div className="space-y-2">
-          {filteredLongterm.length ? (
-            filteredLongterm.map((item) => (
-              <article
-                key={item.id}
-                className="rounded-[var(--radius-control)] border p-3"
-                style={{ borderColor: "var(--color-border)", background: "rgba(41,37,36,0.45)" }}
-              >
-                <p className="text-sm font-medium">{item.title}</p>
-                <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">{item.content}</p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {item.tags.map((tag) => (
-                    <span key={tag} className="vulcan-chip">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </article>
-            ))
-          ) : (
-            <p className="text-sm text-[var(--color-muted-foreground)]">No recent activity</p>
-          )}
-        </div>
-      </section>
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <Book size={18} className="text-stone-500" />
+            <h2 className="text-lg font-semibold">Long-term Memory</h2>
+          </div>
+          <div className="space-y-3">
+            {filteredLongterm.length > 0 ? (
+              filteredLongterm.map((item) => <MemoryCard key={item.id} item={item} />)
+            ) : (
+              <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-stone-800">
+                <p className="text-sm text-stone-500">No LTM items found.</p>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

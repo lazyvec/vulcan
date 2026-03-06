@@ -1,16 +1,17 @@
 :root {
-  --color-background: #0c0a09;
-  --color-card: #1c1917;
-  --color-muted: #292524;
-  --color-border: #44403c;
+  /* Atrium Neutral Palette + Vulcan Primary */
+  --color-background: #1a1917; /* Atrium Base */
+  --color-surface: #252422; /* Atrium Elevated */
+  --color-muted: #2d2b29; /* Atrium Subtle */
+  --color-border: hsl(34 6% 24%); /* Atrium Border */
 
-  --color-primary: #e07a40;
+  --color-primary: #e07a40; /* Vulcan Hearth (Keep) */
   --color-primary-hover: #e8955e;
   --color-primary-12: rgba(224, 122, 64, 0.12);
 
-  --color-foreground: #fafaf9;
-  --color-muted-foreground: #a8a29e;
-  --color-tertiary: #78716c;
+  --color-foreground: #f5f4f2; /* Atrium Text Primary */
+  --color-muted-foreground: #bfbab4; /* Atrium Text Secondary */
+  --color-tertiary: #8d877f; /* Atrium Text Tertiary */
 
   --color-success: #22c55e;
   --color-warning: #f59e0b;
@@ -24,5 +25,5 @@
   --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.32);
   --gradient-bg: radial-gradient(circle at 10% 0%, rgba(224, 122, 64, 0.12), transparent 30%),
     radial-gradient(circle at 90% 100%, rgba(96, 165, 250, 0.1), transparent 28%),
-    linear-gradient(180deg, #0f0b09 0%, #0c0a09 100%);
+    linear-gradient(180deg, #1A1917 0%, #1A1917 100%);
 }
