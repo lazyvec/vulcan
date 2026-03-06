@@ -3,8 +3,9 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useMissionControl } from "@/components/MissionControlProvider";
+import { MenuIcon } from "lucide-react";
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -85,20 +86,38 @@ export function Topbar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b bg-[rgba(12,10,9,0.75)] px-6 py-4 backdrop-blur-md">
-      <div className="flex items-center gap-3">
-        <input
-          className="vulcan-input max-w-sm"
-          placeholder="Search tasks, docs, memory"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <button className="vulcan-button" type="button" onClick={togglePause}>
-          {paused ? "Resume" : "Pause"}
+    <header className="sticky top-0 z-20 border-b bg-[rgba(26,25,23,0.8)] px-4 py-3 backdrop-blur-lg sm:px-6">
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className="rounded p-1.5 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] md:hidden"
+        >
+          <MenuIcon size={22} />
+          <span className="sr-only">Open sidebar</span>
         </button>
-        <button className="vulcan-button status-pulse" type="button" onClick={pingHermes}>
-          {pingText}
-        </button>
+
+        <div className="flex-1">
+          <input
+            className="vulcan-input max-w-sm"
+            placeholder="Search tasks, docs, memory..."
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button className="vulcan-button" type="button" onClick={togglePause}>
+            {paused ? "Resume" : "Pause"}
+          </button>
+          <button
+            className="vulcan-button status-pulse hidden sm:flex"
+            type="button"
+            onClick={pingHermes}
+          >
+            {pingText}
+          </button>
+        </div>
       </div>
     </header>
   );
