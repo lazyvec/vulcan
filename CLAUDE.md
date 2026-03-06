@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: M0 완료 → Phase 0 대기
+> **현재 Phase**: M0 완료 + Phase 0 완료 → Phase 1 대기
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -53,18 +53,18 @@
 
 ## 도구
 
-- `npm run dev` — 개발 서버 (localhost:3000)
-- `npm run build` — 프로덕션 빌드
-- `npm run lint` — ESLint
-- `npm run seed` — DB 시드 데이터 생성
-- `npm run adapter` — OpenClaw 어댑터 실행
-- `npm run test:smoke` — Playwright 스모크 테스트
+- `pnpm dev` — 개발 서버 (localhost:3000)
+- `pnpm build` — 프로덕션 빌드
+- `pnpm lint` — ESLint
+- `pnpm seed` — DB 시드 데이터 생성
+- `pnpm adapter` — OpenClaw 어댑터 실행
+- `pnpm test:smoke` — Playwright 스모크 테스트
 
 ## 고도화 로드맵 (Phase 0~10)
 
 | Phase | 이름 | 의존성 | 상태 |
 |-------|------|--------|------|
-| 0 | Foundation (모노레포 + 공유 패키지) | — | 대기 |
+| 0 | Foundation (모노레포 + 공유 패키지) | — | 완료 |
 | 1 | PostgreSQL + Redis + Hono | 0 | 대기 |
 | 2 | WebSocket + Gateway RPC | 1 | 대기 |
 | 3 | 에이전트 생명주기 관리 | 2 | 대기 |

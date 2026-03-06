@@ -3,8 +3,8 @@ module.exports = {
     {
       name: "vulcan-mc",
       cwd: "/home/linuxuser/projects/vulcan",
-      script: "npm",
-      args: "run start -- --port 3001 --hostname 127.0.0.1",
+      script: "pnpm",
+      args: "start",
       autorestart: true,
       restart_delay: 2000,
       max_restarts: 20,
@@ -22,8 +22,8 @@ module.exports = {
     {
       name: "vulcan-adapter",
       cwd: "/home/linuxuser/projects/vulcan",
-      script: "npm",
-      args: "run adapter",
+      script: "pnpm",
+      args: "adapter",
       autorestart: true,
       restart_delay: 1500,
       max_restarts: 50,

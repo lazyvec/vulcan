@@ -3,20 +3,20 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 0 — Foundation (모노레포 + 공유 패키지)
+## 현재 Phase: 1 — PostgreSQL + Redis + Hono
 
-> M0 기능은 모두 완료. 고도화 Phase 0부터 시작.
+> M0 + Phase 0 완료. Phase 1 작업부터 이어서 진행.
 
 ---
 
-## Phase 0: Foundation (3-5일) — 의존성: 없음
+## Phase 0: Foundation (3-5일) — 의존성: 없음 (완료: 2026-03-06)
 
-- [ ] pnpm 워크스페이스 모노레포 전환 (`pnpm-workspace.yaml`, `apps/web/`, `packages/shared/`)
-- [ ] 공유 패키지 추출 (`lib/types.ts` → `packages/shared/types.ts`, `lib/statusMap.ts` → `packages/shared/constants.ts`)
-- [ ] Zod 스키마 추가 (API request/response 유효성 검증)
-- [ ] Drizzle Kit 마이그레이션 도입 (`CREATE TABLE IF NOT EXISTS` → 정식 마이그레이션)
-- [ ] Store 인터페이스 추상화 (`lib/store.ts` → 인터페이스 + SQLite 구현체)
-- [ ] 검증: `pnpm install && pnpm -r build` 성공, 기존 기능 동작 확인
+- [x] pnpm 워크스페이스 모노레포 전환 (`pnpm-workspace.yaml`, `apps/web/`, `packages/shared/`)
+- [x] 공유 패키지 추출 (`lib/types.ts` → `packages/shared/types.ts`, `lib/statusMap.ts` → `packages/shared/constants.ts`)
+- [x] Zod 스키마 추가 (API request/response 유효성 검증)
+- [x] Drizzle Kit 마이그레이션 도입 (`CREATE TABLE IF NOT EXISTS` → 정식 마이그레이션)
+- [x] Store 인터페이스 추상화 (`lib/store.ts` → 인터페이스 + SQLite 구현체)
+- [x] 검증: `pnpm install && pnpm -r build` 성공, 기존 기능 동작 확인
 
 ## Phase 1: PostgreSQL + Redis + Hono (7-10일) — 의존성: Phase 0
 
@@ -128,3 +128,4 @@
 - [x] M0 기능 전체 (SSE, 칸반, 오피스, 메모리, 문서, PWA) — 2026-03-06
 - [x] 디자인/UX 오버홀 Pass 1 + Pass 2 — 2026-03-06
 - [x] 고도화 로드맵 v2 수립 — 2026-03-06
+- [x] Phase 0 Foundation 완료 (모노레포/공유패키지/Zod/Drizzle 마이그레이션/Store 추상화) — 2026-03-06

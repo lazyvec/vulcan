@@ -1,6 +1,6 @@
 # Vulcan Roadmap
 
-> **현재 상태**: M0 완료 → Phase 0 시작 대기
+> **현재 상태**: M0 완료 + Phase 0 완료 → Phase 1 시작 대기
 > **실행 체크리스트**: `docs/WORK_PLAN.md`
 
 ## 목표 아키텍처

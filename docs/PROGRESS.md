@@ -1,6 +1,32 @@
 # PROGRESS
 
-<!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `design/ux-overhaul-pass1`
+<!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
+
+## 2026-03-06: Phase 0 Foundation 완료
+
+### 요약
+Phase 0 체크리스트를 전부 완료했다.
+단일 앱 구조를 `pnpm` 워크스페이스 모노레포로 전환하고, 공유 패키지·검증 스키마·마이그레이션 기반을 도입했다.
+
+### 완료 항목
+- ✅ `apps/web` + `packages/shared` 구조로 모노레포 전환
+- ✅ `@vulcan/shared`로 타입/상수 추출 (`types`, `constants`)
+- ✅ Zod 스키마 추가 및 API 경계 검증 적용 (`adapter/ingest`, `events`, `tasks/[id]`)
+- ✅ Drizzle Kit 도입 (`drizzle.config.ts`, 초기 마이그레이션 생성/적용)
+- ✅ Store 인터페이스 추상화 (`lib/store` 디렉터리 구조화 + SQLite 구현 분리)
+
+### 검증 결과
+- `pnpm install --prod=false` 성공
+- `pnpm -r build` 성공
+- `pnpm lint` 성공
+- `pnpm db:migrate` 성공
+- `pnpm seed` 성공
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3215 pnpm --filter @vulcan/web test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- 🔜 **다음 작업: Phase 1 — PostgreSQL + Redis + Hono**
 
 ## 2026-03-06: 고도화 로드맵 v2 수립
 

@@ -1,37 +1,16 @@
 {
-  "name": "vulcan-mission-control",
-  "version": "0.1.0",
+  "name": "vulcan-monorepo",
   "private": true,
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "seed": "npx tsx scripts/seed.ts",
-    "adapter": "node scripts/adapter-openclaw.mjs",
-    "test:smoke": "playwright test tests/smoke/vulcan.smoke.spec.ts"
-  },
-  "dependencies": {
-    "better-sqlite3": "^12.6.2",
-    "drizzle-orm": "^0.45.1",
-    "framer-motion": "^12.35.0",
-    "lucide-react": "^0.577.0",
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.58.2",
-    "@tailwindcss/postcss": "^4",
-    "@tailwindcss/typography": "^0.5.19",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4",
-    "tsx": "^4.21.0",
-    "typescript": "5.9.3"
+    "dev": "pnpm --filter @vulcan/web dev",
+    "build": "pnpm --filter @vulcan/shared build && pnpm --filter @vulcan/web build",
+    "start": "pnpm --filter @vulcan/web start -- --port 3001 --hostname 127.0.0.1",
+    "lint": "pnpm --filter @vulcan/shared lint && pnpm --filter @vulcan/web lint",
+    "seed": "pnpm --filter @vulcan/web seed",
+    "adapter": "pnpm --filter @vulcan/web adapter",
+    "test:smoke": "pnpm --filter @vulcan/web test:smoke",
+    "db:generate": "pnpm --filter @vulcan/web db:generate",
+    "db:migrate": "pnpm --filter @vulcan/web db:migrate"
   }
 }

@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -17,6 +18,7 @@
 
 # next.js
 /.next/
+**/.next/
 /out/
 
 # production
@@ -27,6 +29,8 @@
 *.pem
 *.db
 /data/
+apps/web/data/
+apps/web/test-results/
 README.orig.md
 
 # debug
