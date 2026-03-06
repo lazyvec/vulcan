@@ -1,4 +1,4 @@
-import { getSchedules } from "@/lib/store";
+import { getSchedules } from "@/lib/api-server";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +9,8 @@ function formatDate(ts: number | null) {
   return new Date(ts).toLocaleString("ko-KR");
 }
 
-export default function CalendarPage() {
-  const schedules = getSchedules();
+export default async function CalendarPage() {
+  const schedules = await getSchedules();
   const running = schedules.filter((item) => item.status === "running");
   const weekly = schedules.filter((item) => item.status !== "running");
 

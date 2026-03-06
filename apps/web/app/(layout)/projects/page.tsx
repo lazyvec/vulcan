@@ -1,10 +1,9 @@
-import { getAgents, getProjects } from "@/lib/store";
+import { getAgents, getProjects } from "@/lib/api-server";
 
 export const dynamic = "force-dynamic";
 
-export default function ProjectsPage() {
-  const agents = getAgents();
-  const projects = getProjects();
+export default async function ProjectsPage() {
+  const [agents, projects] = await Promise.all([getAgents(), getProjects()]);
 
   function ownerName(ownerId: string | null) {
     if (!ownerId) {

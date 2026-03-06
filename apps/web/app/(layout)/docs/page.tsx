@@ -1,5 +1,5 @@
 import { DocsExplorer } from "@/components/DocsExplorer";
-import { getDocs } from "@/lib/store";
+import { getDocs } from "@/lib/api-server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +10,6 @@ export default async function DocsPage({
 }) {
   const params = await searchParams;
   const query = params.q ?? "";
-  const docs = getDocs(query);
+  const docs = await getDocs(query);
   return <DocsExplorer docs={docs} initialQuery={query} />;
 }

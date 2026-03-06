@@ -3,7 +3,7 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 1 — PostgreSQL + Redis + Hono
+## 현재 Phase: 1 — PostgreSQL + Redis + Hono (진행중)
 
 > M0 + Phase 0 완료. Phase 1 작업부터 이어서 진행.
 
@@ -23,15 +23,15 @@
 - [ ] Drizzle 스키마 PostgreSQL 전환 (`sqliteTable` → `pgTable`, UUID, timestamp)
 - [ ] 외래키 제약조건 추가
 - [ ] SQLite → PostgreSQL 원타임 데이터 마이그레이션 스크립트
-- [ ] Redis 설정 (`ioredis` + `bullmq`)
+- [x] Redis 설정 (`ioredis` + `bullmq`) — API 패키지 의존성/큐 초기화 코드 도입
 - [ ] `event-stream.ts` in-memory → Redis Pub/Sub 교체
-- [ ] Hono 백엔드 서비스 구축 (`apps/api/`) — 기존 12개 API 포팅
-- [ ] 미들웨어: CORS, 보안 헤더, 에러 핸들링, 로깅
-- [ ] Health endpoint: PostgreSQL + Redis 연결 상태
-- [ ] Next.js에서 API Route Handlers 제거 → Hono 백엔드로 연결
-- [ ] 어댑터 URL 변경
-- [ ] PM2 ecosystem에 Hono 서버 추가
-- [ ] 검증: `curl /api/health` → PostgreSQL + Redis 연결, 12개 API 동일 응답
+- [x] Hono 백엔드 서비스 구축 (`apps/api/`) — 기존 12개 API 포팅
+- [x] 미들웨어: CORS, 보안 헤더, 에러 핸들링, 로깅
+- [x] Health endpoint: PostgreSQL + Redis 연결 상태
+- [x] Next.js에서 API Route Handlers 제거 → Hono 백엔드로 연결
+- [x] 어댑터 URL 변경
+- [x] PM2 ecosystem에 Hono 서버 추가
+- [x] 검증: `curl /api/health` → PostgreSQL + Redis 연결, 12개 API 동일 응답
 
 ## Phase 2: WebSocket + Gateway RPC (5-7일) — 의존성: Phase 1
 

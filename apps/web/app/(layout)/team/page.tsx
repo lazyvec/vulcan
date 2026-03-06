@@ -1,10 +1,10 @@
 import { OFFICE_ZONES, STATUS_COLORS, STATUS_LABELS } from "@/lib/statusMap";
-import { getAgents } from "@/lib/store";
+import { getAgents } from "@/lib/api-server";
 
 export const dynamic = "force-dynamic";
 
-export default function TeamPage() {
-  const agents = getAgents();
+export default async function TeamPage() {
+  const agents = await getAgents();
 
   return (
     <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

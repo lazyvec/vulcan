@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: M0 완료 + Phase 0 완료 → Phase 1 대기
+> **현재 Phase**: M0 완료 + Phase 0 완료 → Phase 1 진행중
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -22,9 +22,10 @@
 
 ## 설계 나침반
 
-### 현재 (M0)
-- **단일 서버**: Next.js App Router (풀스택) + SQLite + SSE
-- **어댑터 패턴**: OpenClaw 로그 → `/api/adapter/ingest` → DB → SSE
+### 현재 (Phase 1 진행중)
+- **분리 시작**: Next.js(UI) + Hono(API) + SQLite + SSE
+- **API 연결**: Web `/api/*` rewrite → Hono API
+- **어댑터 패턴**: OpenClaw 로그 → Hono `/api/adapter/ingest` → DB → SSE
 
 ### 목표 (Phase 1~)
 - **분리 아키텍처**: Next.js (UI) + Hono (API + WebSocket + Worker) + PostgreSQL + Redis
@@ -39,11 +40,11 @@
 
 ## 시스템 흐름
 
-### 현재 (M0)
-- **데이터 수집**: adapter-openclaw → `POST /api/adapter/ingest` → DB + SSE
-- **실시간**: `GET /api/stream` (SSE) | `GET /api/events?since=` (폴링)
-- **UI**: Sidebar → 페이지별 뷰 (Team, Tasks, Projects, Docs, Memory, Calendar, Office)
-- **태스크**: Kanban 3-lane → `PATCH /api/tasks` → 상태 변경
+### 현재 (Phase 1 진행중)
+- **데이터 수집**: adapter-openclaw → Hono `POST /api/adapter/ingest` → DB + SSE
+- **실시간**: Hono `GET /api/stream` (SSE) | `GET /api/events?since=` (폴링)
+- **UI**: Next.js는 API fetch 중심 UI 레이어로 동작
+- **태스크**: Kanban 3-lane → Hono `PATCH /api/tasks/:id` → 상태 변경
 
 ### 목표 (Phase 2~)
 - **양방향**: Hono API ↔ Gateway RPC ↔ OpenClaw 에이전트
@@ -54,6 +55,7 @@
 ## 도구
 
 - `pnpm dev` — 개발 서버 (localhost:3000)
+- `pnpm api:dev` — Hono API 개발 서버 (localhost:8787)
 - `pnpm build` — 프로덕션 빌드
 - `pnpm lint` — ESLint
 - `pnpm seed` — DB 시드 데이터 생성
@@ -65,7 +67,7 @@
 | Phase | 이름 | 의존성 | 상태 |
 |-------|------|--------|------|
 | 0 | Foundation (모노레포 + 공유 패키지) | — | 완료 |
-| 1 | PostgreSQL + Redis + Hono | 0 | 대기 |
+| 1 | PostgreSQL + Redis + Hono | 0 | 진행중 |
 | 2 | WebSocket + Gateway RPC | 1 | 대기 |
 | 3 | 에이전트 생명주기 관리 | 2 | 대기 |
 | 4 | 태스크 시스템 고도화 | 3 | 대기 |

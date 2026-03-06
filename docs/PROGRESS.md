@@ -2,6 +2,39 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 1 Kickoff (Hono API + 연결 상태)
+
+### 요약
+Phase 1의 첫 배치를 구현했다.
+`apps/api`를 신설해 기존 12개 API를 Hono로 포팅하고, PostgreSQL/Redis 연결 상태를 Health에 포함했다.
+
+### 완료 항목
+- ✅ `apps/api` 워크스페이스 신설 (`hono`, `@hono/node-server`, `pg`, `ioredis`, `bullmq`)
+- ✅ API 포팅: agents/projects/tasks/events/stream/adapter/memory/docs/schedule/health
+- ✅ 미들웨어 적용: CORS, 보안 헤더, 로깅, 공통 에러 응답
+- ✅ Health 확장: SQLite + PostgreSQL + Redis 상태 리포트
+- ✅ Next.js API Route 제거 + `/api/*` → Hono rewrite 연결
+- ✅ Web 서버 컴포넌트 데이터 로드를 Store 직접 호출 → Hono API fetch로 전환
+- ✅ PM2 설정에 `vulcan-api` 프로세스 추가
+- ✅ 어댑터 기본 인제스트 URL을 API(8787) 기준으로 전환
+
+### 검증 결과
+- `pnpm --filter @vulcan/api build` 성공
+- `pnpm --filter @vulcan/api lint` 성공
+- `pnpm build` 성공 (shared + api + web)
+- `pnpm lint` 성공 (shared + api + web)
+- 임시 API 기동 후 검증:
+  - `GET /api/health` 응답 확인
+  - `GET /api/agents` 응답 확인
+  - `POST /api/events`, `PATCH /api/tasks/:id`, `POST /api/adapter/ingest` 동작 확인
+- `pnpm test:smoke` 성공 (Playwright webServer로 API+Web 동시 기동, 6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- 🚧 Phase 1 진행중
+  - 남은 핵심: PostgreSQL 스키마 전환, 외래키/데이터 마이그레이션, Redis Pub/Sub 이벤트 스트림 전환
+
 ## 2026-03-06: Phase 0 Foundation 완료
 
 ### 요약

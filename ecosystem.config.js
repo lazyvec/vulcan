@@ -1,6 +1,31 @@
 module.exports = {
   apps: [
     {
+      name: "vulcan-api",
+      cwd: "/home/linuxuser/projects/vulcan",
+      script: "pnpm",
+      args: "api:start",
+      autorestart: true,
+      restart_delay: 1500,
+      max_restarts: 50,
+      kill_timeout: 5000,
+      time: true,
+      env: {
+        NODE_ENV: "production",
+        VULCAN_API_PORT: "8787",
+        VULCAN_CORS_ORIGIN: "*",
+        DATABASE_URL: "",
+        REDIS_URL: "",
+      },
+      env_production: {
+        NODE_ENV: "production",
+        VULCAN_API_PORT: "8787",
+        VULCAN_CORS_ORIGIN: "*",
+        DATABASE_URL: "",
+        REDIS_URL: "",
+      },
+    },
+    {
       name: "vulcan-mc",
       cwd: "/home/linuxuser/projects/vulcan",
       script: "pnpm",
@@ -31,7 +56,7 @@ module.exports = {
       time: true,
       env: {
         NODE_ENV: "production",
-        VULCAN_INGEST_URL: "http://127.0.0.1:3001/api/adapter/ingest",
+        VULCAN_INGEST_URL: "http://127.0.0.1:8787/api/adapter/ingest",
         OPENCLAW_LOG_DIR: "/tmp/openclaw",
         OPENCLAW_LOG_FILE: "",
         ADAPTER_POLL_MS: "2000",
@@ -42,7 +67,7 @@ module.exports = {
       },
       env_production: {
         NODE_ENV: "production",
-        VULCAN_INGEST_URL: "http://127.0.0.1:3001/api/adapter/ingest",
+        VULCAN_INGEST_URL: "http://127.0.0.1:8787/api/adapter/ingest",
         OPENCLAW_LOG_DIR: "/tmp/openclaw",
         OPENCLAW_LOG_FILE: "",
         ADAPTER_POLL_MS: "2000",

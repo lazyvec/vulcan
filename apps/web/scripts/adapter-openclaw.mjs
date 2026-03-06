@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 const API_URL =
-  process.env.VULCAN_INGEST_URL ?? "http://127.0.0.1:3001/api/adapter/ingest";
+  process.env.VULCAN_INGEST_URL ?? "http://127.0.0.1:8787/api/adapter/ingest";
 const LOG_FILE = process.env.OPENCLAW_LOG_FILE ?? "";
 const LOG_DIRS = Array.from(
   new Set(
