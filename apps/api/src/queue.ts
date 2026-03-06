@@ -1,6 +1,32 @@
-import { Queue } from "bullmq";
+import type { AgentCommandMode } from "@vulcan/shared/types";
+import { Queue, Worker } from "bullmq";
 
-let commandQueue: Queue | null = null;
+const COMMAND_QUEUE_NAME = "vulcan-commands";
+const HEALTHCHECK_QUEUE_NAME = "vulcan-healthchecks";
+
+export type CommandQueueJobData = {
+  commandId: string;
+  mode: AgentCommandMode;
+  agentId: string;
+  message: string;
+  to?: string;
+  taskLabel?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type HealthcheckQueueJobData = {
+  check: "gateway-status";
+};
+
+type QueueWorkerHandlers = {
+  command: (payload: CommandQueueJobData) => Promise<void>;
+  healthcheck: (payload: HealthcheckQueueJobData) => Promise<void>;
+};
+
+let commandQueue: Queue<CommandQueueJobData> | null = null;
+let healthcheckQueue: Queue<HealthcheckQueueJobData> | null = null;
+let commandWorker: Worker<CommandQueueJobData> | null = null;
+let healthcheckWorker: Worker<HealthcheckQueueJobData> | null = null;
 
 type RedisConnectionOptions = {
   host: string;
@@ -53,15 +79,127 @@ export function getCommandQueue() {
   }
 
   if (!commandQueue) {
-    commandQueue = new Queue("vulcan-commands", { connection });
+    commandQueue = new Queue<CommandQueueJobData>(COMMAND_QUEUE_NAME, { connection });
   }
 
   return commandQueue;
 }
 
+export function getHealthcheckQueue() {
+  const connection = getRedisConnectionOptions();
+  if (!connection) {
+    return null;
+  }
+
+  if (!healthcheckQueue) {
+    healthcheckQueue = new Queue<HealthcheckQueueJobData>(HEALTHCHECK_QUEUE_NAME, { connection });
+  }
+
+  return healthcheckQueue;
+}
+
+export function startQueueWorkers(handlers: QueueWorkerHandlers) {
+  const connection = getRedisConnectionOptions();
+  if (!connection) {
+    return false;
+  }
+
+  if (!commandWorker) {
+    commandWorker = new Worker<CommandQueueJobData>(
+      COMMAND_QUEUE_NAME,
+      async (job) => {
+        await handlers.command(job.data);
+      },
+      {
+        connection,
+        concurrency: 2,
+      },
+    );
+
+    commandWorker.on("failed", (job, error) => {
+      console.error("[vulcan-api] command queue worker failed", {
+        jobId: job?.id ?? null,
+        error: error.message,
+      });
+    });
+  }
+
+  if (!healthcheckWorker) {
+    healthcheckWorker = new Worker<HealthcheckQueueJobData>(
+      HEALTHCHECK_QUEUE_NAME,
+      async (job) => {
+        await handlers.healthcheck(job.data);
+      },
+      {
+        connection,
+        concurrency: 1,
+      },
+    );
+
+    healthcheckWorker.on("failed", (job, error) => {
+      console.error("[vulcan-api] healthcheck queue worker failed", {
+        jobId: job?.id ?? null,
+        error: error.message,
+      });
+    });
+  }
+
+  return true;
+}
+
+export async function enqueueCommandJob(payload: CommandQueueJobData) {
+  const queue = getCommandQueue();
+  if (!queue) {
+    return false;
+  }
+
+  await queue.add("agent-command", payload, {
+    jobId: payload.commandId,
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 1_000,
+    },
+    removeOnComplete: 200,
+    removeOnFail: 500,
+  });
+
+  return true;
+}
+
+export async function enqueueHealthcheckJob(payload: HealthcheckQueueJobData = { check: "gateway-status" }) {
+  const queue = getHealthcheckQueue();
+  if (!queue) {
+    return false;
+  }
+
+  await queue.add("gateway-healthcheck", payload, {
+    jobId: `gateway-healthcheck:${Math.floor(Date.now() / 30_000)}`,
+    removeOnComplete: 100,
+    removeOnFail: 100,
+  });
+
+  return true;
+}
+
 export async function closeQueueResources() {
+  if (commandWorker) {
+    await commandWorker.close();
+    commandWorker = null;
+  }
+
+  if (healthcheckWorker) {
+    await healthcheckWorker.close();
+    healthcheckWorker = null;
+  }
+
   if (commandQueue) {
     await commandQueue.close();
     commandQueue = null;
+  }
+
+  if (healthcheckQueue) {
+    await healthcheckQueue.close();
+    healthcheckQueue = null;
   }
 }

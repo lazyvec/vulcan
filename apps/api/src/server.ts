@@ -46,7 +46,15 @@ import {
   subscribeEvents,
 } from "./event-stream";
 import { getRuntimeInfo } from "./runtime-info";
-import { getCommandQueue } from "./queue";
+import {
+  closeQueueResources,
+  enqueueCommandJob,
+  enqueueHealthcheckJob,
+  getCommandQueue,
+  getHealthcheckQueue,
+  startQueueWorkers,
+  type CommandQueueJobData,
+} from "./queue";
 import { getGatewayRpcClient } from "./gateway-rpc";
 
 const app = new Hono();
@@ -158,6 +166,112 @@ async function parseGatewayParams(c: { req: { json: () => Promise<unknown> } }) 
   }
 
   return { ok: true as const, payload };
+}
+
+function buildDelegateRelayMessage(input: {
+  targetAgentId: string;
+  message: string;
+  taskLabel?: string;
+}) {
+  return [
+    "[VULCAN_DELEGATE]",
+    `targetAgentId=${input.targetAgentId}`,
+    input.taskLabel ? `taskLabel=${input.taskLabel}` : null,
+    "",
+    input.message,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function executeCommandQueueJob(payload: CommandQueueJobData) {
+  const actionBase = payload.mode === "delegate" ? "agent.delegate" : "agent.command";
+  const target = payload.mode === "delegate" ? "hermes" : payload.to ?? payload.agentId;
+  const message =
+    payload.mode === "delegate"
+      ? buildDelegateRelayMessage({
+          targetAgentId: payload.agentId,
+          taskLabel: payload.taskLabel,
+          message: payload.message,
+        })
+      : payload.message;
+
+  try {
+    const gatewayResult = await gatewayRpcClient.chatSend({
+      to: target,
+      message,
+      idempotencyKey: payload.commandId,
+    });
+    const done = updateAgentCommand(payload.commandId, {
+      status: "sent",
+      gatewayCommandId: extractGatewayCommandId(gatewayResult),
+      executedAt: Date.now(),
+      error: null,
+    });
+
+    writeAudit({
+      action: `${actionBase}.sent`,
+      entityType: "agent_command",
+      entityId: payload.commandId,
+      after: done,
+      metadata: {
+        queue: "bullmq",
+        target,
+        mode: payload.mode,
+        gatewayResult,
+      },
+    });
+  } catch (error) {
+    const failed = updateAgentCommand(payload.commandId, {
+      status: "failed",
+      error: getErrorMessage(error),
+      executedAt: Date.now(),
+    });
+
+    writeAudit({
+      action: `${actionBase}.failed`,
+      entityType: "agent_command",
+      entityId: payload.commandId,
+      after: failed,
+      metadata: {
+        queue: "bullmq",
+        target,
+        mode: payload.mode,
+        error: getErrorMessage(error),
+      },
+    });
+  }
+}
+
+async function executeHealthcheckQueueJob() {
+  const gateway = gatewayRpcClient.getStatus();
+  upsertGateway({
+    id: "openclaw-main",
+    name: "OpenClaw Gateway",
+    url: gateway.url,
+    protocol: "ws-rpc-v3",
+    status: gateway.connected ? "connected" : gateway.connecting ? "connecting" : "disconnected",
+    lastSeenAt: gateway.lastConnectedAt,
+  });
+}
+
+let healthcheckQueueTimer: ReturnType<typeof setInterval> | null = null;
+let queueWorkersReady = false;
+try {
+  queueWorkersReady = startQueueWorkers({
+    command: executeCommandQueueJob,
+    healthcheck: executeHealthcheckQueueJob,
+  });
+} catch (error) {
+  queueWorkersReady = false;
+  console.error("[vulcan-api] queue worker bootstrap failed", error);
+}
+
+if (queueWorkersReady) {
+  void enqueueHealthcheckJob();
+  healthcheckQueueTimer = setInterval(() => {
+    void enqueueHealthcheckJob();
+  }, 30_000);
 }
 
 app.use("*", logger());
@@ -386,15 +500,56 @@ app.post("/api/agents/:id/delegate", async (c) => {
     payloadJson: stringifyJson(parsed.data),
   });
 
-  const relayMessage = [
-    "[VULCAN_DELEGATE]",
-    `targetAgentId=${targetAgentId}`,
-    parsed.data.taskLabel ? `taskLabel=${parsed.data.taskLabel}` : null,
-    "",
-    parsed.data.message,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  try {
+    const queued = await enqueueCommandJob({
+      commandId: command.id,
+      mode: "delegate",
+      agentId: targetAgentId,
+      message: parsed.data.message,
+      taskLabel: parsed.data.taskLabel,
+      metadata: parsed.data.metadata,
+    });
+    if (queued) {
+      writeAudit({
+        action: "agent.delegate.queued",
+        entityType: "agent_command",
+        entityId: command.id,
+        after: command,
+        metadata: {
+          queue: "bullmq",
+          targetAgentId,
+          via: "hermes",
+        },
+      });
+      return c.json({ command, queued: true }, 202);
+    }
+  } catch (error) {
+    const failed = updateAgentCommand(command.id, {
+      status: "failed",
+      error: getErrorMessage(error),
+      executedAt: Date.now(),
+    });
+
+    writeAudit({
+      action: "agent.delegate.enqueue_failed",
+      entityType: "agent_command",
+      entityId: command.id,
+      after: failed ?? command,
+      metadata: {
+        queue: "bullmq",
+        targetAgentId,
+        error: getErrorMessage(error),
+      },
+    });
+
+    return c.json({ error: getErrorMessage(error), command: failed ?? command }, 502);
+  }
+
+  const relayMessage = buildDelegateRelayMessage({
+    targetAgentId,
+    taskLabel: parsed.data.taskLabel,
+    message: parsed.data.message,
+  });
 
   try {
     const gatewayResult = await gatewayRpcClient.chatSend({
@@ -415,6 +570,7 @@ app.post("/api/agents/:id/delegate", async (c) => {
       entityId: command.id,
       after: done ?? command,
       metadata: {
+        queue: "inline",
         targetAgentId,
         via: "hermes",
         gatewayResult,
@@ -435,6 +591,7 @@ app.post("/api/agents/:id/delegate", async (c) => {
       entityId: command.id,
       after: failed ?? command,
       metadata: {
+        queue: "inline",
         targetAgentId,
         via: "hermes",
         error: getErrorMessage(error),
@@ -482,6 +639,50 @@ app.post("/api/agents/:id/command", async (c) => {
   });
 
   try {
+    const queued = await enqueueCommandJob({
+      commandId: command.id,
+      mode: "direct",
+      agentId,
+      to: parsed.data.to,
+      message: parsed.data.message,
+      metadata: parsed.data.metadata,
+    });
+    if (queued) {
+      writeAudit({
+        action: "agent.command.queued",
+        entityType: "agent_command",
+        entityId: command.id,
+        after: command,
+        metadata: {
+          queue: "bullmq",
+          target: parsed.data.to ?? agentId,
+        },
+      });
+      return c.json({ command, queued: true }, 202);
+    }
+  } catch (error) {
+    const failed = updateAgentCommand(command.id, {
+      status: "failed",
+      error: getErrorMessage(error),
+      executedAt: Date.now(),
+    });
+
+    writeAudit({
+      action: "agent.command.enqueue_failed",
+      entityType: "agent_command",
+      entityId: command.id,
+      after: failed ?? command,
+      metadata: {
+        queue: "bullmq",
+        target: parsed.data.to ?? agentId,
+        error: getErrorMessage(error),
+      },
+    });
+
+    return c.json({ error: getErrorMessage(error), command: failed ?? command }, 502);
+  }
+
+  try {
     const gatewayResult = await gatewayRpcClient.chatSend({
       to: parsed.data.to ?? agentId,
       message: parsed.data.message,
@@ -500,6 +701,7 @@ app.post("/api/agents/:id/command", async (c) => {
       entityId: command.id,
       after: done ?? command,
       metadata: {
+        queue: "inline",
         target: parsed.data.to ?? agentId,
         gatewayResult,
       },
@@ -519,6 +721,7 @@ app.post("/api/agents/:id/command", async (c) => {
       entityId: command.id,
       after: failed ?? command,
       metadata: {
+        queue: "inline",
         target: parsed.data.to ?? agentId,
         error: getErrorMessage(error),
       },
@@ -991,26 +1194,35 @@ async function checkPostgres() {
 }
 
 async function checkRedis() {
-  const queue = getCommandQueue();
-  if (!queue) {
+  const commandQueue = getCommandQueue();
+  const healthcheckQueue = getHealthcheckQueue();
+  if (!commandQueue || !healthcheckQueue) {
     return { ok: null, status: "not_configured" };
   }
 
   try {
-    const client = await queue.client;
+    const client = await commandQueue.client;
     const ping = await client.ping();
     const ok = ping === "PONG";
     return {
       ok,
       status: ok ? "connected" : "error",
-      queue: queue.name,
+      workers: queueWorkersReady,
+      queues: {
+        command: commandQueue.name,
+        healthcheck: healthcheckQueue.name,
+      },
     };
   } catch (error) {
     return {
       ok: false,
       status: "error",
       error: error instanceof Error ? error.message : String(error),
-      queue: queue.name,
+      workers: queueWorkersReady,
+      queues: {
+        command: commandQueue.name,
+        healthcheck: healthcheckQueue.name,
+      },
     };
   }
 }
@@ -1081,3 +1293,36 @@ const server = serve(
 );
 
 injectWebSocket(server);
+
+let isShuttingDown = false;
+
+async function shutdown(signal: string) {
+  if (isShuttingDown) {
+    return;
+  }
+  isShuttingDown = true;
+
+  console.log(`[vulcan-api] shutting down (${signal})`);
+
+  if (healthcheckQueueTimer) {
+    clearInterval(healthcheckQueueTimer);
+    healthcheckQueueTimer = null;
+  }
+
+  gatewayRpcClient.stop();
+  await closeQueueResources().catch((error) => {
+    console.error("[vulcan-api] queue shutdown failed", error);
+  });
+
+  await new Promise<void>((resolve) => {
+    server.close(() => resolve());
+  });
+}
+
+process.once("SIGINT", () => {
+  void shutdown("SIGINT");
+});
+
+process.once("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});

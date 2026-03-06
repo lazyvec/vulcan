@@ -2,6 +2,44 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 Batch 2 (BullMQ 커맨드/헬스체크 워커)
+
+### 요약
+Phase 3 두 번째 배치로 비동기 실행 기반을 도입했다.
+Redis(`REDIS_URL`)가 설정된 경우 `/delegate`, `/command` 요청은 BullMQ 커맨드 큐로 들어가고 워커가 Gateway RPC를 실행한다. 동시에 헬스체크 큐 워커가 Gateway 상태를 주기적으로 동기화한다.
+
+### 완료 항목
+- ✅ `apps/api/src/queue.ts` 확장
+  - `vulcan-commands`, `vulcan-healthchecks` 큐 추가
+  - command/healthcheck 워커 부트스트랩
+  - queue job enqueue 유틸 추가 (`enqueueCommandJob`, `enqueueHealthcheckJob`)
+  - 큐/워커 리소스 정리(`closeQueueResources`) 보강
+- ✅ `apps/api/src/server.ts` 큐 연동
+  - `/api/agents/:id/delegate`, `/api/agents/:id/command`:
+    - Redis 사용 시 `202 queued` 비동기 처리
+    - Redis 미사용 시 기존 inline 실행 폴백 유지
+  - 워커 실행 로직 추가:
+    - command job → `chat.send` 실행 + `agent_commands` 상태/감사로그 갱신
+    - healthcheck job → `gateways` 상태 스냅샷 갱신
+  - `/api/health`의 Redis 상태에 command/healthcheck 큐 및 워커 상태 노출
+  - SIGINT/SIGTERM 시 queue/gateway 종료 처리
+
+### 검증 결과
+- `pnpm --filter @vulcan/api lint` 성공
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm --filter @vulcan/api test:gateway-event-adapter` 성공 (4/4)
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- 🚧 Phase 3 진행중 (Batch 2 완료)
+  - 다음 핵심: 에이전트 관리 UI + 고급 Gateway 제어(`sessions.spawn/send`, config/cron UX 연결)
+
 ## 2026-03-06: Phase 3 Batch 1 (에이전트 생명주기 API 기본형 + 감사 로그)
 
 ### 요약
