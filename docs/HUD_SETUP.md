@@ -20,7 +20,7 @@ Claude Code에 아래 내용을 그대로 붙여넣어 실행할 것.
 
 ---
 
-## 1단계: 수정된 dist 파일 5개 덮어쓰기
+## 1단계: 수정된 dist 파일 7개 덮어쓰기
 
 PLUGIN_DIR="$HOME/.claude/plugins/marketplaces/claude-hud/dist"
 
@@ -68,6 +68,51 @@ export function coloredBar(percent, width = 6) {
     return `${color}${'█'.repeat(filled)}${DIM}${'░'.repeat(empty)}${RESET}`;
 }
 //# sourceMappingURL=colors.js.map
+
+
+### $PLUGIN_DIR/render/lines/identity.js
+
+import { getContextPercent, getBufferedPercent, getTotalTokens } from '../../stdin.js';
+import { dim, getContextColor, RESET } from '../colors.js';
+const DEBUG = process.env.DEBUG?.includes('claude-hud') || process.env.DEBUG === '*';
+export function renderIdentityLine(ctx) {
+    const rawPercent = getContextPercent(ctx.stdin);
+    const bufferedPercent = getBufferedPercent(ctx.stdin);
+    const autocompactMode = ctx.config?.display?.autocompactBuffer ?? 'enabled';
+    const percent = autocompactMode === 'disabled' ? rawPercent : bufferedPercent;
+    if (DEBUG && autocompactMode === 'disabled') {
+        console.error(`[claude-hud:context] autocompactBuffer=disabled, showing raw ${rawPercent}% (buffered would be ${bufferedPercent}%)`);
+    }
+    const display = ctx.config?.display;
+    const contextValueMode = display?.contextValue ?? 'percent';
+    const contextValue = formatContextValue(ctx, percent, contextValueMode);
+    const contextValueDisplay = `${getContextColor(percent)}${contextValue}${RESET}`;
+    let line = `🧠 ${contextValueDisplay}`;
+    if (display?.showTokenBreakdown !== false && percent >= 85) {
+        const usage = ctx.stdin.context_window?.current_usage;
+        if (usage) {
+            const input = formatTokens(usage.input_tokens ?? 0);
+            const cache = formatTokens((usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0));
+            line += dim(` (in: ${input}, cache: ${cache})`);
+        }
+    }
+    return line;
+}
+function formatTokens(n) {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(0)}k`;
+    return n.toString();
+}
+function formatContextValue(ctx, percent, mode) {
+    if (mode === 'tokens') {
+        const totalTokens = getTotalTokens(ctx.stdin);
+        const size = ctx.stdin.context_window?.context_window_size ?? 0;
+        if (size > 0) return `${formatTokens(totalTokens)}/${formatTokens(size)}`;
+        return formatTokens(totalTokens);
+    }
+    return `${percent}%`;
+}
+//# sourceMappingURL=identity.js.map
 
 
 ### $PLUGIN_DIR/render/lines/project.js
@@ -214,6 +259,83 @@ export function renderEnvironmentLine(ctx) {
     return parts.join(` · `);
 }
 //# sourceMappingURL=environment.js.map
+
+
+### $PLUGIN_DIR/render/index.js
+
+import { renderSessionLine } from './session-line.js';
+import { renderToolsLine, renderCompactToolsLine } from './tools-line.js';
+import { renderAgentsLine } from './agents-line.js';
+import { renderTodosLine } from './todos-line.js';
+import { renderIdentityLine, renderProjectLine, renderEnvironmentLine, renderUsageLine, } from './lines/index.js';
+import { dim, RESET } from './colors.js';
+function stripAnsi(str) {
+    return str.replace(/\x1b\[[0-9;]*m/g, '');
+}
+function visualLength(str) {
+    return stripAnsi(str).length;
+}
+function makeSeparator(length) {
+    return dim('─'.repeat(Math.max(length, 20)));
+}
+function collectActivityLines(ctx) {
+    const activityLines = [];
+    const display = ctx.config?.display;
+    if (display?.showAgents !== false) {
+        const agentsLine = renderAgentsLine(ctx);
+        if (agentsLine) activityLines.push(agentsLine);
+    }
+    if (display?.showTodos !== false) {
+        const todosLine = renderTodosLine(ctx);
+        if (todosLine) activityLines.push(todosLine);
+    }
+    return activityLines;
+}
+function renderCompact(ctx) {
+    const lines = [];
+    const sessionLine = renderSessionLine(ctx);
+    if (sessionLine) lines.push(sessionLine);
+    return lines;
+}
+function renderExpanded(ctx) {
+    const lines = [];
+    // 라인 1: 프로젝트 (모델 · 경로 · git)
+    const projectLine = renderProjectLine(ctx);
+    if (projectLine) lines.push(projectLine);
+    // 라인 2: 사용량 바 · 컨텍스트 바 (5h · 7d · context)
+    const identityLine = renderIdentityLine(ctx);
+    const usageLine = renderUsageLine(ctx);
+    if (usageLine && identityLine) {
+        lines.push(`${usageLine} ${dim('·')} ${identityLine}`);
+    } else if (usageLine) {
+        lines.push(usageLine);
+    } else if (identityLine) {
+        lines.push(identityLine);
+    }
+    // 라인 3: 도구 (이모지+개수)
+    const compactTools = renderCompactToolsLine(ctx);
+    if (compactTools) lines.push(compactTools);
+    return lines;
+}
+export function render(ctx) {
+    const lineLayout = ctx.config?.lineLayout ?? 'expanded';
+    const showSeparators = ctx.config?.showSeparators ?? false;
+    const headerLines = lineLayout === 'expanded'
+        ? renderExpanded(ctx)
+        : renderCompact(ctx);
+    const activityLines = collectActivityLines(ctx);
+    const lines = [...headerLines];
+    if (showSeparators && activityLines.length > 0) {
+        const maxWidth = Math.max(...headerLines.map(visualLength), 20);
+        lines.push(makeSeparator(maxWidth));
+    }
+    lines.push(...activityLines);
+    for (const line of lines) {
+        const outputLine = `${RESET}${line.replace(/ /g, '\u00A0')}`;
+        console.log(outputLine);
+    }
+}
+//# sourceMappingURL=index.js.map
 
 
 ### $PLUGIN_DIR/render/tools-line.js
@@ -412,7 +534,7 @@ mkdir -p "$HOME/.claude/plugins/claude-hud"
     "showAgents": true,
     "showTodos": true,
     "showTokenBreakdown": true,
-    "showConfigCounts": true,
+    "showConfigCounts": false,
     "showSpeed": false,
     "sevenDayThreshold": 0,
     "autocompactBuffer": "enabled"
