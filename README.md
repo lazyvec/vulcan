@@ -129,6 +129,9 @@ pm2 startOrReload ecosystem.config.js --env production
 | `GET` | `/api/schedule` | 스케줄 목록 |
 | `GET` | `/api/gateway/status` | Gateway 연결 상태 |
 | `POST` | `/api/gateway/rpc` | Gateway RPC 호출 |
+| `GET` | `/api/gateway/sessions` | Gateway 세션 목록 |
+| `POST` | `/api/gateway/sessions/send` | Gateway 세션 메시지 전송 |
+| `POST` | `/api/gateway/sessions/spawn` | Hermes 경유 세션 위임 전송 |
 | `PATCH` | `/api/gateway/config` | Gateway 설정 패치 |
 | `GET` | `/api/gateway/cron` | Gateway cron 목록 |
 | `GET` | `/api/gateway/cron/status` | Gateway cron 상태 |

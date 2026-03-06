@@ -78,7 +78,7 @@
 - [x] 감사 로깅 (모든 mutation 자동 기록)
 - [x] 검증: UI에서 에이전트 일시정지/재시작, Hermes 경유 위임 동작
   - [x] 정적 검증: lint/build/smoke + gateway-rpc/event-adapter 테스트
-  - [ ] 실환경 검증: Gateway 연결 상태에서 Team pause/resume/delegate E2E 확인 (운영 점검 시)
+  - [x] 실환경 검증: Gateway 연결 상태에서 Team pause/resume/delegate/session E2E 확인 (2026-03-06)
 
 ## Phase 4: 태스크 시스템 고도화 (7-10일) — 의존성: Phase 3 | 병렬: Phase 5
 

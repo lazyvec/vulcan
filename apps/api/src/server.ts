@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
@@ -237,9 +238,129 @@ function mergeAgentConfig(
   };
 }
 
+function normalizeSessionKey(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function extractGatewaySessionKeyFromAgentConfig(config: Record<string, unknown> | undefined) {
+  if (!isRecord(config)) {
+    return null;
+  }
+  return normalizeSessionKey(config.gatewaySessionKey);
+}
+
+function extractGatewaySessionRows(payload: unknown): Array<Record<string, unknown>> {
+  if (!isRecord(payload) || !Array.isArray(payload.sessions)) {
+    return [];
+  }
+  return payload.sessions.filter((row): row is Record<string, unknown> => isRecord(row));
+}
+
+function pickGatewaySessionKeyForAgent(
+  agentId: string,
+  rows: Array<Record<string, unknown>>,
+): string | null {
+  const normalizedAgentId = agentId.trim().toLowerCase();
+  if (!normalizedAgentId) {
+    return null;
+  }
+
+  for (const row of rows) {
+    const key = normalizeSessionKey(row.key);
+    if (!key) {
+      continue;
+    }
+    const keyLower = key.toLowerCase();
+    if (
+      keyLower === normalizedAgentId ||
+      keyLower.includes(`:${normalizedAgentId}:`) ||
+      keyLower.endsWith(`:${normalizedAgentId}`)
+    ) {
+      return key;
+    }
+  }
+
+  for (const row of rows) {
+    const key = normalizeSessionKey(row.key);
+    if (!key) {
+      continue;
+    }
+    const displayName = typeof row.displayName === "string" ? row.displayName.toLowerCase() : "";
+    const label = typeof row.label === "string" ? row.label.toLowerCase() : "";
+    if (displayName.includes(normalizedAgentId) || label.includes(normalizedAgentId)) {
+      return key;
+    }
+  }
+
+  return null;
+}
+
+async function resolveGatewaySessionKeyForAgent(
+  agentId: string,
+  config: Record<string, unknown> | undefined,
+) {
+  const normalizedAgentId = normalizeSessionKey(agentId);
+  if (!normalizedAgentId) {
+    return null;
+  }
+  if (normalizedAgentId.includes(":")) {
+    return normalizedAgentId;
+  }
+
+  const configKey = extractGatewaySessionKeyFromAgentConfig(config);
+  if (configKey) {
+    return configKey;
+  }
+
+  try {
+    const listed = await gatewayRpcClient.sessionsList({
+      limit: 200,
+      includeGlobal: true,
+      includeUnknown: true,
+    });
+    const rows = extractGatewaySessionRows(listed);
+    const matched = pickGatewaySessionKeyForAgent(normalizedAgentId, rows);
+    if (matched) {
+      return matched;
+    }
+
+    if (normalizedAgentId.toLowerCase() === "hermes") {
+      const mainSession = rows
+        .map((row) => normalizeSessionKey(row.key))
+        .find((key) => Boolean(key && key.startsWith("agent:main:")));
+      if (mainSession) {
+        return mainSession;
+      }
+      if (rows.length === 1) {
+        return normalizeSessionKey(rows[0].key);
+      }
+    }
+  } catch {
+    // Ignore lookup failures and fall back to null.
+  }
+
+  return null;
+}
+
+function buildGatewayIdempotencyKey(input: unknown, prefix = "vulcan") {
+  const value = normalizeSessionKey(input);
+  if (value) {
+    return value;
+  }
+  return `${prefix}-${randomUUID()}`;
+}
+
 async function executeCommandQueueJob(payload: CommandQueueJobData) {
   const actionBase = payload.mode === "delegate" ? "agent.delegate" : "agent.command";
   const target = payload.mode === "delegate" ? "hermes" : payload.to ?? payload.agentId;
+  const targetConfig =
+    payload.mode === "delegate"
+      ? getAgentById("hermes")?.config
+      : getAgentById(payload.to ?? payload.agentId)?.config;
   const message =
     payload.mode === "delegate"
       ? buildDelegateRelayMessage({
@@ -250,8 +371,12 @@ async function executeCommandQueueJob(payload: CommandQueueJobData) {
       : payload.message;
 
   try {
+    const sessionKey = await resolveGatewaySessionKeyForAgent(target, targetConfig);
+    if (!sessionKey) {
+      throw new Error(`gateway session key not resolved for target: ${target}`);
+    }
     const gatewayResult = await gatewayRpcClient.chatSend({
-      to: target,
+      sessionKey,
       message,
       idempotencyKey: payload.commandId,
     });
@@ -270,6 +395,7 @@ async function executeCommandQueueJob(payload: CommandQueueJobData) {
       metadata: {
         queue: "bullmq",
         target,
+        sessionKey,
         mode: payload.mode,
         gatewayResult,
       },
@@ -539,27 +665,34 @@ app.post("/api/agents/:id/pause", async (c) => {
     // Ignore optional payload parsing errors.
   }
 
-  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null = null;
-  try {
-    const result = await gatewayRpcClient.sessionsPatch({
-      agentId,
-      sessionId: agentId,
-      paused: true,
-      state: "paused",
-      reason: reason ?? "human_pause",
-    });
-    gatewayResult = { ok: true, result };
-  } catch (error) {
-    gatewayResult = { ok: false, error: getErrorMessage(error) };
+  const sessionKey = await resolveGatewaySessionKeyForAgent(agentId, before.config);
+  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null;
+  if (sessionKey) {
+    try {
+      const result = await gatewayRpcClient.sessionsPatch({
+        key: sessionKey,
+        sendPolicy: "deny",
+      });
+      gatewayResult = { ok: true, result };
+    } catch (error) {
+      gatewayResult = { ok: false, error: getErrorMessage(error) };
+    }
+  } else {
+    gatewayResult = { ok: false, error: "gateway session key not resolved for this agent" };
+  }
+
+  const configPatch: Record<string, unknown> = {
+    paused: true,
+    pausedAt: Date.now(),
+    pauseReason: reason ?? null,
+  };
+  if (sessionKey) {
+    configPatch.gatewaySessionKey = sessionKey;
   }
 
   const agent = updateAgent(agentId, {
     status: "idle",
-    config: mergeAgentConfig(before.config, {
-      paused: true,
-      pausedAt: Date.now(),
-      pauseReason: reason ?? null,
-    }),
+    config: mergeAgentConfig(before.config, configPatch),
   });
 
   if (!agent) {
@@ -574,6 +707,7 @@ app.post("/api/agents/:id/pause", async (c) => {
     after: agent,
     metadata: {
       reason: reason ?? null,
+      sessionKey,
       gatewayResult,
     },
   });
@@ -588,26 +722,34 @@ app.post("/api/agents/:id/resume", async (c) => {
     return c.json({ error: "agent not found" }, 404);
   }
 
-  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null = null;
-  try {
-    const result = await gatewayRpcClient.sessionsPatch({
-      agentId,
-      sessionId: agentId,
-      paused: false,
-      state: "active",
-    });
-    gatewayResult = { ok: true, result };
-  } catch (error) {
-    gatewayResult = { ok: false, error: getErrorMessage(error) };
+  const sessionKey = await resolveGatewaySessionKeyForAgent(agentId, before.config);
+  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null;
+  if (sessionKey) {
+    try {
+      const result = await gatewayRpcClient.sessionsPatch({
+        key: sessionKey,
+        sendPolicy: "allow",
+      });
+      gatewayResult = { ok: true, result };
+    } catch (error) {
+      gatewayResult = { ok: false, error: getErrorMessage(error) };
+    }
+  } else {
+    gatewayResult = { ok: false, error: "gateway session key not resolved for this agent" };
+  }
+
+  const configPatch: Record<string, unknown> = {
+    paused: false,
+    resumedAt: Date.now(),
+    pauseReason: null,
+  };
+  if (sessionKey) {
+    configPatch.gatewaySessionKey = sessionKey;
   }
 
   const agent = updateAgent(agentId, {
     status: "idle",
-    config: mergeAgentConfig(before.config, {
-      paused: false,
-      resumedAt: Date.now(),
-      pauseReason: null,
-    }),
+    config: mergeAgentConfig(before.config, configPatch),
   });
 
   if (!agent) {
@@ -621,6 +763,7 @@ app.post("/api/agents/:id/resume", async (c) => {
     before,
     after: agent,
     metadata: {
+      sessionKey,
       gatewayResult,
     },
   });
@@ -716,8 +859,15 @@ app.post("/api/agents/:id/delegate", async (c) => {
   });
 
   try {
+    const hermesSessionKey = await resolveGatewaySessionKeyForAgent(
+      "hermes",
+      getAgentById("hermes")?.config,
+    );
+    if (!hermesSessionKey) {
+      throw new Error("gateway session key not resolved for hermes");
+    }
     const gatewayResult = await gatewayRpcClient.chatSend({
-      to: "hermes",
+      sessionKey: hermesSessionKey,
       message: relayMessage,
       idempotencyKey: command.id,
     });
@@ -737,6 +887,7 @@ app.post("/api/agents/:id/delegate", async (c) => {
         queue: "inline",
         targetAgentId,
         via: "hermes",
+        sessionKey: hermesSessionKey,
         gatewayResult,
       },
     });
@@ -847,8 +998,16 @@ app.post("/api/agents/:id/command", async (c) => {
   }
 
   try {
+    const target = parsed.data.to ?? agentId;
+    const sessionKey = await resolveGatewaySessionKeyForAgent(
+      target,
+      parsed.data.to ? getAgentById(parsed.data.to)?.config : agent.config,
+    );
+    if (!sessionKey) {
+      throw new Error(`gateway session key not resolved for target: ${target}`);
+    }
     const gatewayResult = await gatewayRpcClient.chatSend({
-      to: parsed.data.to ?? agentId,
+      sessionKey,
       message: parsed.data.message,
       idempotencyKey: command.id,
     });
@@ -866,7 +1025,8 @@ app.post("/api/agents/:id/command", async (c) => {
       after: done ?? command,
       metadata: {
         queue: "inline",
-        target: parsed.data.to ?? agentId,
+        target,
+        sessionKey,
         gatewayResult,
       },
     });
@@ -1282,8 +1442,34 @@ app.post("/api/gateway/sessions/spawn", async (c) => {
   }
 
   try {
-    const result = await gatewayRpcClient.sessionsSpawn(parsed.payload);
-    return c.json({ result });
+    const to = normalizeSessionKey(parsed.payload.to);
+    const message =
+      typeof parsed.payload.message === "string" ? parsed.payload.message.trim() : "";
+    const taskLabel =
+      typeof parsed.payload.task === "string" ? parsed.payload.task.trim() : undefined;
+    const from = normalizeSessionKey(parsed.payload.from) ?? "hermes";
+
+    if (!to || !message) {
+      return c.json({ error: "sessions.spawn requires non-empty to/message" }, 400);
+    }
+
+    const sessionKey = await resolveGatewaySessionKeyForAgent(from, getAgentById(from)?.config);
+    if (!sessionKey) {
+      return c.json({ error: `gateway session key not resolved for from=${from}` }, 502);
+    }
+
+    const relayMessage = buildDelegateRelayMessage({
+      targetAgentId: to,
+      taskLabel,
+      message,
+    });
+
+    const result = await gatewayRpcClient.chatSend({
+      sessionKey,
+      message: relayMessage,
+      idempotencyKey: buildGatewayIdempotencyKey(parsed.payload.idempotencyKey, "session-spawn"),
+    });
+    return c.json({ result, resolved: { sessionKey, from, to } });
   } catch (error) {
     return c.json({ error: getErrorMessage(error) }, 502);
   }
@@ -1296,8 +1482,25 @@ app.post("/api/gateway/sessions/send", async (c) => {
   }
 
   try {
-    const result = await gatewayRpcClient.sessionsSend(parsed.payload);
-    return c.json({ result });
+    const to = normalizeSessionKey(parsed.payload.to);
+    const message =
+      typeof parsed.payload.message === "string" ? parsed.payload.message.trim() : "";
+
+    if (!to || !message) {
+      return c.json({ error: "sessions.send requires non-empty to/message" }, 400);
+    }
+
+    const sessionKey = await resolveGatewaySessionKeyForAgent(to, getAgentById(to)?.config);
+    if (!sessionKey) {
+      return c.json({ error: `gateway session key not resolved for to=${to}` }, 502);
+    }
+
+    const result = await gatewayRpcClient.chatSend({
+      sessionKey,
+      message,
+      idempotencyKey: buildGatewayIdempotencyKey(parsed.payload.idempotencyKey, "session-send"),
+    });
+    return c.json({ result, resolved: { sessionKey, to } });
   } catch (error) {
     return c.json({ error: getErrorMessage(error) }, 502);
   }
