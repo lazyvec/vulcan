@@ -39,10 +39,10 @@ Hermes runs.  Vulcan watches.  The human decides.
                           │   Vulcan UI (PWA)    │
                           │   Next.js App Router │
                           └──────────┬──────────┘
-                                     │ SSE / polling
+                                     │ WebSocket / SSE / polling
                           ┌──────────┴──────────┐
-                          │    Vulcan API        │
-                          │    Route Handlers    │
+                          │    Hono API          │
+                          │    + Gateway RPC     │
                           └──────────┬──────────┘
                                      │
                           ┌──────────┴──────────┐
@@ -52,8 +52,8 @@ Hermes runs.  Vulcan watches.  The human decides.
                           └──────────┬──────────┘
                                      │ ingest
                           ┌──────────┴──────────┐
-                          │  adapter-openclaw    │
-                          │  log → event 정규화   │
+                          │ gateway-adapter      │
+                          │ ws event 정규화       │
                           └──────────┬──────────┘
                                      │
                           ┌──────────┴──────────┐
@@ -108,7 +108,7 @@ pm2 startOrReload ecosystem.config.js --env production
 | `pnpm start` | 프로덕션 서버 |
 | `pnpm lint` | ESLint |
 | `pnpm seed` | 시드 데이터 |
-| `pnpm adapter` | OpenClaw 로그 수집기 |
+| `pnpm adapter` | OpenClaw Gateway 이벤트 수집기 |
 
 ## API Endpoints
 
@@ -125,11 +125,13 @@ pm2 startOrReload ecosystem.config.js --env production
 | `GET` | `/api/memory` | 메모리 아이템 |
 | `GET` | `/api/docs` | 문서 탐색기 |
 | `GET` | `/api/schedule` | 스케줄 목록 |
+| `GET` | `/api/gateway/status` | Gateway 연결 상태 |
+| `POST` | `/api/gateway/rpc` | Gateway RPC 호출 |
 
 ## OpenClaw 연동
 
 ```bash
-# 실전송 — 로그를 파싱해서 Vulcan에 인제스트
+# 실전송 — Gateway 이벤트를 Vulcan에 인제스트
 pnpm adapter
 
 # dry-run — DB 미삽입, stdout 출력만
@@ -137,29 +139,20 @@ ADAPTER_DRY_RUN=1 pnpm adapter
 ```
 
 어댑터 동작:
-1. `/tmp/openclaw` 또는 `~/.openclaw*/logs`에서 `openclaw-*.log` 자동 탐색
+1. OpenClaw Gateway WebSocket(`ws://127.0.0.1:18789`) 연결
 2. `message / tool_call / error / sync` 이벤트 정규화
 3. `POST /api/adapter/ingest`로 전송 → API 저장 후 UI에 실시간 반영
 
 ## Environment
 
-`apps/web/.env.example` 참조:
-
-```env
-PORT=3001
-VULCAN_INGEST_URL=http://127.0.0.1:8787/api/adapter/ingest
-OPENCLAW_LOG_DIR=/tmp/openclaw
-OPENCLAW_LOG_FILE=           # 특정 로그 파일 강제 지정
-ADAPTER_DRY_RUN=1            # 전송 없이 이벤트 출력
-```
-
 `apps/api/.env.example` 참조:
 
 ```env
-VULCAN_API_PORT=8787
-VULCAN_CORS_ORIGIN=*
-DATABASE_URL=
-REDIS_URL=
+VULCAN_INGEST_URL=http://127.0.0.1:8787/api/adapter/ingest
+OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
+OPENCLAW_GATEWAY_TOKEN=
+VULCAN_GATEWAY_SCOPES=operator.admin
+ADAPTER_DRY_RUN=1
 ```
 
 ## Stack
@@ -170,7 +163,7 @@ REDIS_URL=
 | Language | TypeScript (strict) |
 | Database | SQLite + Drizzle ORM |
 | Styling | Tailwind CSS v4 + CSS 변수 디자인 토큰 |
-| Realtime | SSE (`X-Accel-Buffering: no`) |
+| Realtime | WebSocket + SSE fallback |
 | Icons | Lucide React |
 | Animation | Framer Motion |
 | Typography | Geist Sans / Geist Mono |

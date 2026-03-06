@@ -2,6 +2,41 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 2 Batch 3 (Gateway 이벤트 어댑터 전환 + 팬아웃 정합화)
+
+### 요약
+Phase 2의 마지막 배치로 이벤트 수집 경로를 로그 파일 폴링에서 Gateway WebSocket 직접 수신으로 전환했다.
+Gateway 이벤트를 ingest 이벤트로 변환하는 모듈/테스트를 추가하고, 어댑터 실행 경로(`pnpm adapter`)를 API Gateway 어댑터로 전환해 Redis Pub/Sub 팬아웃 경로를 완성했다.
+
+### 완료 항목
+- ✅ `apps/api/src/gateway-rpc/event-adapter.ts` 추가
+  - Gateway event → Vulcan ingest event 변환
+  - 이벤트 타입/요약/agentId 추론
+  - fingerprint 기반 dedupe 유틸
+- ✅ `apps/api/scripts/adapter-openclaw-gateway.ts` 추가
+  - Gateway WS 이벤트 수신
+  - rate-limit + heartbeat + ingest 전송
+  - graceful shutdown 처리
+- ✅ 실행 경로 전환
+  - 루트 `pnpm adapter` → API Gateway 어댑터
+  - PM2 `vulcan-adapter` env를 Gateway 기준으로 갱신
+- ✅ 테스트 추가
+  - `event-adapter` 변환 규칙 테스트 4종
+
+### 검증 결과
+- `pnpm --filter @vulcan/api test:gateway-event-adapter` 성공 (4/4)
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- 🔜 **다음 작업: Phase 3 — 에이전트 생명주기 관리**
+
 ## 2026-03-06: Phase 2 Batch 2 (Gateway RPC 클라이언트 + v3 핸드셰이크)
 
 ### 요약

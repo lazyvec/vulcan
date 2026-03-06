@@ -9,6 +9,8 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
     "test:gateway-rpc": "tsx --test src/gateway-rpc/client.test.ts",
+    "test:gateway-event-adapter": "tsx --test src/gateway-rpc/event-adapter.test.ts",
+    "adapter:gateway": "tsx scripts/adapter-openclaw-gateway.ts",
     "db:generate:pg": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate:pg": "drizzle-kit migrate --config drizzle.config.ts",
     "migrate:sqlite-to-pg": "tsx scripts/sqlite-to-postgres.ts"

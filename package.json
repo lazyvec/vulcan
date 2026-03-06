@@ -14,7 +14,7 @@
     "start": "pnpm --filter @vulcan/web start -- --port 3001 --hostname 127.0.0.1",
     "lint": "pnpm --filter @vulcan/shared lint && pnpm --filter @vulcan/api lint && pnpm --filter @vulcan/web lint",
     "seed": "pnpm --filter @vulcan/web seed",
-    "adapter": "pnpm --filter @vulcan/web adapter",
+    "adapter": "pnpm --filter @vulcan/api adapter:gateway",
     "test:smoke": "pnpm --filter @vulcan/web test:smoke",
     "db:generate": "pnpm --filter @vulcan/web db:generate",
     "db:migrate": "pnpm --filter @vulcan/web db:migrate"
