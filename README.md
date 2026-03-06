@@ -87,6 +87,8 @@ E2E/에이전트 운영 문서:
 - [`docs/E2E_SESSION_SEND_RUNBOOK.md`](./docs/E2E_SESSION_SEND_RUNBOOK.md)
 - [`docs/ACCOUNT_ROUTING_POLICY.md`](./docs/ACCOUNT_ROUTING_POLICY.md)
 - [`docs/ACCOUNT_STATUS.md`](./docs/ACCOUNT_STATUS.md)
+- [`docs/HERMES_OPERATING_PROFILE.md`](./docs/HERMES_OPERATING_PROFILE.md)
+- [`docs/AGENT_ROUTING_MATRIX.md`](./docs/AGENT_ROUTING_MATRIX.md)
 
 ## Quick Start
 
