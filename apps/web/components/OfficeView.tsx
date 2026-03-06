@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LiveActivityPanel } from "@/components/LiveActivityPanel";
 import {
   OFFICE_ZONES,
@@ -8,7 +8,7 @@ import {
   STATUS_LABELS,
   statusFromEventType,
 } from "@/lib/statusMap";
-import type { Agent, AgentStatus, EventItem } from "@/lib/types";
+import type { Agent, AgentCommand, AgentStatus, EventItem } from "@/lib/types";
 import {
   AlertTriangle,
   BrainCircuit,
@@ -59,11 +59,31 @@ function StatusIcon({ status }: { status: AgentStatus }) {
   }
 }
 
+const COMMAND_STATUS_LABELS: Record<AgentCommand["status"], string> = {
+  queued: "Queued",
+  sent: "Sent",
+  failed: "Failed",
+};
+
+const COMMAND_STATUS_COLORS: Record<AgentCommand["status"], string> = {
+  queued: "text-amber-300 border-amber-500/40 bg-amber-500/10",
+  sent: "text-green-300 border-green-500/40 bg-green-500/10",
+  failed: "text-red-300 border-red-500/40 bg-red-500/10",
+};
+
+function formatTime(ts: number) {
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
   const [selectedAgentId, setSelectedAgentId] = useState<string>(
     agents[0]?.id ?? "hermes"
   );
   const [liveAgents, setLiveAgents] = useState<Agent[]>(agents);
+  const [commands, setCommands] = useState<AgentCommand[]>([]);
+  const [commandsLoading, setCommandsLoading] = useState(false);
+  const [commandsError, setCommandsError] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   function handleIncomingEvent(event: EventItem) {
     if (!event.agentId) return;
@@ -76,6 +96,62 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
       )
     );
   }
+
+  async function loadCommands(agentId: string) {
+    if (!agentId) {
+      setCommands([]);
+      return;
+    }
+
+    setCommandsLoading(true);
+    setCommandsError(null);
+    try {
+      const response = await fetch(
+        `/api/agent-commands?agentId=${encodeURIComponent(agentId)}&limit=20`
+      );
+      if (!response.ok) {
+        throw new Error(`failed to load commands (${response.status})`);
+      }
+      const data = (await response.json()) as { commands?: AgentCommand[] };
+      setCommands(Array.isArray(data.commands) ? data.commands : []);
+    } catch (error) {
+      setCommandsError(error instanceof Error ? error.message : "failed to load commands");
+      setCommands([]);
+    } finally {
+      setCommandsLoading(false);
+    }
+  }
+
+  async function retryCommand(commandId: string) {
+    setRetryingId(commandId);
+    setCommandsError(null);
+    try {
+      const response = await fetch(`/api/agent-commands/${commandId}/retry`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        let detail = "";
+        try {
+          const payload = (await response.json()) as { error?: string };
+          if (payload.error) {
+            detail = `: ${payload.error}`;
+          }
+        } catch {
+          // Ignore response parse failure.
+        }
+        throw new Error(`retry failed (${response.status})${detail}`);
+      }
+      await loadCommands(selectedAgentId);
+    } catch (error) {
+      setCommandsError(error instanceof Error ? error.message : "retry failed");
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
+  useEffect(() => {
+    void loadCommands(selectedAgentId);
+  }, [selectedAgentId]);
 
   async function runDemo(status: AgentStatus) {
     await fetch("/api/events", {
@@ -142,6 +218,65 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
                 {STATUS_LABELS[status]}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-[var(--color-tertiary)]">
+              Recent Commands (for {selectedAgentId})
+            </p>
+            <button
+              type="button"
+              className="rounded border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)]"
+              onClick={() => void loadCommands(selectedAgentId)}
+              disabled={commandsLoading}
+            >
+              {commandsLoading ? "Loading..." : "Refresh"}
+            </button>
+          </div>
+
+          {commandsError ? (
+            <p className="mb-2 text-xs text-red-300">{commandsError}</p>
+          ) : null}
+
+          <div className="space-y-2">
+            {commands.map((command) => (
+              <article
+                key={command.id}
+                className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-2"
+              >
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="truncate text-xs font-medium text-[var(--color-foreground)]">
+                    {command.mode === "delegate" ? "Delegate via Hermes" : "Direct Command"}
+                  </p>
+                  <span
+                    className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${COMMAND_STATUS_COLORS[command.status]}`}
+                  >
+                    {COMMAND_STATUS_LABELS[command.status]}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--color-tertiary)]">
+                  {formatTime(command.createdAt)} · {command.id}
+                </p>
+                {command.error ? (
+                  <p className="mt-1 line-clamp-2 text-[11px] text-red-300">{command.error}</p>
+                ) : null}
+                {command.status === "failed" ? (
+                  <button
+                    type="button"
+                    className="mt-2 rounded border border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => void retryCommand(command.id)}
+                    disabled={retryingId === command.id}
+                  >
+                    {retryingId === command.id ? "Retrying..." : "Retry"}
+                  </button>
+                ) : null}
+              </article>
+            ))}
+            {!commandsLoading && commands.length === 0 ? (
+              <p className="text-xs text-[var(--color-tertiary)]">No command history yet.</p>
+            ) : null}
           </div>
         </div>
       </section>

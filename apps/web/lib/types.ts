@@ -1,5 +1,7 @@
 export type {
   Agent,
+  AgentCommand,
+  AgentCommandStatus,
   AgentStatus,
   DocItem,
   EventItem,

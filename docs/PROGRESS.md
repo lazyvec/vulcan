@@ -2,6 +2,39 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 3 Batch 4 (오피스 커맨드 이력/재시도 UI 연결)
+
+### 요약
+Phase 3 네 번째 배치로 운영 API를 UI에 연결했다.
+`OfficeView`에서 선택한 에이전트의 커맨드 이력을 조회하고, 실패 커맨드를 즉시 재시도할 수 있는 패널을 추가했다.
+
+### 완료 항목
+- ✅ `apps/web/components/OfficeView.tsx`
+  - 선택 에이전트 변경 시 `/api/agent-commands` 조회
+  - 커맨드 상태(queued/sent/failed) 시각화
+  - 실패 커맨드 `Retry` 버튼 → `/api/agent-commands/:id/retry` 호출
+  - refresh/loading/error 상태 처리
+- ✅ `apps/web/lib/types.ts`
+  - `AgentCommand`, `AgentCommandStatus` 타입 re-export
+
+### 검증 결과
+- `pnpm --filter @vulcan/web lint` 성공
+- `pnpm --filter @vulcan/web build` 성공
+- `pnpm --filter @vulcan/api lint` 성공
+- `pnpm --filter @vulcan/api test:gateway-rpc` 성공 (3/3)
+- `pnpm --filter @vulcan/api test:gateway-event-adapter` 성공 (4/4)
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- 🚧 Phase 3 진행중 (Batch 4 완료)
+  - 다음 핵심: Team/Office 제어 UI 확장(생성/수정/비활성화/직접 명령) + `sessions.spawn/send` 연동
+
 ## 2026-03-06: Phase 3 Batch 3 (커맨드 조회/재시도 API)
 
 ### 요약
