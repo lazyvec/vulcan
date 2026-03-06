@@ -2,6 +2,40 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
 
+## 2026-03-06: Phase 2 Batch 1 (WebSocket 실시간 경로 전환)
+
+### 요약
+Phase 2의 첫 배치로 WebSocket 경로를 도입했다.
+`/api/ws` 엔드포인트와 공용 메시지 프로토콜을 추가하고, 프론트엔드 실시간 수신을 SSE에서 WebSocket 기본 경로로 전환했다.
+
+### 완료 항목
+- ✅ `@vulcan/shared`에 실시간 프로토콜 타입/스키마 추가
+  - `event | command | ack | error` envelope
+- ✅ Hono API에 `/api/ws` WebSocket 엔드포인트 추가 (`@hono/node-ws`)
+  - seed 이벤트 전송
+  - `command: ping` → `ack: pong` 처리
+  - heartbeat ack 전송
+- ✅ 프론트엔드 `useVulcanWebSocket` 훅 추가 (자동 재연결)
+- ✅ `LiveActivityPanel` 실시간 입력 경로를 WebSocket으로 전환
+  - WebSocket 단절 시 기존 `/api/events?since=` 폴링 폴백 유지
+- ✅ Playwright/PM2 환경에 `NEXT_PUBLIC_VULCAN_WS_URL` 반영
+
+### 검증 결과
+- `pnpm lint` 성공
+- `pnpm build` 성공
+- `pnpm test:smoke` 성공 (6/6)
+- 수동 WebSocket 검증 성공
+  - `ws://127.0.0.1:8793/api/ws` 연결
+  - `command ping` → `ack pong` 수신
+  - `POST /api/events` 후 `type:event` 프레임 수신
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- 🚧 Phase 2 진행중 (Batch 1 완료)
+  - 다음 핵심: OpenClaw Gateway RPC 클라이언트/핸드셰이크, Redis 팬아웃 정합화
+
 ## 2026-03-06: Phase 1 PostgreSQL 전환 마무리 (완료)
 
 ### 요약

@@ -1,5 +1,6 @@
 import { Client } from "pg";
 import { serve } from "@hono/node-server";
+import { createNodeWebSocket } from "@hono/node-ws";
 import { cors } from "hono/cors";
 import { Hono } from "hono";
 import { logger } from "hono/logger";
@@ -7,8 +8,10 @@ import { streamSSE } from "hono/streaming";
 import {
   createEventSchema,
   ingestPayloadSchema,
+  realtimeClientMessageSchema,
   taskLanePatchSchema,
 } from "@vulcan/shared/schemas";
+import type { RealtimeServerMessage } from "@vulcan/shared/types";
 import {
   appendEvent,
   countRecords,
@@ -32,18 +35,39 @@ import { getRuntimeInfo } from "./runtime-info";
 import { getCommandQueue } from "./queue";
 
 const app = new Hono();
+const WS_PATH = "/api/ws";
+let wsClientCount = 0;
+const applyApiCors = cors({
+  origin: process.env.VULCAN_CORS_ORIGIN ?? "*",
+  allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization"],
+});
+const { injectWebSocket, upgradeWebSocket } = createNodeWebSocket({ app });
+
+function sendWsMessage(
+  ws: { send: (message: string) => void },
+  message: RealtimeServerMessage,
+) {
+  try {
+    ws.send(JSON.stringify(message));
+  } catch {
+    // Ignore best-effort send errors after disconnect.
+  }
+}
 
 app.use("*", logger());
-app.use(
-  "/api/*",
-  cors({
-    origin: process.env.VULCAN_CORS_ORIGIN ?? "*",
-    allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-  }),
-);
+app.use("/api/*", async (c, next) => {
+  if (c.req.path === WS_PATH) {
+    await next();
+    return;
+  }
+  return applyApiCors(c, next);
+});
 app.use("*", async (c, next) => {
   await next();
+  if (c.req.path === WS_PATH) {
+    return;
+  }
   c.header("X-Content-Type-Options", "nosniff");
   c.header("X-Frame-Options", "DENY");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -204,6 +228,94 @@ app.get("/api/docs", (c) => {
 
 app.get("/api/schedule", (c) => c.json({ schedules: getSchedules() }));
 
+app.get(
+  WS_PATH,
+  upgradeWebSocket(() => {
+    let unsubscribe: (() => void) | null = null;
+    let heartbeat: ReturnType<typeof setInterval> | null = null;
+
+    const release = () => {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      if (heartbeat) {
+        clearInterval(heartbeat);
+        heartbeat = null;
+      }
+    };
+
+    return {
+      onOpen(_event, ws) {
+        wsClientCount += 1;
+
+        const seed = getLatestEvents(8);
+        for (const event of seed) {
+          sendWsMessage(ws, { type: "event", payload: event });
+        }
+
+        sendWsMessage(ws, {
+          type: "ack",
+          payload: { kind: "ready", ts: Date.now() },
+        });
+
+        unsubscribe = subscribeEvents((event) => {
+          sendWsMessage(ws, { type: "event", payload: event });
+        });
+
+        heartbeat = setInterval(() => {
+          sendWsMessage(ws, {
+            type: "ack",
+            payload: { kind: "heartbeat", ts: Date.now() },
+          });
+        }, 15_000);
+      },
+      onMessage(event, ws) {
+        let payload: unknown;
+        try {
+          payload = JSON.parse(String(event.data));
+        } catch {
+          sendWsMessage(ws, {
+            type: "error",
+            payload: { message: "invalid JSON payload" },
+          });
+          return;
+        }
+
+        const parsed = realtimeClientMessageSchema.safeParse(payload);
+        if (!parsed.success) {
+          sendWsMessage(ws, {
+            type: "error",
+            payload: { message: "invalid command payload" },
+          });
+          return;
+        }
+
+        if (parsed.data.payload.command === "ping") {
+          sendWsMessage(ws, {
+            type: "ack",
+            payload: {
+              kind: "pong",
+              ts: Date.now(),
+              requestId: parsed.data.payload.requestId,
+            },
+          });
+        }
+      },
+      onClose() {
+        wsClientCount = Math.max(0, wsClientCount - 1);
+        release();
+      },
+      onError(_event, ws) {
+        sendWsMessage(ws, {
+          type: "error",
+          payload: { message: "websocket runtime error" },
+        });
+      },
+    };
+  }),
+);
+
 app.get("/api/stream", (c) => {
   return streamSSE(c, async (stream) => {
     const seed = getLatestEvents(8);
@@ -305,7 +417,9 @@ app.get("/api/health", async (c) => {
     postgres,
     redis,
     sseOk: true,
+    streamSubscribers: getSubscriberCount(),
     sseSubscribers: getSubscriberCount(),
+    wsClients: wsClientCount,
     records: countRecords(),
     nodeEnv: process.env.NODE_ENV ?? "unknown",
     port: process.env.VULCAN_API_PORT ?? "8787",
@@ -319,7 +433,7 @@ app.get("/", (c) => c.json({ service: "vulcan-api", ok: true }));
 
 const port = Number(process.env.VULCAN_API_PORT ?? "8787");
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     port,
@@ -329,3 +443,5 @@ serve(
     console.log(`[vulcan-api] listening on http://${info.address}:${info.port}`);
   },
 );
+
+injectWebSocket(server);

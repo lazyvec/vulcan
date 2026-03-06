@@ -38,10 +38,12 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "3001",
+        NEXT_PUBLIC_VULCAN_WS_URL: "ws://127.0.0.1:8787/api/ws",
       },
       env_production: {
         NODE_ENV: "production",
         PORT: "3001",
+        NEXT_PUBLIC_VULCAN_WS_URL: "ws://127.0.0.1:8787/api/ws",
       },
     },
     {

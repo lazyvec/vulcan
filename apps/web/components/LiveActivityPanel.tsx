@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMissionControl } from "@/components/MissionControlProvider";
+import { useVulcanWebSocket } from "@/hooks/useWebSocket";
 import type { EventItem } from "@/lib/types";
 import {
   AlertTriangle,
@@ -77,27 +78,27 @@ export function LiveActivityPanel({
   }, []);
 
   const latestTs = useMemo(() => events[events.length - 1]?.ts ?? 0, [events]);
-
-  useEffect(() => {
-    if (paused) return;
-
-    const source = new EventSource("/api/stream");
-
-    source.onmessage = (message) => {
-      const event = JSON.parse(message.data) as EventItem;
+  const pushEvent = useCallback(
+    (event: EventItem) => {
       onEvent?.(event);
       setEvents((prev) => {
-        if (prev.find((item) => item.id === event.id)) return prev;
-        setHighlighted((h) => [...h, event.id]);
+        if (prev.find((item) => item.id === event.id)) {
+          return prev;
+        }
+        setHighlighted((current) => [...current, event.id]);
         return [...prev.slice(-149), event];
       });
-    };
+    },
+    [onEvent],
+  );
 
-    return () => source.close();
-  }, [onEvent, paused]);
+  const { connected: wsConnected } = useVulcanWebSocket({
+    paused,
+    onEvent: pushEvent,
+  });
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || wsConnected) return;
 
     const timer = setInterval(async () => {
       const response = await fetch(`/api/events?since=${latestTs}`);
@@ -105,21 +106,13 @@ export function LiveActivityPanel({
       const data = (await response.json()) as { events: EventItem[] };
       if (!data.events.length) return;
 
-      setEvents((prev) => {
-        const merged = [...prev];
-        for (const event of data.events) {
-          onEvent?.(event);
-          if (!merged.find((item) => item.id === event.id)) {
-            merged.push(event);
-            setHighlighted((h) => [...h, event.id]);
-          }
-        }
-        return merged.slice(-150);
-      });
+      for (const event of data.events) {
+        pushEvent(event);
+      }
     }, 8000);
 
     return () => clearInterval(timer);
-  }, [latestTs, onEvent, paused]);
+  }, [latestTs, paused, pushEvent, wsConnected]);
 
   const filtered = useMemo(() => {
     const start = rangeStart(range);
@@ -145,10 +138,14 @@ export function LiveActivityPanel({
         <h2 className="mr-auto text-base font-semibold text-[var(--color-foreground)]">{title}</h2>
         <span
           className={`vulcan-chip text-xs font-bold ${
-            paused ? "bg-amber-600/20 text-amber-300" : "bg-green-600/20 text-green-300"
+            paused
+              ? "bg-amber-600/20 text-amber-300"
+              : wsConnected
+                ? "bg-green-600/20 text-green-300"
+                : "bg-blue-600/20 text-blue-300"
           }`}
         >
-          {paused ? "PAUSED" : "LIVE"}
+          {paused ? "PAUSED" : wsConnected ? "LIVE · WS" : "LIVE · POLL"}
         </span>
         <select
           className="vulcan-input w-auto"

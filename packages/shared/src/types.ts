@@ -92,3 +92,47 @@ export interface IngestEventInput {
   summary: string;
   payloadJson?: string;
 }
+
+export type RealtimeMessageType = "event" | "command" | "ack" | "error";
+
+export interface RealtimeEnvelope<
+  TType extends RealtimeMessageType,
+  TPayload = unknown,
+> {
+  type: TType;
+  payload: TPayload;
+}
+
+export type RealtimeClientCommandMessage = RealtimeEnvelope<
+  "command",
+  {
+    command: "ping";
+    requestId?: string;
+  }
+>;
+
+export type RealtimeServerEventMessage = RealtimeEnvelope<"event", EventItem>;
+
+export type RealtimeServerAckMessage = RealtimeEnvelope<
+  "ack",
+  {
+    kind: "ready" | "heartbeat" | "pong";
+    ts: number;
+    requestId?: string;
+  }
+>;
+
+export type RealtimeServerErrorMessage = RealtimeEnvelope<
+  "error",
+  {
+    message: string;
+    requestId?: string;
+  }
+>;
+
+export type RealtimeClientMessage = RealtimeClientCommandMessage;
+
+export type RealtimeServerMessage =
+  | RealtimeServerEventMessage
+  | RealtimeServerAckMessage
+  | RealtimeServerErrorMessage;

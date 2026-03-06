@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 2 — WebSocket + Gateway RPC (진행준비)
+## 현재 Phase: 2 — WebSocket + Gateway RPC (진행중, Batch 1 완료)
 
-> M0 + Phase 0 + Phase 1 완료. Phase 2 작업부터 이어서 진행.
+> M0 + Phase 0 + Phase 1 완료. Phase 2 Batch 1(WebSocket 경로) 완료 후 다음 배치 진행.
 
 ---
 
@@ -35,14 +35,14 @@
 
 ## Phase 2: WebSocket + Gateway RPC (5-7일) — 의존성: Phase 1
 
-- [ ] Hono WebSocket 서버 (`hono/ws`) — 프론트엔드 ↔ 백엔드
-- [ ] 메시지 프로토콜 정의: `{ type: 'event'|'command'|'ack'|'error', payload }`
+- [x] Hono WebSocket 서버 (`/api/ws`) — 프론트엔드 ↔ 백엔드
+- [x] 메시지 프로토콜 정의: `{ type: 'event'|'command'|'ack'|'error', payload }`
 - [ ] OpenClaw Gateway RPC 클라이언트 (`ws://127.0.0.1:18789`)
   - [ ] 챌린지 기반 핸드셰이크, 프로토콜 v3
   - [ ] RPC 래핑: `agents.*`, `chat.*`, `sessions.*`, `config.*`, `cron.*`
   - [ ] 재연결 로직 (지수 백오프)
-- [ ] 프론트엔드 `useWebSocket` 훅 (자동 재연결)
-- [ ] `LiveActivityPanel.tsx`, `OfficeView.tsx` SSE → WebSocket 전환
+- [x] 프론트엔드 `useWebSocket` 훅 (자동 재연결)
+- [x] `LiveActivityPanel.tsx`, `OfficeView.tsx` SSE → WebSocket 전환
 - [ ] Redis Pub/Sub 팬아웃 (Gateway 이벤트 → 모든 클라이언트)
 - [ ] 로그 파일 폴링 어댑터 → Gateway RPC 직접 수신으로 대체
 - [ ] 검증: WebSocket 연결, Gateway 핸드셰이크, 에이전트 목록 실시간 수신

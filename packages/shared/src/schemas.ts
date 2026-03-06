@@ -25,6 +25,18 @@ export const ingestEventInputSchema = z.object({
   payloadJson: z.string().optional(),
 });
 
+export const eventItemSchema = z.object({
+  id: z.string().min(1),
+  ts: z.number().int().nonnegative(),
+  source: z.string().min(1),
+  agentId: nullableIdSchema,
+  projectId: nullableIdSchema,
+  taskId: nullableIdSchema,
+  type: z.string().min(1),
+  summary: z.string().min(1),
+  payloadJson: z.string(),
+});
+
 export const ingestPayloadSchema = z.union([
   z.object({
     events: z.array(ingestEventInputSchema).min(1),
@@ -37,6 +49,43 @@ export const taskLanePatchSchema = z.object({
 });
 
 export const createEventSchema = ingestEventInputSchema;
+
+export const realtimeMessageTypeSchema = z.enum([
+  "event",
+  "command",
+  "ack",
+  "error",
+]);
+
+export const realtimeClientMessageSchema = z.object({
+  type: z.literal("command"),
+  payload: z.object({
+    command: z.literal("ping"),
+    requestId: z.string().min(1).optional(),
+  }),
+});
+
+export const realtimeServerMessageSchema = z.union([
+  z.object({
+    type: z.literal("event"),
+    payload: eventItemSchema,
+  }),
+  z.object({
+    type: z.literal("ack"),
+    payload: z.object({
+      kind: z.enum(["ready", "heartbeat", "pong"]),
+      ts: z.number().int().nonnegative(),
+      requestId: z.string().min(1).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal("error"),
+    payload: z.object({
+      message: z.string().min(1),
+      requestId: z.string().min(1).optional(),
+    }),
+  }),
+]);
 
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
