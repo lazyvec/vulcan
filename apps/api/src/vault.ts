@@ -1,0 +1,164 @@
+/**
+ * Obsidian Vault 읽기/검색/클리핑 모듈
+ * obsidian-skills를 TypeScript로 포팅 + path traversal 방어
+ */
+
+import { readFile, writeFile, readdir, stat, mkdir } from "node:fs/promises";
+import { join, relative, extname, basename, resolve } from "node:path";
+import matter from "gray-matter";
+import type { VaultNote, VaultNoteSummary, ClipResult } from "@vulcan/shared/types";
+
+function getVaultPath(): string {
+  const p = process.env.OBSIDIAN_VAULT_PATH;
+  if (!p) throw new Error("OBSIDIAN_VAULT_PATH not configured");
+  return resolve(p);
+}
+
+function assertInsideVault(abs: string, vaultPath: string): void {
+  const resolved = resolve(abs);
+  if (!resolved.startsWith(vaultPath + "/") && resolved !== vaultPath) {
+    throw new Error("path traversal blocked");
+  }
+}
+
+async function walk(dir: string, result: string[]): Promise<void> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const e of entries) {
+    if (e.name.startsWith(".")) continue;
+    const full = join(dir, e.name);
+    if (e.isDirectory()) {
+      await walk(full, result);
+    } else if (extname(e.name) === ".md") {
+      result.push(full);
+    }
+  }
+}
+
+export async function listVaultNotes(): Promise<VaultNoteSummary[]> {
+  const vaultPath = getVaultPath();
+  const files: string[] = [];
+  await walk(vaultPath, files);
+
+  const notes: VaultNoteSummary[] = [];
+  for (const f of files) {
+    try {
+      const raw = await readFile(f, "utf-8");
+      const { data: frontmatter } = matter(raw);
+      const info = await stat(f);
+      const rel = relative(vaultPath, f);
+      notes.push({
+        path: rel,
+        title: (frontmatter.title as string) ?? basename(rel, ".md"),
+        frontmatter,
+        modified: info.mtime.toISOString(),
+      });
+    } catch {
+      // 읽기 실패한 파일은 건너뜀
+    }
+  }
+  return notes;
+}
+
+export async function readVaultNote(relPath: string): Promise<VaultNote> {
+  const vaultPath = getVaultPath();
+  const abs = resolve(join(vaultPath, relPath));
+  assertInsideVault(abs, vaultPath);
+
+  const raw = await readFile(abs, "utf-8");
+  const { data: frontmatter, content } = matter(raw);
+  const info = await stat(abs);
+  return {
+    path: relative(vaultPath, abs),
+    title: (frontmatter.title as string) ?? basename(relPath, ".md"),
+    frontmatter,
+    content: content.trim(),
+    modified: info.mtime.toISOString(),
+  };
+}
+
+export async function searchVaultNotes(query: string): Promise<VaultNoteSummary[]> {
+  const vaultPath = getVaultPath();
+  const files: string[] = [];
+  await walk(vaultPath, files);
+
+  const q = query.toLowerCase();
+  const results: VaultNoteSummary[] = [];
+
+  for (const f of files) {
+    try {
+      const raw = await readFile(f, "utf-8");
+      const { data: frontmatter, content } = matter(raw);
+      const rel = relative(vaultPath, f);
+      const titleStr = (frontmatter.title as string) ?? basename(rel, ".md");
+
+      const haystack = [
+        rel,
+        titleStr,
+        content,
+        JSON.stringify(frontmatter),
+      ].join(" ").toLowerCase();
+
+      if (haystack.includes(q)) {
+        const info = await stat(f);
+        results.push({
+          path: rel,
+          title: titleStr,
+          frontmatter,
+          modified: info.mtime.toISOString(),
+        });
+      }
+    } catch {
+      // 읽기 실패한 파일은 건너뜀
+    }
+  }
+  return results;
+}
+
+export async function clipUrlToVault(url: string): Promise<ClipResult> {
+  const vaultPath = getVaultPath();
+  const { Defuddle } = await import("defuddle/node");
+  const TurndownService = (await import("turndown")).default;
+
+  const res = await fetch(url);
+  const html = await res.text();
+
+  const result = await Defuddle(html, url);
+  const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
+  const markdown = td.turndown(result.content ?? html);
+
+  const title = result.title ?? new URL(url).hostname;
+  const author = result.author ?? "";
+  const published = result.published ?? "";
+  const description = result.description ?? "";
+
+  const slug = title
+    .replace(/[^a-zA-Z0-9가-힣\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 80);
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const fileName = `${dateStr}-${slug}.md`;
+  const clippingsDir = join(vaultPath, "Clippings");
+
+  await mkdir(clippingsDir, { recursive: true });
+
+  const frontmatterObj = {
+    title,
+    author,
+    published,
+    description,
+    source: url,
+    clipped: dateStr,
+  };
+  const fileContent = matter.stringify(markdown, frontmatterObj);
+  const filePath = join(clippingsDir, fileName);
+  await writeFile(filePath, fileContent, "utf-8");
+
+  return {
+    title,
+    author,
+    published,
+    description,
+    url,
+    savedPath: relative(vaultPath, filePath),
+  };
+}

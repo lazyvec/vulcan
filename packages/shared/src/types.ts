@@ -183,3 +183,29 @@ export type RealtimeServerMessage =
   | RealtimeServerEventMessage
   | RealtimeServerAckMessage
   | RealtimeServerErrorMessage;
+
+// ── Obsidian Vault ──────────────────────────────────────────────────────────
+
+export interface VaultNote {
+  path: string;
+  title: string;
+  frontmatter: Record<string, unknown>;
+  content: string;
+  modified: string;
+}
+
+export interface VaultNoteSummary {
+  path: string;
+  title: string;
+  frontmatter: Record<string, unknown>;
+  modified: string;
+}
+
+export interface ClipResult {
+  title: string;
+  author: string;
+  published: string;
+  description: string;
+  url: string;
+  savedPath: string;
+}

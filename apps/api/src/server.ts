@@ -63,6 +63,12 @@ import {
   type CommandQueueJobData,
 } from "./queue";
 import { getGatewayRpcClient } from "./gateway-rpc";
+import {
+  listVaultNotes,
+  readVaultNote,
+  searchVaultNotes,
+  clipUrlToVault,
+} from "./vault";
 
 const app = new Hono();
 const WS_PATH = "/api/ws";
@@ -1339,6 +1345,81 @@ app.get("/api/memory", (c) => {
 app.get("/api/docs", (c) => {
   const q = c.req.query("q") ?? "";
   return c.json({ docs: getDocs(q) });
+});
+
+// ── Obsidian Vault ──────────────────────────────────────────────────────────
+
+app.get("/api/vault/notes", async (c) => {
+  try {
+    const notes = await listVaultNotes();
+    return c.json({ notes });
+  } catch (error) {
+    if (getErrorMessage(error).includes("not configured")) {
+      return c.json({ error: "vault not configured" }, 503);
+    }
+    return c.json({ error: getErrorMessage(error) }, 500);
+  }
+});
+
+app.get("/api/vault/notes/*", async (c) => {
+  try {
+    const prefix = "/api/vault/notes/";
+    const relPath = c.req.path.startsWith(prefix)
+      ? decodeURIComponent(c.req.path.slice(prefix.length))
+      : "";
+    if (!relPath) return c.json({ error: "path required" }, 400);
+    const note = await readVaultNote(relPath);
+    return c.json({ note });
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
+    if (msg.includes("traversal")) return c.json({ error: "not found" }, 404);
+    if (msg.includes("ENOENT")) return c.json({ error: "not found" }, 404);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.post("/api/vault/search", async (c) => {
+  try {
+    const body = await c.req.json();
+    const q = isRecord(body) && typeof body.q === "string" ? body.q : "";
+    if (!q) return c.json({ error: "q is required" }, 400);
+    const results = await searchVaultNotes(q);
+    return c.json({ results });
+  } catch (error) {
+    if (getErrorMessage(error).includes("not configured")) {
+      return c.json({ error: "vault not configured" }, 503);
+    }
+    return c.json({ error: getErrorMessage(error) }, 500);
+  }
+});
+
+app.post("/api/vault/clip", async (c) => {
+  try {
+    const body = await c.req.json();
+    const url = isRecord(body) && typeof body.url === "string" ? body.url : "";
+    if (!url) return c.json({ error: "url is required" }, 400);
+    const result = await clipUrlToVault(url);
+    writeAudit({
+      action: "vault.clip",
+      entityType: "vault_note",
+      entityId: result.savedPath,
+      after: result,
+    });
+    const event = appendEvent({
+      type: "vault.clip",
+      source: "vulcan-api",
+      summary: `클리핑 저장: ${result.title}`,
+      payloadJson: JSON.stringify(result),
+    });
+    publishEvent(event);
+    return c.json({ clip: result });
+  } catch (error) {
+    if (getErrorMessage(error).includes("not configured")) {
+      return c.json({ error: "vault not configured" }, 503);
+    }
+    return c.json({ error: getErrorMessage(error) }, 500);
+  }
 });
 
 app.get("/api/schedule", (c) => c.json({ schedules: getSchedules() }));
