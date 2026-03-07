@@ -62,6 +62,7 @@
 - **에이전트 관리 UI**: Team 화면에 제어 패널 도입 (inactive 포함 조회 + pause/resume)
 - **Mission Control UI**: Tasks/Team/Office 정보 위계/밀도 개선 + confirm 기반 안전 액션 UX 반영
 - **Gateway Ops UI**: Team 화면에서 Gateway 설정/스케줄 운영 제어
+- **Vault UI**: Obsidian 볼트 웹 탐색기 (트리 뷰, 검색, URL 클리핑, 마크다운 렌더링)
 
 ### 목표 (Phase 2~)
 - **양방향**: Hono API ↔ Gateway RPC ↔ OpenClaw 에이전트

@@ -1,6 +1,42 @@
 # PROGRESS
 
-<!-- last-session --> **마지막 세션**: 2026-03-06 | 브랜치: `main`
+<!-- last-session --> **마지막 세션**: 2026-03-07 | 브랜치: `main`
+
+## 2026-03-07: Vault UI 구현 (Obsidian 볼트 웹 탐색기)
+
+### 요약
+Obsidian 볼트(마크다운 노트 저장소)를 웹에서 탐색/검색/클리핑할 수 있는 Vault 페이지를 추가했다.
+좌측 파일 트리 + 우측 마크다운 뷰어 2컬럼 레이아웃, 디바운스 검색, URL 클리핑 기능을 포함한다.
+
+### 완료 항목
+- ✅ `apps/web/app/(layout)/vault/page.tsx` — Vault 페이지 (SSR, getVaultNotes)
+- ✅ `apps/web/components/VaultExplorer.tsx` — 메인 컴포넌트
+  - 재귀 TreeItem으로 폴더/파일 트리 구현
+  - 디바운스(300ms) 실시간 검색
+  - URL 클리핑 기능
+  - useMemo/useCallback 최적화
+  - Frontmatter 태그 추출 및 칩 표시
+- ✅ `apps/web/components/MarkdownRenderer.tsx` — 마크다운 렌더러
+  - react-markdown + remark-gfm
+  - 코드 블록, 테이블, 외부 링크 커스텀 스타일링
+  - Vulcan CSS 변수 시스템 완전 활용
+- ✅ `apps/web/components/Sidebar.tsx` — 네비게이션에 Vault 항목 추가
+- ✅ `apps/web/lib/api-server.ts` — getVaultNotes() 함수 추가
+- ✅ `apps/web/package.json` — react-markdown, remark-gfm 의존성 추가
+
+### 외부 리뷰 (Gemini)
+- 판정: **통과 (PASS)**
+- 의도 부합성, UX/UI, 코드 품질, CSS 일관성, 보안 모두 양호
+- 개선 제안(minor): `[[위키링크]]` 지원, 클리핑 Toast 알림, TreeItem React.memo
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- ✅ Phase 3 완료 + 운영 하드닝 반영
+- ✅ Vault UI 추가 완료
+- ▶️ 다음: Phase 4 태스크 시스템 고도화
 
 ## 2026-03-06: Phase 3 운영 안정화 (PM2 토큰 덮어쓰기 방지 + 재배포 검증)
 

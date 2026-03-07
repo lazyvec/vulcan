@@ -7,6 +7,7 @@ import type {
   Schedule,
   Task,
   TaskLane,
+  VaultNoteSummary,
 } from "@vulcan/shared/types";
 
 const API_BASE_URL = process.env.VULCAN_API_BASE_URL ?? "http://127.0.0.1:8787";
@@ -80,4 +81,9 @@ export async function getDocs(query?: string) {
 export async function getSchedules() {
   const data = await requestJson<{ schedules: Schedule[] }>("/api/schedule");
   return data.schedules;
+}
+
+export async function getVaultNotes(): Promise<VaultNoteSummary[]> {
+  const data = await requestJson<{ notes: VaultNoteSummary[] }>("/api/vault/notes");
+  return data.notes;
 }

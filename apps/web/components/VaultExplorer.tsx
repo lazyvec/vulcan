@@ -1,0 +1,363 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FileText,
+  FolderClosed,
+  FolderOpen,
+  Link,
+  Loader2,
+  Search,
+} from "lucide-react";
+import type { VaultNoteSummary, VaultNote } from "@vulcan/shared/types";
+import { MarkdownRenderer } from "./MarkdownRenderer";
+
+/* ── 유틸 ──────────────────────────────────────────── */
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "방금 전";
+  if (mins < 60) return `${mins}분 전`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}시간 전`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}일 전`;
+  return new Date(iso).toLocaleDateString("ko-KR");
+}
+
+interface TreeNode {
+  name: string;
+  path: string;
+  children: TreeNode[];
+  note?: VaultNoteSummary;
+}
+
+function buildTree(notes: VaultNoteSummary[]): TreeNode[] {
+  const root: TreeNode[] = [];
+
+  for (const note of notes) {
+    const parts = note.path.split("/");
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isFile = i === parts.length - 1;
+      const fullPath = parts.slice(0, i + 1).join("/");
+
+      let existing = current.find((n) => n.name === part);
+      if (!existing) {
+        existing = {
+          name: part,
+          path: fullPath,
+          children: [],
+          note: isFile ? note : undefined,
+        };
+        current.push(existing);
+      }
+      if (isFile) {
+        existing.note = note;
+      }
+      current = existing.children;
+    }
+  }
+
+  const sortNodes = (nodes: TreeNode[]) => {
+    nodes.sort((a, b) => {
+      const aIsFolder = a.children.length > 0 && !a.note;
+      const bIsFolder = b.children.length > 0 && !b.note;
+      if (aIsFolder !== bIsFolder) return aIsFolder ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    for (const n of nodes) sortNodes(n.children);
+  };
+  sortNodes(root);
+  return root;
+}
+
+/* ── 트리 노드 컴포넌트 ───────────────────────────── */
+
+function TreeItem({
+  node,
+  selectedPath,
+  expandedFolders,
+  onToggle,
+  onSelect,
+  depth,
+}: {
+  node: TreeNode;
+  selectedPath: string | null;
+  expandedFolders: Set<string>;
+  onToggle: (path: string) => void;
+  onSelect: (path: string) => void;
+  depth: number;
+}) {
+  const isFolder = node.children.length > 0 && !node.note;
+  const isExpanded = expandedFolders.has(node.path);
+  const isSelected = node.note && node.note.path === selectedPath;
+
+  if (isFolder) {
+    return (
+      <div>
+        <button
+          onClick={() => onToggle(node.path)}
+          className="flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        >
+          {isExpanded ? (
+            <FolderOpen size={14} className="shrink-0 text-[var(--color-primary)]" />
+          ) : (
+            <FolderClosed size={14} className="shrink-0" />
+          )}
+          <span className="truncate font-medium">{node.name}</span>
+        </button>
+        {isExpanded &&
+          node.children.map((child) => (
+            <TreeItem
+              key={child.path}
+              node={child}
+              selectedPath={selectedPath}
+              expandedFolders={expandedFolders}
+              onToggle={onToggle}
+              onSelect={onSelect}
+              depth={depth + 1}
+            />
+          ))}
+      </div>
+    );
+  }
+
+  const displayName = node.note?.title ?? node.name.replace(/\.md$/, "");
+
+  return (
+    <button
+      onClick={() => onSelect(node.note!.path)}
+      className={`flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left text-sm transition-colors ${
+        isSelected
+          ? "border border-[var(--color-primary)] bg-[var(--color-primary-12)] text-[var(--color-primary)]"
+          : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+      }`}
+      style={{ paddingLeft: `${depth * 12 + 8}px` }}
+    >
+      <FileText size={14} className="shrink-0" />
+      <span className="truncate">{displayName}</span>
+      {node.note && (
+        <span className="ml-auto shrink-0 text-[10px] text-[var(--color-tertiary)]">
+          {relativeTime(node.note.modified)}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/* ── 메인 컴포넌트 ─────────────────────────────────── */
+
+export function VaultExplorer({
+  initialNotes,
+}: {
+  initialNotes: VaultNoteSummary[];
+}) {
+  const [notes, setNotes] = useState(initialNotes);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [noteContent, setNoteContent] = useState<VaultNote | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState("");
+  const [clipUrl, setClipUrl] = useState("");
+  const [clipping, setClipping] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    () => new Set<string>(),
+  );
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+  /* 검색 */
+  const doSearch = useCallback(async (q: string) => {
+    if (!q.trim()) {
+      const res = await fetch("/api/vault/notes");
+      const data = await res.json();
+      setNotes(data.notes ?? []);
+      return;
+    }
+    const res = await fetch("/api/vault/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ q }),
+    });
+    const data = await res.json();
+    setNotes(data.results ?? []);
+  }, []);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(query), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, doSearch]);
+
+  /* 노트 선택 */
+  const selectNote = useCallback(async (path: string) => {
+    setSelectedPath(path);
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/vault/notes/${encodeURIComponent(path)}`);
+      const data = await res.json();
+      setNoteContent(data.note ?? null);
+    } catch {
+      setNoteContent(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /* 클리핑 */
+  const handleClip = useCallback(async () => {
+    if (!clipUrl.trim()) return;
+    setClipping(true);
+    try {
+      await fetch("/api/vault/clip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: clipUrl }),
+      });
+      setClipUrl("");
+      doSearch(query);
+    } finally {
+      setClipping(false);
+    }
+  }, [clipUrl, query, doSearch]);
+
+  /* 폴더 토글 */
+  const toggleFolder = useCallback((path: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }, []);
+
+  const tree = useMemo(() => buildTree(notes), [notes]);
+
+  /* 태그 추출 */
+  const tags: string[] = useMemo(() => {
+    if (!noteContent?.frontmatter) return [];
+    const t = noteContent.frontmatter.tags;
+    if (Array.isArray(t)) return t.map(String);
+    if (typeof t === "string") return t.split(",").map((s) => s.trim());
+    return [];
+  }, [noteContent]);
+
+  return (
+    <div className="flex h-full flex-col gap-4">
+      {/* 상단 바 */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]"
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="노트 검색..."
+            className="vulcan-input pl-9"
+          />
+        </div>
+        <div className="flex gap-2">
+          <div className="relative flex-1 sm:w-64">
+            <Link
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]"
+            />
+            <input
+              type="text"
+              value={clipUrl}
+              onChange={(e) => setClipUrl(e.target.value)}
+              placeholder="URL 클리핑..."
+              className="vulcan-input pl-9"
+              onKeyDown={(e) => e.key === "Enter" && handleClip()}
+            />
+          </div>
+          <button
+            onClick={handleClip}
+            disabled={clipping || !clipUrl.trim()}
+            className="vulcan-button flex shrink-0 items-center gap-2 disabled:opacity-50"
+          >
+            {clipping ? <Loader2 size={14} className="animate-spin" /> : null}
+            Clip
+          </button>
+        </div>
+      </div>
+
+      {/* 메인 그리드 */}
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[280px_1fr]">
+        {/* 왼쪽 — 파일 트리 */}
+        <div className="vulcan-card flex flex-col overflow-hidden p-2">
+          <div className="overflow-y-auto">
+            {tree.length === 0 ? (
+              <p className="p-4 text-center text-sm text-[var(--color-tertiary)]">
+                노트가 없습니다
+              </p>
+            ) : (
+              tree.map((node) => (
+                <TreeItem
+                  key={node.path}
+                  node={node}
+                  selectedPath={selectedPath}
+                  expandedFolders={expandedFolders}
+                  onToggle={toggleFolder}
+                  onSelect={selectNote}
+                  depth={0}
+                />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* 오른쪽 — 본문 뷰어 */}
+        <div className="vulcan-card flex flex-col overflow-hidden p-6">
+          {loading ? (
+            <div className="flex flex-1 items-center justify-center">
+              <Loader2
+                size={24}
+                className="animate-spin text-[var(--color-primary)]"
+              />
+            </div>
+          ) : noteContent ? (
+            <div className="overflow-y-auto">
+              {/* 메타 */}
+              <div className="mb-6 border-b border-[var(--color-border)] pb-4">
+                <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
+                  {noteContent.title}
+                </h2>
+                <p className="mt-1 text-xs text-[var(--color-tertiary)]">
+                  수정: {relativeTime(noteContent.modified)} · {noteContent.path}
+                </p>
+                {tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <span key={tag} className="vulcan-chip text-xs">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* 본문 */}
+              <MarkdownRenderer content={noteContent.content} />
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-[var(--color-tertiary)]">
+              <div className="text-center">
+                <FileText size={48} className="mx-auto mb-3 opacity-30" />
+                <p>노트를 선택하세요</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
