@@ -580,6 +580,25 @@ openclaw-mission-control 참조 분석 → Vulcan 고도화 방향 확정.
 
 ---
 
+## 2026-03-07: 운영 알림 오탐 정리
+
+### 변경 요약
+- Vulcan 서비스 장애가 아니라 watchdog 오탐과 PM2 밖에 남아 있던 orphan 프로세스가 반복 알림의 원인이었음을 확인했다.
+- `vulcan-api`/`vulcan-adapter`/`vulcan-mc` 실서비스는 정상 연결 상태를 유지했고, OpenClaw Gateway의 `token_missing` 경고는 오래된 테스트/수동 실행 프로세스 종료 후 재발이 멈췄다.
+- PM2 환경에 Gateway 클라이언트 식별자/버전을 명시해 운영 상태를 더 쉽게 추적할 수 있게 했다.
+
+### 확인/조치 내용
+- ✅ `pm2 list`, `/api/health`, `/api/gateway/status`로 실서비스 정상 상태 확인
+- ✅ `/home/linuxuser/scripts/vulcan-watchdog.sh` 수정
+- ✅ 최근 로그 기반 실패 집계 + cooldown/dedupe 적용
+- ✅ 헬스 정상 시 `token_missing` 계열 오탐 제외
+- ✅ PM2 밖 orphan 프로세스(`gateway-rpc/client.test.ts`, 수동 `adapter-openclaw-gateway.ts`) 종료
+- ✅ 종료 후 `token_missing_after_cutoff = 0` 확인
+
+### 후속 메모
+- watchdog 스크립트는 레포 밖(`/home/linuxuser/scripts`)에 있으므로 운영 서버 기준으로만 반영됨
+- `ecosystem.config.js`에는 API/adapter용 `VULCAN_GATEWAY_CLIENT_ID`, `VULCAN_GATEWAY_CLIENT_VERSION` 명시값을 유지
+
 ## 2026-03-06: 디자인/UX 오버홀 Pass 1
 
 ### 변경 요약
