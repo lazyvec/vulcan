@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  CheckCircle,
   FileText,
   FolderClosed,
   FolderOpen,
   Link,
   Loader2,
   Search,
+  XCircle,
 } from "lucide-react";
 import type { VaultNoteSummary, VaultNote } from "@vulcan/shared/types";
 import { MarkdownRenderer } from "./MarkdownRenderer";
@@ -75,9 +77,57 @@ function buildTree(notes: VaultNoteSummary[]): TreeNode[] {
   return root;
 }
 
-/* ── 트리 노드 컴포넌트 ───────────────────────────── */
+/* ── Toast ─────────────────────────────────────────── */
 
-function TreeItem({
+interface ToastMessage {
+  id: number;
+  type: "success" | "error";
+  text: string;
+}
+
+function useToast() {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const idRef = useRef(0);
+
+  const show = useCallback((type: "success" | "error", text: string) => {
+    const id = ++idRef.current;
+    setToasts((prev) => [...prev, { id, type, text }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3000);
+  }, []);
+
+  return { toasts, show };
+}
+
+function ToastContainer({ toasts }: { toasts: ToastMessage[] }) {
+  if (toasts.length === 0) return null;
+  return (
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className={`flex items-center gap-2 rounded-[var(--radius-card)] px-4 py-3 text-sm shadow-lg animate-in slide-in-from-right fade-in duration-200 ${
+            t.type === "success"
+              ? "bg-emerald-900/90 text-emerald-100 border border-emerald-700/50"
+              : "bg-red-900/90 text-red-100 border border-red-700/50"
+          }`}
+        >
+          {t.type === "success" ? (
+            <CheckCircle size={16} className="shrink-0" />
+          ) : (
+            <XCircle size={16} className="shrink-0" />
+          )}
+          {t.text}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── 트리 노드 컴포넌트 (React.memo) ─────────────── */
+
+const TreeItem = memo(function TreeItem({
   node,
   selectedPath,
   expandedFolders,
@@ -148,7 +198,7 @@ function TreeItem({
       )}
     </button>
   );
-}
+});
 
 /* ── 메인 컴포넌트 ─────────────────────────────────── */
 
@@ -169,6 +219,7 @@ export function VaultExplorer({
   );
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const { toasts, show: showToast } = useToast();
 
   /* 검색 */
   const doSearch = useCallback(async (q: string) => {
@@ -210,22 +261,44 @@ export function VaultExplorer({
     }
   }, []);
 
+  /* 위키링크 클릭 → 노트 이동 */
+  const handleWikiLink = useCallback(
+    (notePath: string) => {
+      const target = notes.find(
+        (n) =>
+          n.path === notePath ||
+          n.path === `${notePath}.md` ||
+          n.title === notePath,
+      );
+      if (target) {
+        selectNote(target.path);
+      } else {
+        selectNote(`${notePath}.md`);
+      }
+    },
+    [notes, selectNote],
+  );
+
   /* 클리핑 */
   const handleClip = useCallback(async () => {
     if (!clipUrl.trim()) return;
     setClipping(true);
     try {
-      await fetch("/api/vault/clip", {
+      const res = await fetch("/api/vault/clip", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: clipUrl }),
       });
+      if (!res.ok) throw new Error(`${res.status}`);
       setClipUrl("");
+      showToast("success", "클리핑 완료");
       doSearch(query);
+    } catch {
+      showToast("error", "클리핑 실패 — URL을 확인해주세요");
     } finally {
       setClipping(false);
     }
-  }, [clipUrl, query, doSearch]);
+  }, [clipUrl, query, doSearch, showToast]);
 
   /* 폴더 토글 */
   const toggleFolder = useCallback((path: string) => {
@@ -250,6 +323,9 @@ export function VaultExplorer({
 
   return (
     <div className="flex h-full flex-col gap-4">
+      {/* Toast */}
+      <ToastContainer toasts={toasts} />
+
       {/* 상단 바 */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -346,7 +422,10 @@ export function VaultExplorer({
                 )}
               </div>
               {/* 본문 */}
-              <MarkdownRenderer content={noteContent.content} />
+              <MarkdownRenderer
+                content={noteContent.content}
+                onWikiLink={handleWikiLink}
+              />
             </div>
           ) : (
             <div className="flex flex-1 items-center justify-center text-[var(--color-tertiary)]">
