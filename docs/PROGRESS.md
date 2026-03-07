@@ -27,7 +27,15 @@ Obsidian 볼트(마크다운 노트 저장소)를 웹에서 탐색/검색/클리
 ### 외부 리뷰 (Gemini)
 - 판정: **통과 (PASS)**
 - 의도 부합성, UX/UI, 코드 품질, CSS 일관성, 보안 모두 양호
-- 개선 제안(minor): `[[위키링크]]` 지원, 클리핑 Toast 알림, TreeItem React.memo
+
+### 개선 제안 반영 (3건 완료)
+- ✅ `[[위키링크]]` 지원: `remark-wiki-link` 추가, 점선 밑줄 스타일, 클릭 시 노트 간 이동
+- ✅ 클리핑 Toast 알림: 경량 `useToast` 훅 + `ToastContainer` 구현 (성공/실패 3초 자동 소멸)
+- ✅ `TreeItem`에 `React.memo` 적용: 대규모 볼트 리렌더링 최적화
+
+### 검증 결과
+- `pnpm build` 성공
+- `pnpm lint` 성공
 
 ### 현재 상태
 - ✅ M0 완료
