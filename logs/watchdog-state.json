@@ -1,0 +1,24 @@
+{
+  "high_failures": {
+    "hash": "a6874374bde8555a3387843874e2af55609558a3bd7ba2f23f2536be31439b1d",
+    "time": "2026-03-08 00:40:01 KST",
+    "epoch": 1772898001
+  },
+  "gateway_down": {
+    "hash": "9d0ab293dd37219b6d63c04e3041955a5a27c3d8a71c7615db36d1efc8aee6e5",
+    "time": "2026-03-08 00:34:01 KST",
+    "epoch": 1772897641
+  },
+  "counters": {
+    "health_failures": 0,
+    "warning_failures": 0
+  },
+  "alerts": {
+    "critical": {
+      "active": false
+    },
+    "warning": {
+      "active": false
+    }
+  }
+}

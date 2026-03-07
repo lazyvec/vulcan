@@ -1,0 +1,522 @@
+[2026-03-06 23:08:53 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-06 23:08:53 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-06 23:12:38 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-06 23:12:38 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+
+## Warning
+- ⚠️ Max weekly low: 93% remaining, 156.8h to reset
+[2026-03-06 23:12:38 KST] telegram alert sent
+[2026-03-06 23:18:21 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-06 23:18:21 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+
+## Warning
+- ⚠️ Max weekly low: 93% remaining, 156.7h to reset
+[2026-03-06 23:18:21 KST] telegram alert sent
+[2026-03-06 23:18:22 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-06 23:18:22 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+
+## Warning
+- ⚠️ Max weekly low: 93% remaining, 156.7h to reset
+[2026-03-06 23:18:22 KST] telegram alert skipped (dedupe: same warning within 6h)
+[2026-03-07 00:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 00:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 01:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 01:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 02:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 02:05:02 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 03:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 03:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 04:05:02 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 04:05:02 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 05:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 05:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 06:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 06:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 07:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 07:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 08:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 08:05:02 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 56% | 28% | 2026-03-06 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 09:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 09:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 93% | 27% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:00 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 10:05:02 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 10:05:02 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | ?% | ?% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | ?% | ?% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 11:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 11:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | ?% | ?% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | ?% | ?% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 12:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 12:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | ?% | ?% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | ?% | ?% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 13:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 13:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | ?% | ?% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | ?% | ?% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 14:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 14:05:02 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | ?% | ?% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | ?% | ?% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 15:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 15:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | ?% | ?% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | ?% | ?% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 16:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 16:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | ?% | ?% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | ?% | ?% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 17:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 17:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | ?% | ?% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | ?% | ?% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 18:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 18:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | 92% | 100% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | 100% | 100% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 19:05:02 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 19:05:02 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | 92% | 100% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | 100% | 100% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 20:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 20:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | 92% | 100% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | 100% | 100% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 21:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 21:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | 92% | 100% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | 100% | 100% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 22:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 22:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | 92% | 100% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | 100% | 100% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-07 23:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-07 23:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | 92% | 100% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | 100% | 100% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-08 00:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-08 00:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 88% | 33% | 2026-03-06 19:00:00 KST | 2026-03-07 22:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+| Hermes (Codex) | Main | Cloud | 92% | 100% | - | - | OK |
+| Hermes (Gemini) | Main | Cloud | 100% | 100% | - | - | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
+[2026-03-08 01:05:01 KST] run account-health-check
+[ok] wrote /home/linuxuser/projects/vulcan/docs/ACCOUNT_STATUS.md
+# Account Status (KST)
+
+- Generated at: 2026-03-08 01:05:01 KST
+- Thresholds: Pro 5h<20% or weekly<20% => insufficient
+
+| Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
+|---|---|---:|---:|---:|---|---|---|
+| claude-sub | Pro | Pro | 57% | 95% | 2026-03-08 05:00:00 KST | 2026-03-15 00:00:00 KST | OK |
+| claude-main | Pro | Pro | 53% | 22% | 2026-03-07 13:00:00 KST | 2026-03-08 00:00:01 KST | OK |
+| claude-work | Max | Max | 16% | 93% | 2026-03-06 17:00:00 KST | 2026-03-13 12:00:00 KST | OK |
+
+## Routing Recommendation
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
