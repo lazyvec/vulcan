@@ -26,6 +26,9 @@ importers:
       '@vulcan/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      better-sqlite3:
+        specifier: ^12.6.2
+        version: 12.6.2
       bullmq:
         specifier: ^5.58.5
         version: 5.70.4
@@ -54,6 +57,9 @@ importers:
         specifier: ^8.19.0
         version: 8.19.0
     devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
       '@types/node':
         specifier: ^20
         version: 20.19.37
