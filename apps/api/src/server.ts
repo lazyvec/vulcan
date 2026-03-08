@@ -19,6 +19,7 @@ import {
   realtimeClientMessageSchema,
   taskLanePatchSchema,
   updateAgentInputSchema,
+  updateNotificationPreferencesSchema,
   updateTaskInputSchema,
   upsertSkillInputSchema,
 } from "@vulcan/shared/schemas";
@@ -72,6 +73,10 @@ import {
   upsertGateway,
   upsertSkill,
   upsertSkillRegistry,
+  getNotificationPreferences,
+  upsertNotificationPreferences,
+  appendNotificationLog,
+  getNotificationLogs,
 } from "./store";
 import { ensureSchema, getSqlite } from "./db";
 import {
@@ -84,11 +89,19 @@ import {
   closeQueueResources,
   enqueueCommandJob,
   enqueueHealthcheckJob,
+  enqueueNotificationJob,
   getCommandQueue,
   getHealthcheckQueue,
   startQueueWorkers,
   type CommandQueueJobData,
+  type NotificationQueueJobData,
 } from "./queue";
+import {
+  formatEventMessage,
+  getDefaultNotificationChatId,
+  sendTelegramMessage,
+  shouldNotify,
+} from "./telegram";
 import { getGatewayRpcClient } from "./gateway-rpc";
 import {
   listVaultNotes,
@@ -467,12 +480,27 @@ async function executeHealthcheckQueueJob() {
   });
 }
 
+async function executeNotificationQueueJob(payload: NotificationQueueJobData) {
+  const result = await sendTelegramMessage(payload.chatId, payload.message);
+  appendNotificationLog({
+    chatId: payload.chatId,
+    eventType: payload.eventType,
+    message: payload.message,
+    status: result.ok ? "sent" : "failed",
+    error: result.error,
+  });
+  if (!result.ok) {
+    throw new Error(result.error ?? "Telegram send failed");
+  }
+}
+
 let healthcheckQueueTimer: ReturnType<typeof setInterval> | null = null;
 let queueWorkersReady = false;
 try {
   queueWorkersReady = startQueueWorkers({
     command: executeCommandQueueJob,
     healthcheck: executeHealthcheckQueueJob,
+    notification: executeNotificationQueueJob,
   });
 } catch (error) {
   queueWorkersReady = false;
@@ -485,6 +513,33 @@ if (queueWorkersReady) {
     void enqueueHealthcheckJob();
   }, 30_000);
 }
+
+// Phase 7: Telegram 알림 — 이벤트 구독 후크
+subscribeEvents((event) => {
+  const prefs = getNotificationPreferences();
+  if (!shouldNotify(event, prefs)) return;
+
+  const chatId = prefs?.chatId || getDefaultNotificationChatId();
+  if (!chatId) return;
+
+  const message = formatEventMessage(event);
+
+  const enqueued = enqueueNotificationJob({ chatId, eventType: event.type, message });
+  void Promise.resolve(enqueued).then((queued) => {
+    if (!queued) {
+      // Redis 없으면 직접 발송 (로컬 모드)
+      void sendTelegramMessage(chatId, message).then((result) => {
+        appendNotificationLog({
+          chatId,
+          eventType: event.type,
+          message,
+          status: result.ok ? "sent" : "failed",
+          error: result.error,
+        });
+      });
+    }
+  });
+});
 
 app.use("*", logger());
 app.use("/api/*", async (c, next) => {
@@ -2239,6 +2294,55 @@ async function checkRedis() {
     };
   }
 }
+
+// ── Notification API (Phase 7) ──────────────────────────────────────────────
+
+app.get("/api/notifications/preferences", (c) => {
+  const prefs = getNotificationPreferences();
+  return c.json({ preferences: prefs });
+});
+
+app.put("/api/notifications/preferences", async (c) => {
+  const body = await c.req.json();
+  const parsed = updateNotificationPreferencesSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.flatten() }, 400);
+  }
+
+  const prefs = upsertNotificationPreferences(parsed.data);
+  return c.json({ preferences: prefs });
+});
+
+app.post("/api/notifications/test", async (c) => {
+  const prefs = getNotificationPreferences();
+  const chatId = prefs?.chatId || getDefaultNotificationChatId();
+  if (!chatId) {
+    return c.json({ error: "No chat ID configured" }, 400);
+  }
+
+  const testMessage = `<b>🔔 Vulcan Test Alert</b>\n테스트 알림입니다. 정상 동작 확인.\n<b>시각:</b> ${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`;
+  const result = await sendTelegramMessage(chatId, testMessage);
+
+  appendNotificationLog({
+    chatId,
+    eventType: "system.test",
+    message: testMessage,
+    status: result.ok ? "sent" : "failed",
+    error: result.error,
+  });
+
+  if (!result.ok) {
+    return c.json({ ok: false, error: result.error }, 502);
+  }
+
+  return c.json({ ok: true, chatId });
+});
+
+app.get("/api/notifications/logs", (c) => {
+  const limit = Number(c.req.query("limit") || "50");
+  const logs = getNotificationLogs(limit);
+  return c.json({ logs });
+});
 
 app.get("/api/health", async (c) => {
   const runtime = getRuntimeInfo();

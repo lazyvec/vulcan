@@ -204,6 +204,35 @@ export const installSkillInputSchema = z.object({
 export type UpsertSkillInput = z.infer<typeof upsertSkillInputSchema>;
 export type InstallSkillInput = z.infer<typeof installSkillInputSchema>;
 
+// ── Notification (Phase 7) ──────────────────────────────────────────────────
+
+export const notificationCategorySchema = z.enum([
+  "agent",
+  "task",
+  "command",
+  "skill",
+  "system",
+  "gateway",
+  "legacy",
+]);
+
+export const updateNotificationPreferencesSchema = z.object({
+  chatId: z.string().min(1).optional(),
+  enabledCategories: z.array(notificationCategorySchema).optional(),
+  enabledTypes: z.array(z.string().min(1)).optional(),
+  silentHours: z
+    .object({
+      startHour: z.number().int().min(0).max(23),
+      endHour: z.number().int().min(0).max(23),
+    })
+    .nullable()
+    .optional(),
+});
+
+export type UpdateNotificationPreferencesInput = z.infer<
+  typeof updateNotificationPreferencesSchema
+>;
+
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;

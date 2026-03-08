@@ -27,6 +27,11 @@ import type {
   TaskPriority,
 } from "@vulcan/shared/types";
 import { db, ensureSchema, getSqlite } from "./db";
+import type {
+  NotificationCategory,
+  NotificationLog,
+  NotificationPreference,
+} from "@vulcan/shared/types";
 import {
   agentCommandsTable,
   agentSkillsTable,
@@ -36,6 +41,8 @@ import {
   eventsTable,
   gatewaysTable,
   memoryItemsTable,
+  notificationLogsTable,
+  notificationPreferencesTable,
   projectsTable,
   schedulesTable,
   skillRegistryTable,
@@ -1391,6 +1398,152 @@ export function getSkillRegistry(): SkillRegistryEntry[] {
     .orderBy(skillRegistryTable.name)
     .all()
     .map(mapSkillRegistry);
+}
+
+// ── Notification Preferences (Phase 7) ──────────────────────────────────────
+
+function mapNotificationPreference(
+  row: typeof notificationPreferencesTable.$inferSelect,
+): NotificationPreference {
+  return {
+    id: row.id,
+    userId: row.userId,
+    chatId: row.chatId,
+    enabledCategories: parseStringArray(row.enabledCategories) as NotificationCategory[],
+    enabledTypes: parseStringArray(row.enabledTypes),
+    silentHours: row.silentHoursJson ? parseJsonRecord(row.silentHoursJson) as { startHour: number; endHour: number } : null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapNotificationLog(
+  row: typeof notificationLogsTable.$inferSelect,
+): NotificationLog {
+  return {
+    id: row.id,
+    chatId: row.chatId,
+    eventType: row.eventType,
+    message: row.message,
+    status: row.status as "sent" | "failed",
+    error: row.error,
+    sentAt: row.sentAt,
+  };
+}
+
+export function getNotificationPreferences(): NotificationPreference | null {
+  ensureSchema();
+  const row = db
+    .select()
+    .from(notificationPreferencesTable)
+    .where(eq(notificationPreferencesTable.userId, "default"))
+    .get();
+  return row ? mapNotificationPreference(row) : null;
+}
+
+export function upsertNotificationPreferences(input: {
+  chatId?: string;
+  enabledCategories?: string[];
+  enabledTypes?: string[];
+  silentHours?: { startHour: number; endHour: number } | null;
+}): NotificationPreference {
+  ensureSchema();
+  const now = Date.now();
+  const existing = db
+    .select()
+    .from(notificationPreferencesTable)
+    .where(eq(notificationPreferencesTable.userId, "default"))
+    .get();
+
+  if (existing) {
+    const nextValues: Partial<typeof notificationPreferencesTable.$inferInsert> = {
+      updatedAt: now,
+    };
+    if (typeof input.chatId === "string") nextValues.chatId = input.chatId;
+    if (Array.isArray(input.enabledCategories)) {
+      nextValues.enabledCategories = JSON.stringify(input.enabledCategories);
+    }
+    if (Array.isArray(input.enabledTypes)) {
+      nextValues.enabledTypes = JSON.stringify(input.enabledTypes);
+    }
+    if (Object.prototype.hasOwnProperty.call(input, "silentHours")) {
+      nextValues.silentHoursJson = input.silentHours ? JSON.stringify(input.silentHours) : null;
+    }
+
+    db.update(notificationPreferencesTable)
+      .set(nextValues)
+      .where(eq(notificationPreferencesTable.id, existing.id))
+      .run();
+    const updated = db
+      .select()
+      .from(notificationPreferencesTable)
+      .where(eq(notificationPreferencesTable.id, existing.id))
+      .get();
+    if (!updated) throw new Error("failed to update notification preferences");
+    return mapNotificationPreference(updated);
+  }
+
+  const chatId = input.chatId ?? process.env.TELEGRAM_CHAT_ID ?? "";
+  const row: typeof notificationPreferencesTable.$inferInsert = {
+    id: randomUUID(),
+    userId: "default",
+    chatId,
+    enabledCategories: JSON.stringify(
+      input.enabledCategories ?? ["agent", "task", "command", "skill", "system", "gateway", "legacy"],
+    ),
+    enabledTypes: JSON.stringify(input.enabledTypes ?? []),
+    silentHoursJson: input.silentHours ? JSON.stringify(input.silentHours) : null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  db.insert(notificationPreferencesTable).values(row).run();
+  const created = db
+    .select()
+    .from(notificationPreferencesTable)
+    .where(eq(notificationPreferencesTable.id, row.id))
+    .get();
+  if (!created) throw new Error("failed to create notification preferences");
+  return mapNotificationPreference(created);
+}
+
+export function appendNotificationLog(input: {
+  chatId: string;
+  eventType: string;
+  message: string;
+  status: "sent" | "failed";
+  error?: string | null;
+}): NotificationLog {
+  ensureSchema();
+  const row: typeof notificationLogsTable.$inferInsert = {
+    id: randomUUID(),
+    chatId: input.chatId,
+    eventType: input.eventType,
+    message: input.message,
+    status: input.status,
+    error: input.error ?? null,
+    sentAt: Date.now(),
+  };
+
+  db.insert(notificationLogsTable).values(row).run();
+  const created = db
+    .select()
+    .from(notificationLogsTable)
+    .where(eq(notificationLogsTable.id, row.id))
+    .get();
+  if (!created) throw new Error("failed to create notification log");
+  return mapNotificationLog(created);
+}
+
+export function getNotificationLogs(limit = 50): NotificationLog[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(notificationLogsTable)
+    .orderBy(desc(notificationLogsTable.sentAt))
+    .limit(Math.min(limit, 200))
+    .all()
+    .map(mapNotificationLog);
 }
 
 export function countRecords() {

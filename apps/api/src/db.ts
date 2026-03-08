@@ -262,6 +262,30 @@ function ensureLegacyBootstrap() {
     CREATE INDEX IF NOT EXISTS idx_events_agent ON events (agent_id, ts DESC);
     CREATE INDEX IF NOT EXISTS idx_events_source ON events (source, ts DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log (action, ts DESC);
+
+    CREATE TABLE IF NOT EXISTS notification_preferences (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL DEFAULT 'default',
+      chat_id TEXT NOT NULL,
+      enabled_categories TEXT NOT NULL DEFAULT '[]',
+      enabled_types TEXT NOT NULL DEFAULT '[]',
+      silent_hours_json TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS notification_logs (
+      id TEXT PRIMARY KEY,
+      chat_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT NOT NULL,
+      error TEXT,
+      sent_at INTEGER NOT NULL
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_prefs_user ON notification_preferences (user_id);
+    CREATE INDEX IF NOT EXISTS idx_notification_logs_sent_at ON notification_logs (sent_at DESC);
   `);
 
   ensureColumn("tasks", "description", "description TEXT");

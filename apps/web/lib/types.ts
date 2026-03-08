@@ -23,4 +23,7 @@ export type {
   TaskDependency,
   TaskLane,
   TaskPriority,
+  NotificationCategory,
+  NotificationPreference,
+  NotificationLog,
 } from "@vulcan/shared/types";

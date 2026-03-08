@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/office", label: "Office" },
   { href: "/skills", label: "Skills" },
   { href: "/activity", label: "Activity" },
+  { href: "/notifications", label: "Notifications" },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

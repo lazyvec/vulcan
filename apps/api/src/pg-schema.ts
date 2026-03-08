@@ -295,6 +295,33 @@ export const skillRegistryPgTable = pgTable("skill_registry", {
   lastSeenAt: nowTs("last_seen_at"),
 });
 
+export const notificationPreferencesPgTable = pgTable("notification_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull().default("default"),
+  chatId: text("chat_id").notNull(),
+  enabledCategories: jsonb("enabled_categories").$type<string[]>().notNull().default([]),
+  enabledTypes: jsonb("enabled_types").$type<string[]>().notNull().default([]),
+  silentHoursJson: jsonb("silent_hours_json").$type<{ startHour: number; endHour: number } | null>(),
+  createdAt: nowTs("created_at"),
+  updatedAt: nowTs("updated_at"),
+});
+
+export const notificationLogsPgTable = pgTable(
+  "notification_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    chatId: text("chat_id").notNull(),
+    eventType: text("event_type").notNull(),
+    message: text("message").notNull(),
+    status: text("status").notNull(),
+    error: text("error"),
+    sentAt: nowTs("sent_at"),
+  },
+  (table) => ({
+    idxNotificationLogsSentAt: index("idx_notification_logs_sent_at_pg").on(table.sentAt),
+  }),
+);
+
 export const auditLogPgTable = pgTable(
   "audit_log",
   {

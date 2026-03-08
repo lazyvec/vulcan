@@ -22,13 +22,13 @@
   },
   "lint-staged": {
     "packages/shared/src/**/*.ts": [
-      "pnpm --filter @vulcan/shared lint"
+      "bash -c 'pnpm --filter @vulcan/shared lint'"
     ],
     "apps/api/src/**/*.ts": [
-      "pnpm --filter @vulcan/api lint"
+      "bash -c 'pnpm --filter @vulcan/api lint'"
     ],
     "apps/web/**/*.{ts,tsx}": [
-      "pnpm --filter @vulcan/web lint"
+      "bash -c 'pnpm --filter @vulcan/web lint'"
     ]
   },
   "devDependencies": {

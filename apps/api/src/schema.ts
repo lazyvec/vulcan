@@ -208,6 +208,33 @@ export const skillRegistryTable = sqliteTable("skill_registry", {
   lastSeenAt: integer("last_seen_at").notNull(),
 });
 
+export const notificationPreferencesTable = sqliteTable("notification_preferences", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().default("default"),
+  chatId: text("chat_id").notNull(),
+  enabledCategories: text("enabled_categories").notNull().default("[]"),
+  enabledTypes: text("enabled_types").notNull().default("[]"),
+  silentHoursJson: text("silent_hours_json"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const notificationLogsTable = sqliteTable(
+  "notification_logs",
+  {
+    id: text("id").primaryKey(),
+    chatId: text("chat_id").notNull(),
+    eventType: text("event_type").notNull(),
+    message: text("message").notNull(),
+    status: text("status").notNull(),
+    error: text("error"),
+    sentAt: integer("sent_at").notNull(),
+  },
+  (table) => ({
+    idxNotificationLogsSentAt: index("idx_notification_logs_sent_at").on(table.sentAt),
+  }),
+);
+
 export const auditLogTable = sqliteTable(
   "audit_log",
   {

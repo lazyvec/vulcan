@@ -6,6 +6,8 @@ import type {
   DocItem,
   EventItem,
   MemoryItem,
+  NotificationLog,
+  NotificationPreference,
   Project,
   Schedule,
   Skill,
@@ -152,6 +154,20 @@ export async function getActivityStats(since?: number) {
     suffix ? `/api/activity/stats?${suffix}` : "/api/activity/stats",
   );
   return data.stats;
+}
+
+export async function getNotificationPreferences() {
+  const data = await requestJson<{ preferences: NotificationPreference | null }>(
+    "/api/notifications/preferences",
+  );
+  return data.preferences;
+}
+
+export async function getNotificationLogs(limit = 50) {
+  const data = await requestJson<{ logs: NotificationLog[] }>(
+    `/api/notifications/logs?limit=${limit}`,
+  );
+  return data.logs;
 }
 
 export async function getAuditLogs(filters?: {

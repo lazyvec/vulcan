@@ -288,3 +288,35 @@ export interface SkillRegistryEntry {
   firstSeenAt: number;
   lastSeenAt: number;
 }
+
+// ── Notification (Phase 7) ──────────────────────────────────────────────────
+
+export type NotificationCategory =
+  | "agent"
+  | "task"
+  | "command"
+  | "skill"
+  | "system"
+  | "gateway"
+  | "legacy";
+
+export interface NotificationPreference {
+  id: string;
+  userId: string;
+  chatId: string;
+  enabledCategories: NotificationCategory[];
+  enabledTypes: string[];
+  silentHours: { startHour: number; endHour: number } | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface NotificationLog {
+  id: string;
+  chatId: string;
+  eventType: string;
+  message: string;
+  status: "sent" | "failed";
+  error: string | null;
+  sentAt: number;
+}

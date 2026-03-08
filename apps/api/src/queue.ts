@@ -3,6 +3,7 @@ import { Queue, Worker } from "bullmq";
 
 const COMMAND_QUEUE_NAME = "vulcan-commands";
 const HEALTHCHECK_QUEUE_NAME = "vulcan-healthchecks";
+const NOTIFICATION_QUEUE_NAME = "vulcan-notifications";
 
 export type CommandQueueJobData = {
   commandId: string;
@@ -18,15 +19,24 @@ export type HealthcheckQueueJobData = {
   check: "gateway-status";
 };
 
+export type NotificationQueueJobData = {
+  chatId: string;
+  eventType: string;
+  message: string;
+};
+
 type QueueWorkerHandlers = {
   command: (payload: CommandQueueJobData) => Promise<void>;
   healthcheck: (payload: HealthcheckQueueJobData) => Promise<void>;
+  notification: (payload: NotificationQueueJobData) => Promise<void>;
 };
 
 let commandQueue: Queue<CommandQueueJobData> | null = null;
 let healthcheckQueue: Queue<HealthcheckQueueJobData> | null = null;
+let notificationQueue: Queue<NotificationQueueJobData> | null = null;
 let commandWorker: Worker<CommandQueueJobData> | null = null;
 let healthcheckWorker: Worker<HealthcheckQueueJobData> | null = null;
+let notificationWorker: Worker<NotificationQueueJobData> | null = null;
 
 type RedisConnectionOptions = {
   host: string;
@@ -98,6 +108,19 @@ export function getHealthcheckQueue() {
   return healthcheckQueue;
 }
 
+export function getNotificationQueue() {
+  const connection = getRedisConnectionOptions();
+  if (!connection) {
+    return null;
+  }
+
+  if (!notificationQueue) {
+    notificationQueue = new Queue<NotificationQueueJobData>(NOTIFICATION_QUEUE_NAME, { connection });
+  }
+
+  return notificationQueue;
+}
+
 export function startQueueWorkers(handlers: QueueWorkerHandlers) {
   const connection = getRedisConnectionOptions();
   if (!connection) {
@@ -144,6 +167,26 @@ export function startQueueWorkers(handlers: QueueWorkerHandlers) {
     });
   }
 
+  if (!notificationWorker) {
+    notificationWorker = new Worker<NotificationQueueJobData>(
+      NOTIFICATION_QUEUE_NAME,
+      async (job) => {
+        await handlers.notification(job.data);
+      },
+      {
+        connection,
+        concurrency: 1,
+      },
+    );
+
+    notificationWorker.on("failed", (job, error) => {
+      console.error("[vulcan-api] notification queue worker failed", {
+        jobId: job?.id ?? null,
+        error: error.message,
+      });
+    });
+  }
+
   return true;
 }
 
@@ -182,6 +225,25 @@ export async function enqueueHealthcheckJob(payload: HealthcheckQueueJobData = {
   return true;
 }
 
+export async function enqueueNotificationJob(payload: NotificationQueueJobData) {
+  const queue = getNotificationQueue();
+  if (!queue) {
+    return false;
+  }
+
+  await queue.add("telegram-notification", payload, {
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 2_000,
+    },
+    removeOnComplete: 200,
+    removeOnFail: 500,
+  });
+
+  return true;
+}
+
 export async function closeQueueResources() {
   if (commandWorker) {
     await commandWorker.close();
@@ -201,5 +263,15 @@ export async function closeQueueResources() {
   if (healthcheckQueue) {
     await healthcheckQueue.close();
     healthcheckQueue = null;
+  }
+
+  if (notificationWorker) {
+    await notificationWorker.close();
+    notificationWorker = null;
+  }
+
+  if (notificationQueue) {
+    await notificationQueue.close();
+    notificationQueue = null;
   }
 }
