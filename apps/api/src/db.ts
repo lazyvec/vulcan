@@ -201,9 +201,35 @@ function ensureLegacyBootstrap() {
     CREATE INDEX IF NOT EXISTS idx_gateways_updated ON gateways (updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_agent_commands_agent ON agent_commands (agent_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_agent_commands_status ON agent_commands (status, updated_at DESC);
+    CREATE TABLE IF NOT EXISTS task_comments (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      author TEXT NOT NULL DEFAULT 'human',
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS task_dependencies (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      depends_on_task_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log (ts DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log (entity_type, entity_id, ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);
+    CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks (parent_task_id);
+    CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments (task_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_task_deps_task ON task_dependencies (task_id);
+    CREATE INDEX IF NOT EXISTS idx_task_deps_depends ON task_dependencies (depends_on_task_id);
   `);
+
+  ensureColumn("tasks", "description", "description TEXT");
+  ensureColumn("tasks", "priority", "priority TEXT NOT NULL DEFAULT 'medium'");
+  ensureColumn("tasks", "due_at", "due_at INTEGER");
+  ensureColumn("tasks", "tags", "tags TEXT NOT NULL DEFAULT '[]'");
+  ensureColumn("tasks", "parent_task_id", "parent_task_id TEXT");
 
   ensureColumn("agents", "skills", "skills TEXT NOT NULL DEFAULT '[]'");
   ensureColumn("agents", "config_json", "config_json TEXT NOT NULL DEFAULT '{}'");

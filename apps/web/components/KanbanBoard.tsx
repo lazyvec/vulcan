@@ -1,13 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { Agent, Task, TaskLane } from "@/lib/types";
-import { CheckCircle2, CircleDashed, Clock3 } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  type DragEndEvent,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { Agent, Task, TaskLane, TaskPriority } from "@/lib/types";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  CheckCircle2,
+  CircleDashed,
+  Clock3,
+  Eye,
+  Flame,
+  Inbox,
+  ListChecks,
+  Archive,
+  Plus,
+} from "lucide-react";
+import { TaskDetailModal } from "./TaskDetailModal";
 
 const LANES: Array<{ key: TaskLane; label: string; note: string }> = [
   { key: "backlog", label: "Backlog", note: "정리 대기" },
+  { key: "queued", label: "Queued", note: "실행 대기" },
   { key: "in_progress", label: "In Progress", note: "실행 중" },
   { key: "review", label: "Review", note: "검토 대기" },
+  { key: "done", label: "Done", note: "완료" },
+  { key: "archived", label: "Archived", note: "보관" },
 ];
 
 interface KanbanBoardProps {
@@ -26,13 +54,37 @@ function Avatar({ agent }: { agent?: Agent }) {
 }
 
 function laneIcon(lane: TaskLane) {
-  if (lane === "in_progress") {
-    return <Clock3 size={14} className="text-[var(--color-primary)]" />;
+  switch (lane) {
+    case "backlog":
+      return <Inbox size={14} className="text-[var(--color-tertiary)]" />;
+    case "queued":
+      return <CircleDashed size={14} className="text-[var(--color-tertiary)]" />;
+    case "in_progress":
+      return <Clock3 size={14} className="text-[var(--color-primary)]" />;
+    case "review":
+      return <Eye size={14} className="text-blue-300" />;
+    case "done":
+      return <CheckCircle2 size={14} className="text-green-400" />;
+    case "archived":
+      return <Archive size={14} className="text-[var(--color-tertiary)]" />;
   }
-  if (lane === "review") {
-    return <CheckCircle2 size={14} className="text-blue-300" />;
+}
+
+function priorityIcon(priority: TaskPriority) {
+  switch (priority) {
+    case "critical":
+      return <Flame size={12} className="text-red-400" />;
+    case "high":
+      return <AlertTriangle size={12} className="text-orange-400" />;
+    case "medium":
+      return <ArrowUp size={12} className="text-yellow-400" />;
+    case "low":
+      return <ArrowDown size={12} className="text-[var(--color-tertiary)]" />;
   }
-  return <CircleDashed size={14} className="text-[var(--color-tertiary)]" />;
+}
+
+function priorityLabel(priority: TaskPriority) {
+  return priority.charAt(0).toUpperCase() + priority.slice(1);
 }
 
 function formatUpdatedAt(ts: number) {
@@ -44,13 +96,162 @@ function formatUpdatedAt(ts: number) {
   });
 }
 
+function SortableTaskCard({
+  task,
+  agent,
+  onOpenDetail,
+}: {
+  task: Task;
+  agent?: Agent;
+  onOpenDetail: (task: Task) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    data: { task },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-sm transition-colors hover:bg-[var(--color-muted)]/45 active:cursor-grabbing"
+    >
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <p className="line-clamp-2 text-sm font-medium text-[var(--color-foreground)]">
+          {task.title}
+        </p>
+        <Avatar agent={agent} />
+      </div>
+      <div className="mb-2 flex items-center gap-2">
+        <span className="flex items-center gap-1 text-xs text-[var(--color-tertiary)]">
+          {priorityIcon(task.priority)}
+          {priorityLabel(task.priority)}
+        </span>
+        {task.tags.length > 0 && (
+          <div className="flex items-center gap-1">
+            {task.tags.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className="vulcan-chip text-[10px]"
+              >
+                {tag}
+              </span>
+            ))}
+            {task.tags.length > 2 && (
+              <span className="text-[10px] text-[var(--color-tertiary)]">
+                +{task.tags.length - 2}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="truncate text-xs text-[var(--color-muted-foreground)]">
+          #{task.id.split("-")[0]} · {formatUpdatedAt(task.updatedAt)}
+        </p>
+        <button
+          type="button"
+          className="rounded border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-0.5 text-[10px] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onOpenDetail(task)}
+        >
+          Detail
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function TaskCardOverlay({ task, agent }: { task: Task; agent?: Agent }) {
+  return (
+    <article className="w-[280px] rounded-lg border border-[var(--color-primary)] bg-[var(--color-surface)] p-3 opacity-90 shadow-lg">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <p className="line-clamp-2 text-sm font-medium text-[var(--color-foreground)]">
+          {task.title}
+        </p>
+        <Avatar agent={agent} />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="flex items-center gap-1 text-xs text-[var(--color-tertiary)]">
+          {priorityIcon(task.priority)}
+          {priorityLabel(task.priority)}
+        </span>
+      </div>
+    </article>
+  );
+}
+
+function DroppableLane({
+  lane,
+  tasks,
+  agentMap,
+  count,
+  onOpenDetail,
+}: {
+  lane: (typeof LANES)[number];
+  tasks: Task[];
+  agentMap: Map<string, Agent>;
+  count: number;
+  onOpenDetail: (task: Task) => void;
+}) {
+  const taskIds = tasks.map((t) => t.id);
+
+  return (
+    <div className="flex min-w-[240px] flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/75 p-2 md:min-w-0">
+      <div className="mb-3 flex items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2">
+        <div className="flex items-center gap-1.5">
+          {laneIcon(lane.key)}
+          <div>
+            <h3 className="font-semibold text-[var(--color-foreground)]">{lane.label}</h3>
+            <p className="text-[11px] text-[var(--color-tertiary)]">{lane.note}</p>
+          </div>
+        </div>
+        <span className="text-sm font-medium text-[var(--color-muted-foreground)]">{count}</span>
+      </div>
+
+      <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+        <div className="flex-1 space-y-2 overflow-y-auto p-1" data-lane={lane.key}>
+          {tasks.map((task) => (
+            <SortableTaskCard
+              key={task.id}
+              task={task}
+              agent={agentMap.get(task.assigneeAgentId ?? "")}
+              onOpenDetail={onOpenDetail}
+            />
+          ))}
+          {tasks.length === 0 && (
+            <div className="flex h-full min-h-[88px] items-center justify-center rounded border border-dashed border-[var(--color-border)]">
+              <p className="text-sm text-[var(--color-tertiary)]">No tasks</p>
+            </div>
+          )}
+        </div>
+      </SortableContext>
+    </div>
+  );
+}
+
 export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanBoardProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [query, setQuery] = useState(initialQuery);
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
-  const [movingTaskId, setMovingTaskId] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const agentMap = useMemo(() => new Map(agents.map((a) => [a.id, a])), [agents]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -58,12 +259,14 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
       const queryMatch =
         !normalized ||
         task.title.toLowerCase().includes(normalized) ||
-        task.id.toLowerCase().includes(normalized);
+        task.id.toLowerCase().includes(normalized) ||
+        (task.description?.toLowerCase().includes(normalized) ?? false);
       const assigneeMatch =
         assigneeFilter === "all" || task.assigneeAgentId === assigneeFilter;
-      return queryMatch && assigneeMatch;
+      const priorityMatch = priorityFilter === "all" || task.priority === priorityFilter;
+      return queryMatch && assigneeMatch && priorityMatch;
     });
-  }, [assigneeFilter, query, tasks]);
+  }, [assigneeFilter, priorityFilter, query, tasks]);
 
   const laneCounts = useMemo(
     () =>
@@ -73,46 +276,110 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
     [filtered],
   );
 
-  async function moveTask(taskId: string, lane: TaskLane) {
-    let snapshot: Task[] = [];
-    setMovingTaskId(taskId);
-    setTasks((prev) => {
-      snapshot = prev;
-      return prev.map((task) => (task.id === taskId ? { ...task, lane } : task));
-    });
-    try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lane }),
-      });
-      if (!response.ok) {
-        throw new Error("failed to move task");
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const taskId = event.active.id as string;
+      const task = tasks.find((t) => t.id === taskId) ?? null;
+      setActiveTask(task);
+    },
+    [tasks],
+  );
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      setActiveTask(null);
+
+      const { active, over } = event;
+      if (!over) return;
+
+      const taskId = active.id as string;
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+
+      // over가 다른 task이면, 그 task의 lane으로 이동
+      const overTask = tasks.find((t) => t.id === over.id);
+      let targetLane: TaskLane | null = null;
+
+      if (overTask && overTask.id !== taskId) {
+        targetLane = overTask.lane;
+      } else {
+        // lane 컨테이너에 드롭된 경우 — data-lane attribute로 확인
+        const overElement = document.querySelector(`[data-lane]`);
+        if (overElement) {
+          // over.id가 lane key와 매칭되는 경우도 처리
+          const laneKey = LANES.find((l) => l.key === over.id)?.key;
+          if (laneKey) targetLane = laneKey;
+        }
       }
-    } catch {
-      setTasks(snapshot);
-    } finally {
-      setMovingTaskId(null);
-    }
-  }
+
+      if (!targetLane || targetLane === task.lane) return;
+
+      const snapshot = [...tasks];
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, lane: targetLane, updatedAt: Date.now() } : t)),
+      );
+
+      try {
+        const response = await fetch(`/api/tasks/${taskId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lane: targetLane }),
+        });
+        if (!response.ok) throw new Error("failed to move task");
+      } catch {
+        setTasks(snapshot);
+      }
+    },
+    [tasks],
+  );
+
+  const handleOpenDetail = useCallback((task: Task) => {
+    setDetailTask(task);
+  }, []);
+
+  const handleTaskUpdated = useCallback((updated: Task) => {
+    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setDetailTask(updated);
+  }, []);
+
+  const handleTaskCreated = useCallback((created: Task) => {
+    setTasks((prev) => [created, ...prev]);
+    setShowCreateModal(false);
+  }, []);
+
+  const handleTaskDeleted = useCallback((taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setDetailTask(null);
+  }, []);
 
   return (
     <section className="flex h-full min-h-0 flex-col rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
       <div className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/70 p-3">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="mr-auto text-lg font-semibold text-[var(--color-foreground)]">Task Board</h2>
+          <h2 className="mr-auto text-lg font-semibold text-[var(--color-foreground)]">
+            <ListChecks size={18} className="mr-1 inline" />
+            Task Board
+          </h2>
           <span className="vulcan-chip text-xs">Total {filtered.length}</span>
           <span className="vulcan-chip text-xs">Agents {agents.length}</span>
+          <button
+            type="button"
+            className="flex items-center gap-1 rounded border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-1 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <Plus size={12} />
+            New Task
+          </button>
         </div>
         <div className="flex flex-col gap-2 lg:flex-row">
           <input
             className="vulcan-input w-full lg:max-w-sm"
-            placeholder="Search tasks by title or id..."
+            placeholder="Search tasks by title, description, or id..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           <select
-            className="vulcan-input w-full lg:w-56"
+            className="vulcan-input w-full lg:w-44"
             aria-label="Filter by agent"
             value={assigneeFilter}
             onChange={(event) => setAssigneeFilter(event.target.value)}
@@ -124,83 +391,66 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
               </option>
             ))}
           </select>
+          <select
+            className="vulcan-input w-full lg:w-36"
+            aria-label="Filter by priority"
+            value={priorityFilter}
+            onChange={(event) => setPriorityFilter(event.target.value)}
+          >
+            <option value="all">All Priority</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-4 overflow-x-auto pb-2 md:grid-cols-3">
-        {LANES.map((lane) => {
-          const laneTasks = filtered.filter((task) => task.lane === lane.key);
-          return (
-            <div
-              key={lane.key}
-              className="flex min-w-[285px] flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/75 p-2 md:min-w-0"
-            >
-              <div className="mb-3 flex items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2">
-                <div className="flex items-center gap-1.5">
-                  {laneIcon(lane.key)}
-                  <div>
-                    <h3 className="font-semibold text-[var(--color-foreground)]">{lane.label}</h3>
-                    <p className="text-[11px] text-[var(--color-tertiary)]">{lane.note}</p>
-                  </div>
-                </div>
-                <span className="text-sm font-medium text-[var(--color-muted-foreground)]">
-                  {laneCounts[lane.key]}
-                </span>
-              </div>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="grid min-h-0 flex-1 gap-3 overflow-x-auto pb-2 md:grid-cols-3 xl:grid-cols-6">
+          {LANES.map((lane) => {
+            const laneTasks = filtered.filter((task) => task.lane === lane.key);
+            return (
+              <DroppableLane
+                key={lane.key}
+                lane={lane}
+                tasks={laneTasks}
+                agentMap={agentMap}
+                count={laneCounts[lane.key]}
+                onOpenDetail={handleOpenDetail}
+              />
+            );
+          })}
+        </div>
 
-              <div className="flex-1 space-y-2 overflow-y-auto p-1">
-                {laneTasks.map((task) => (
-                  <article
-                    key={task.id}
-                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-sm transition-colors hover:bg-[var(--color-muted)]/45"
-                  >
-                    <div className="mb-2 flex items-start justify-between gap-2">
-                      <p className="line-clamp-2 text-sm font-medium text-[var(--color-foreground)]">{task.title}</p>
-                      <Avatar agent={agentMap.get(task.assigneeAgentId ?? "")} />
-                    </div>
-                    <p className="mb-2 text-xs text-[var(--color-tertiary)]">
-                      #{task.id.split("-")[0]} · Updated {formatUpdatedAt(task.updatedAt)}
-                    </p>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-xs text-[var(--color-muted-foreground)]">
-                        {agentMap.get(task.assigneeAgentId ?? "")?.name ?? "Unassigned"}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <label className="sr-only" htmlFor={`lane-${task.id}`}>
-                          Move task lane
-                        </label>
-                        <select
-                          id={`lane-${task.id}`}
-                          className="rounded border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-xs text-[var(--color-muted-foreground)]"
-                          value={task.lane}
-                          onChange={(event) => {
-                            const nextLane = event.target.value as TaskLane;
-                            if (nextLane !== task.lane) {
-                              void moveTask(task.id, nextLane);
-                            }
-                          }}
-                          disabled={movingTaskId === task.id}
-                        >
-                          {LANES.map((target) => (
-                            <option key={target.key} value={target.key}>
-                              {target.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-                {laneTasks.length === 0 ? (
-                  <div className="flex h-full min-h-[88px] items-center justify-center rounded border border-dashed border-[var(--color-border)]">
-                    <p className="text-sm text-[var(--color-tertiary)]">No tasks in this lane.</p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+        <DragOverlay>
+          {activeTask ? (
+            <TaskCardOverlay
+              task={activeTask}
+              agent={agentMap.get(activeTask.assigneeAgentId ?? "")}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {detailTask && (
+        <TaskDetailModal
+          task={detailTask}
+          agents={agents}
+          onClose={() => setDetailTask(null)}
+          onTaskUpdated={handleTaskUpdated}
+          onTaskDeleted={handleTaskDeleted}
+        />
+      )}
+
+      {showCreateModal && (
+        <TaskDetailModal
+          task={null}
+          agents={agents}
+          onClose={() => setShowCreateModal(false)}
+          onTaskCreated={handleTaskCreated}
+        />
+      )}
     </section>
   );
 }

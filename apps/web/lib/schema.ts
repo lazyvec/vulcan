@@ -33,13 +33,20 @@ export const tasksTable = sqliteTable(
     id: text("id").primaryKey(),
     projectId: text("project_id"),
     title: text("title").notNull(),
+    description: text("description"),
     assigneeAgentId: text("assignee_agent_id"),
     lane: text("lane").notNull(),
+    priority: text("priority").notNull().default("medium"),
+    dueAt: integer("due_at"),
+    tags: text("tags").notNull().default("[]"),
+    parentTaskId: text("parent_task_id"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => ({
     idxTasksLane: index("idx_tasks_lane").on(table.lane),
+    idxTasksPriority: index("idx_tasks_priority").on(table.priority),
+    idxTasksParent: index("idx_tasks_parent").on(table.parentTaskId),
   }),
 );
 

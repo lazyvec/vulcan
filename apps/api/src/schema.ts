@@ -38,13 +38,48 @@ export const tasksTable = sqliteTable(
     id: text("id").primaryKey(),
     projectId: text("project_id"),
     title: text("title").notNull(),
+    description: text("description"),
     assigneeAgentId: text("assignee_agent_id"),
     lane: text("lane").notNull(),
+    priority: text("priority").notNull().default("medium"),
+    dueAt: integer("due_at"),
+    tags: text("tags").notNull().default("[]"),
+    parentTaskId: text("parent_task_id"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => ({
     idxTasksLane: index("idx_tasks_lane").on(table.lane),
+    idxTasksPriority: index("idx_tasks_priority").on(table.priority),
+    idxTasksParent: index("idx_tasks_parent").on(table.parentTaskId),
+  }),
+);
+
+export const taskCommentsTable = sqliteTable(
+  "task_comments",
+  {
+    id: text("id").primaryKey(),
+    taskId: text("task_id").notNull(),
+    author: text("author").notNull().default("human"),
+    content: text("content").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => ({
+    idxTaskCommentsTask: index("idx_task_comments_task").on(table.taskId, table.createdAt),
+  }),
+);
+
+export const taskDependenciesTable = sqliteTable(
+  "task_dependencies",
+  {
+    id: text("id").primaryKey(),
+    taskId: text("task_id").notNull(),
+    dependsOnTaskId: text("depends_on_task_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => ({
+    idxTaskDepsTask: index("idx_task_deps_task").on(table.taskId),
+    idxTaskDepsDepends: index("idx_task_deps_depends").on(table.dependsOnTaskId),
   }),
 );
 

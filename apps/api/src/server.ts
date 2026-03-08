@@ -9,12 +9,16 @@ import { streamSSE } from "hono/streaming";
 import {
   createAgentInputSchema,
   createEventSchema,
+  createTaskCommentInputSchema,
+  createTaskDependencyInputSchema,
+  createTaskInputSchema,
   delegateCommandInputSchema,
   directCommandInputSchema,
   ingestPayloadSchema,
   realtimeClientMessageSchema,
   taskLanePatchSchema,
   updateAgentInputSchema,
+  updateTaskInputSchema,
 } from "@vulcan/shared/schemas";
 import type {
   AgentCommand,
@@ -22,12 +26,17 @@ import type {
   RealtimeServerMessage,
 } from "@vulcan/shared/types";
 import {
+  addTaskComment,
+  addTaskDependency,
   appendAuditLog,
   appendEvent,
   countRecords,
   createAgent,
   createAgentCommand,
+  createTask,
   deactivateAgent,
+  deleteTask,
+  deleteTaskDependency,
   getAgentById,
   getAgentCommandById,
   getAgentCommands,
@@ -40,9 +49,13 @@ import {
   getMemoryItems,
   getProjects,
   getSchedules,
+  getTaskById,
+  getTaskComments,
+  getTaskDependencies,
   getTasks,
   updateAgent,
   updateAgentCommand,
+  updateTask,
   updateTaskLane,
   upsertGateway,
 } from "./store";
@@ -1193,13 +1206,61 @@ app.get("/api/projects", (c) => c.json({ projects: getProjects() }));
 app.get("/api/tasks", (c) => {
   const lane = c.req.query("lane") ?? "all";
   const q = c.req.query("q") ?? "";
+  const projectId = c.req.query("projectId") ?? undefined;
+  const assigneeAgentId = c.req.query("assigneeAgentId") ?? undefined;
+  const priority = c.req.query("priority") ?? undefined;
 
   const tasks = getTasks({
-    lane: lane as "all" | "backlog" | "in_progress" | "review",
+    lane: lane as "all" | "backlog" | "queued" | "in_progress" | "review" | "done" | "archived",
     q,
+    projectId,
+    assigneeAgentId,
+    priority: priority as "low" | "medium" | "high" | "critical" | undefined,
   });
 
   return c.json({ tasks });
+});
+
+app.get("/api/tasks/:id", (c) => {
+  const task = getTaskById(c.req.param("id"));
+  if (!task) return c.json({ error: "task not found" }, 404);
+  return c.json({ task });
+});
+
+app.post("/api/tasks", async (c) => {
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = createTaskInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json({ error: "invalid task payload", issues: extractIssueItems(parsed.error) }, 400);
+  }
+
+  const task = createTask(parsed.data);
+
+  const event = appendEvent({
+    source: "vulcan",
+    type: "task_create",
+    summary: `task created: ${task.title}`,
+    taskId: task.id,
+    projectId: task.projectId,
+    agentId: task.assigneeAgentId,
+  });
+  publishEvent(event);
+
+  writeAudit({
+    action: "task.create",
+    entityType: "task",
+    entityId: task.id,
+    before: null,
+    after: task,
+  });
+
+  return c.json({ task }, 201);
 });
 
 app.patch("/api/tasks/:id", async (c) => {
@@ -1249,6 +1310,140 @@ app.patch("/api/tasks/:id", async (c) => {
   });
 
   return c.json({ task });
+});
+
+app.put("/api/tasks/:id", async (c) => {
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = updateTaskInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json({ error: "invalid task payload", issues: extractIssueItems(parsed.error) }, 400);
+  }
+
+  const beforeTask = getTaskById(c.req.param("id"));
+  const task = updateTask(c.req.param("id"), parsed.data);
+  if (!task) {
+    return c.json({ error: "task not found" }, 404);
+  }
+
+  const event = appendEvent({
+    source: "vulcan",
+    type: "task_update",
+    summary: `task updated: ${task.title}`,
+    taskId: task.id,
+    projectId: task.projectId,
+    agentId: task.assigneeAgentId,
+  });
+  publishEvent(event);
+
+  writeAudit({
+    action: "task.update",
+    entityType: "task",
+    entityId: task.id,
+    before: beforeTask,
+    after: task,
+  });
+
+  return c.json({ task });
+});
+
+app.delete("/api/tasks/:id", (c) => {
+  const beforeTask = getTaskById(c.req.param("id"));
+  const deleted = deleteTask(c.req.param("id"));
+  if (!deleted) {
+    return c.json({ error: "task not found" }, 404);
+  }
+
+  const event = appendEvent({
+    source: "vulcan",
+    type: "task_delete",
+    summary: `task deleted: ${c.req.param("id")}`,
+    taskId: c.req.param("id"),
+  });
+  publishEvent(event);
+
+  writeAudit({
+    action: "task.delete",
+    entityType: "task",
+    entityId: c.req.param("id"),
+    before: beforeTask,
+    after: null,
+  });
+
+  return c.json({ ok: true });
+});
+
+app.get("/api/tasks/:id/comments", (c) => {
+  const task = getTaskById(c.req.param("id"));
+  if (!task) return c.json({ error: "task not found" }, 404);
+  const comments = getTaskComments(c.req.param("id"));
+  return c.json({ comments });
+});
+
+app.post("/api/tasks/:id/comments", async (c) => {
+  const task = getTaskById(c.req.param("id"));
+  if (!task) return c.json({ error: "task not found" }, 404);
+
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = createTaskCommentInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json({ error: "invalid comment payload", issues: extractIssueItems(parsed.error) }, 400);
+  }
+
+  const comment = addTaskComment({
+    taskId: c.req.param("id"),
+    ...parsed.data,
+  });
+
+  return c.json({ comment }, 201);
+});
+
+app.get("/api/tasks/:id/deps", (c) => {
+  const task = getTaskById(c.req.param("id"));
+  if (!task) return c.json({ error: "task not found" }, 404);
+  const dependencies = getTaskDependencies(c.req.param("id"));
+  return c.json({ dependencies });
+});
+
+app.post("/api/tasks/:id/deps", async (c) => {
+  const task = getTaskById(c.req.param("id"));
+  if (!task) return c.json({ error: "task not found" }, 404);
+
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = createTaskDependencyInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json({ error: "invalid dependency payload", issues: extractIssueItems(parsed.error) }, 400);
+  }
+
+  const dependency = addTaskDependency({
+    taskId: c.req.param("id"),
+    dependsOnTaskId: parsed.data.dependsOnTaskId,
+  });
+
+  return c.json({ dependency }, 201);
+});
+
+app.delete("/api/tasks/:id/deps/:depId", (c) => {
+  const deleted = deleteTaskDependency(c.req.param("depId"));
+  if (!deleted) return c.json({ error: "dependency not found" }, 404);
+  return c.json({ ok: true });
 });
 
 app.get("/api/events", (c) => {

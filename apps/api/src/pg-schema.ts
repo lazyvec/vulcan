@@ -55,13 +55,20 @@ export const tasksPgTable = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     projectId: uuid("project_id"),
     title: text("title").notNull(),
+    description: text("description"),
     assigneeAgentId: uuid("assignee_agent_id"),
     lane: text("lane").notNull(),
+    priority: text("priority").notNull().default("medium"),
+    dueAt: timestamp("due_at", { withTimezone: false }),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    parentTaskId: uuid("parent_task_id"),
     createdAt: timestamp("created_at", { withTimezone: false }).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: false }).notNull(),
   },
   (table) => ({
     idxTasksLane: index("idx_tasks_lane").on(table.lane),
+    idxTasksPriority: index("idx_tasks_priority").on(table.priority),
+    idxTasksParent: index("idx_tasks_parent").on(table.parentTaskId),
     fkTasksProject: foreignKey({
       name: "fk_tasks_project",
       columns: [table.projectId],
@@ -72,6 +79,54 @@ export const tasksPgTable = pgTable(
       columns: [table.assigneeAgentId],
       foreignColumns: [agentsPgTable.id],
     }).onDelete("set null"),
+    fkTasksParent: foreignKey({
+      name: "fk_tasks_parent",
+      columns: [table.parentTaskId],
+      foreignColumns: [table.id],
+    }).onDelete("set null"),
+  }),
+);
+
+export const taskCommentsPgTable = pgTable(
+  "task_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    taskId: uuid("task_id").notNull(),
+    author: text("author").notNull().default("human"),
+    content: text("content").notNull(),
+    createdAt: nowTs("created_at"),
+  },
+  (table) => ({
+    idxTaskCommentsTask: index("idx_task_comments_task").on(table.taskId, table.createdAt),
+    fkTaskCommentsTask: foreignKey({
+      name: "fk_task_comments_task",
+      columns: [table.taskId],
+      foreignColumns: [tasksPgTable.id],
+    }).onDelete("cascade"),
+  }),
+);
+
+export const taskDependenciesPgTable = pgTable(
+  "task_dependencies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    taskId: uuid("task_id").notNull(),
+    dependsOnTaskId: uuid("depends_on_task_id").notNull(),
+    createdAt: nowTs("created_at"),
+  },
+  (table) => ({
+    idxTaskDepsTask: index("idx_task_deps_task").on(table.taskId),
+    idxTaskDepsDepends: index("idx_task_deps_depends").on(table.dependsOnTaskId),
+    fkTaskDepsTask: foreignKey({
+      name: "fk_task_deps_task",
+      columns: [table.taskId],
+      foreignColumns: [tasksPgTable.id],
+    }).onDelete("cascade"),
+    fkTaskDepsDepends: foreignKey({
+      name: "fk_task_deps_depends",
+      columns: [table.dependsOnTaskId],
+      foreignColumns: [tasksPgTable.id],
+    }).onDelete("cascade"),
   }),
 );
 

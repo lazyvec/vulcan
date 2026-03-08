@@ -7,6 +7,7 @@ import type {
   Schedule,
   Task,
   TaskLane,
+  TaskPriority,
   VaultNoteSummary,
 } from "@vulcan/shared/types";
 
@@ -41,14 +42,19 @@ export async function getProjects() {
   return data.projects;
 }
 
-export async function getTasks(filters?: { lane?: TaskLane | "all"; q?: string }) {
+export async function getTasks(filters?: {
+  lane?: TaskLane | "all";
+  q?: string;
+  projectId?: string;
+  assigneeAgentId?: string;
+  priority?: TaskPriority;
+}) {
   const params = new URLSearchParams();
-  if (filters?.lane) {
-    params.set("lane", filters.lane);
-  }
-  if (filters?.q) {
-    params.set("q", filters.q);
-  }
+  if (filters?.lane) params.set("lane", filters.lane);
+  if (filters?.q) params.set("q", filters.q);
+  if (filters?.projectId) params.set("projectId", filters.projectId);
+  if (filters?.assigneeAgentId) params.set("assigneeAgentId", filters.assigneeAgentId);
+  if (filters?.priority) params.set("priority", filters.priority);
 
   const query = params.toString();
   const data = await requestJson<{ tasks: Task[] }>(

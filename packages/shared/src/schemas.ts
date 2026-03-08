@@ -9,7 +9,16 @@ export const agentStatusSchema = z.enum([
   "error",
 ]);
 
-export const taskLaneSchema = z.enum(["backlog", "in_progress", "review"]);
+export const taskLaneSchema = z.enum([
+  "backlog",
+  "queued",
+  "in_progress",
+  "review",
+  "done",
+  "archived",
+]);
+
+export const taskPrioritySchema = z.enum(["low", "medium", "high", "critical"]);
 
 const nullableIdSchema = z.string().min(1).nullable();
 const jsonRecordSchema = z.record(z.string(), z.unknown());
@@ -47,6 +56,40 @@ export const ingestPayloadSchema = z.union([
 
 export const taskLanePatchSchema = z.object({
   lane: taskLaneSchema,
+});
+
+export const createTaskInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  projectId: z.string().min(1).nullable().optional(),
+  title: z.string().min(1),
+  description: z.string().nullable().optional(),
+  assigneeAgentId: z.string().min(1).nullable().optional(),
+  lane: taskLaneSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  dueAt: z.number().int().nonnegative().nullable().optional(),
+  tags: z.array(z.string().min(1)).optional(),
+  parentTaskId: z.string().min(1).nullable().optional(),
+});
+
+export const updateTaskInputSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  assigneeAgentId: z.string().min(1).nullable().optional(),
+  lane: taskLaneSchema.optional(),
+  priority: taskPrioritySchema.optional(),
+  dueAt: z.number().int().nonnegative().nullable().optional(),
+  tags: z.array(z.string().min(1)).optional(),
+  parentTaskId: z.string().min(1).nullable().optional(),
+  projectId: z.string().min(1).nullable().optional(),
+});
+
+export const createTaskCommentInputSchema = z.object({
+  author: z.string().min(1).optional(),
+  content: z.string().min(1),
+});
+
+export const createTaskDependencyInputSchema = z.object({
+  dependsOnTaskId: z.string().min(1),
 });
 
 export const createEventSchema = ingestEventInputSchema;
@@ -134,6 +177,10 @@ export const realtimeServerMessageSchema = z.union([
 
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
+export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;
+export type UpdateTaskInput = z.infer<typeof updateTaskInputSchema>;
+export type CreateTaskCommentInput = z.infer<typeof createTaskCommentInputSchema>;
+export type CreateTaskDependencyInput = z.infer<typeof createTaskDependencyInputSchema>;
 export type CreateAgentInput = z.infer<typeof createAgentInputSchema>;
 export type UpdateAgentInput = z.infer<typeof updateAgentInputSchema>;
 export type DelegateCommandInput = z.infer<typeof delegateCommandInputSchema>;

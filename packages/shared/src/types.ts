@@ -6,7 +6,15 @@ export type AgentStatus =
   | "syncing"
   | "error";
 
-export type TaskLane = "backlog" | "in_progress" | "review";
+export type TaskLane =
+  | "backlog"
+  | "queued"
+  | "in_progress"
+  | "review"
+  | "done"
+  | "archived";
+
+export type TaskPriority = "low" | "medium" | "high" | "critical";
 
 export interface Agent {
   id: string;
@@ -38,10 +46,30 @@ export interface Task {
   id: string;
   projectId: string | null;
   title: string;
+  description: string | null;
   assigneeAgentId: string | null;
   lane: TaskLane;
+  priority: TaskPriority;
+  dueAt: number | null;
+  tags: string[];
+  parentTaskId: string | null;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  author: string;
+  content: string;
+  createdAt: number;
+}
+
+export interface TaskDependency {
+  id: string;
+  taskId: string;
+  dependsOnTaskId: string;
+  createdAt: number;
 }
 
 export interface EventItem {

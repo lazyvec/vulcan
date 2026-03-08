@@ -13,5 +13,8 @@ export type {
   RealtimeServerMessage,
   Schedule,
   Task,
+  TaskComment,
+  TaskDependency,
   TaskLane,
+  TaskPriority,
 } from "@vulcan/shared/types";

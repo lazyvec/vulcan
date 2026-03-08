@@ -22,6 +22,7 @@ import type {
   Schedule,
   Task,
   TaskLane,
+  TaskPriority,
 } from "@/lib/types";
 
 const DEFAULT_SOURCE = "openclaw";
@@ -68,8 +69,13 @@ function mapTask(row: typeof tasksTable.$inferSelect): Task {
     id: row.id,
     projectId: row.projectId,
     title: row.title,
+    description: row.description ?? null,
     assigneeAgentId: row.assigneeAgentId,
     lane: row.lane as TaskLane,
+    priority: (row.priority ?? "medium") as TaskPriority,
+    dueAt: row.dueAt ?? null,
+    tags: parseStringArray(row.tags),
+    parentTaskId: row.parentTaskId ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

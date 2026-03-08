@@ -16,7 +16,10 @@ import type {
   Project,
   Schedule,
   Task,
+  TaskComment,
+  TaskDependency,
   TaskLane,
+  TaskPriority,
 } from "@vulcan/shared/types";
 import { db, ensureSchema } from "./db";
 import {
@@ -29,6 +32,8 @@ import {
   memoryItemsTable,
   projectsTable,
   schedulesTable,
+  taskCommentsTable,
+  taskDependenciesTable,
   tasksTable,
 } from "./schema";
 
@@ -96,10 +101,34 @@ function mapTask(row: typeof tasksTable.$inferSelect): Task {
     id: row.id,
     projectId: row.projectId,
     title: row.title,
+    description: row.description ?? null,
     assigneeAgentId: row.assigneeAgentId,
     lane: row.lane as TaskLane,
+    priority: (row.priority ?? "medium") as TaskPriority,
+    dueAt: row.dueAt ?? null,
+    tags: parseStringArray(row.tags),
+    parentTaskId: row.parentTaskId ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+function mapTaskComment(row: typeof taskCommentsTable.$inferSelect): TaskComment {
+  return {
+    id: row.id,
+    taskId: row.taskId,
+    author: row.author,
+    content: row.content,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapTaskDependency(row: typeof taskDependenciesTable.$inferSelect): TaskDependency {
+  return {
+    id: row.id,
+    taskId: row.taskId,
+    dependsOnTaskId: row.dependsOnTaskId,
+    createdAt: row.createdAt,
   };
 }
 
@@ -388,7 +417,14 @@ export function getProjects(): Project[] {
     .map(mapProject);
 }
 
-export function getTasks(filters?: { lane?: TaskLane | "all"; q?: string }): Task[] {
+export function getTasks(filters?: {
+  lane?: TaskLane | "all";
+  q?: string;
+  projectId?: string;
+  assigneeAgentId?: string;
+  priority?: TaskPriority;
+  parentTaskId?: string | null;
+}): Task[] {
   ensureSchema();
   const conditions = [];
 
@@ -396,11 +432,32 @@ export function getTasks(filters?: { lane?: TaskLane | "all"; q?: string }): Tas
     conditions.push(eq(tasksTable.lane, filters.lane));
   }
 
+  if (filters?.projectId) {
+    conditions.push(eq(tasksTable.projectId, filters.projectId));
+  }
+
+  if (filters?.assigneeAgentId) {
+    conditions.push(eq(tasksTable.assigneeAgentId, filters.assigneeAgentId));
+  }
+
+  if (filters?.priority) {
+    conditions.push(eq(tasksTable.priority, filters.priority));
+  }
+
+  if (filters?.parentTaskId !== undefined) {
+    conditions.push(
+      filters.parentTaskId === null
+        ? sql`${tasksTable.parentTaskId} IS NULL`
+        : eq(tasksTable.parentTaskId, filters.parentTaskId),
+    );
+  }
+
   if (filters?.q?.trim()) {
     const query = `%${filters.q.trim()}%`;
     conditions.push(
       or(
         like(tasksTable.title, query),
+        like(tasksTable.description, query),
         like(tasksTable.assigneeAgentId, query),
         like(tasksTable.projectId, query),
       ),
@@ -416,6 +473,12 @@ export function getTasks(filters?: { lane?: TaskLane | "all"; q?: string }): Tas
     .map(mapTask);
 }
 
+export function getTaskById(id: string): Task | null {
+  ensureSchema();
+  const row = db.select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+  return row ? mapTask(row) : null;
+}
+
 export function updateTaskLane(id: string, lane: TaskLane): Task | null {
   ensureSchema();
   const updatedAt = Date.now();
@@ -427,6 +490,187 @@ export function updateTaskLane(id: string, lane: TaskLane): Task | null {
 
   const row = db.select().from(tasksTable).where(eq(tasksTable.id, id)).get();
   return row ? mapTask(row) : null;
+}
+
+export function createTask(input: {
+  id?: string;
+  projectId?: string | null;
+  title: string;
+  description?: string | null;
+  assigneeAgentId?: string | null;
+  lane?: TaskLane;
+  priority?: TaskPriority;
+  dueAt?: number | null;
+  tags?: string[];
+  parentTaskId?: string | null;
+}): Task {
+  ensureSchema();
+  const now = Date.now();
+  const row: typeof tasksTable.$inferInsert = {
+    id: input.id ?? randomUUID(),
+    projectId: input.projectId ?? null,
+    title: input.title,
+    description: input.description ?? null,
+    assigneeAgentId: input.assigneeAgentId ?? null,
+    lane: input.lane ?? "backlog",
+    priority: input.priority ?? "medium",
+    dueAt: input.dueAt ?? null,
+    tags: JSON.stringify(input.tags ?? []),
+    parentTaskId: input.parentTaskId ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.insert(tasksTable).values(row).run();
+  const created = db.select().from(tasksTable).where(eq(tasksTable.id, row.id)).get();
+  if (!created) {
+    throw new Error("failed to create task");
+  }
+  return mapTask(created);
+}
+
+export function updateTask(
+  id: string,
+  input: {
+    title?: string;
+    description?: string | null;
+    assigneeAgentId?: string | null;
+    lane?: TaskLane;
+    priority?: TaskPriority;
+    dueAt?: number | null;
+    tags?: string[];
+    parentTaskId?: string | null;
+    projectId?: string | null;
+  },
+): Task | null {
+  ensureSchema();
+  const existing = db.select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+  if (!existing) {
+    return null;
+  }
+
+  const nextValues: Partial<typeof tasksTable.$inferInsert> = {
+    updatedAt: Date.now(),
+  };
+
+  if (typeof input.title === "string") nextValues.title = input.title;
+  if (Object.prototype.hasOwnProperty.call(input, "description")) {
+    nextValues.description = input.description ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "assigneeAgentId")) {
+    nextValues.assigneeAgentId = input.assigneeAgentId ?? null;
+  }
+  if (typeof input.lane === "string") nextValues.lane = input.lane;
+  if (typeof input.priority === "string") nextValues.priority = input.priority;
+  if (Object.prototype.hasOwnProperty.call(input, "dueAt")) {
+    nextValues.dueAt = input.dueAt ?? null;
+  }
+  if (Array.isArray(input.tags)) nextValues.tags = JSON.stringify(input.tags);
+  if (Object.prototype.hasOwnProperty.call(input, "parentTaskId")) {
+    nextValues.parentTaskId = input.parentTaskId ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "projectId")) {
+    nextValues.projectId = input.projectId ?? null;
+  }
+
+  db.update(tasksTable).set(nextValues).where(eq(tasksTable.id, id)).run();
+  const updated = db.select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+  return updated ? mapTask(updated) : null;
+}
+
+export function deleteTask(id: string): boolean {
+  ensureSchema();
+  const existing = db.select().from(tasksTable).where(eq(tasksTable.id, id)).get();
+  if (!existing) return false;
+  db.delete(taskDependenciesTable)
+    .where(
+      or(eq(taskDependenciesTable.taskId, id), eq(taskDependenciesTable.dependsOnTaskId, id)),
+    )
+    .run();
+  db.delete(taskCommentsTable).where(eq(taskCommentsTable.taskId, id)).run();
+  db.delete(tasksTable).where(eq(tasksTable.id, id)).run();
+  return true;
+}
+
+export function addTaskComment(input: {
+  taskId: string;
+  author?: string;
+  content: string;
+}): TaskComment {
+  ensureSchema();
+  const now = Date.now();
+  const row: typeof taskCommentsTable.$inferInsert = {
+    id: randomUUID(),
+    taskId: input.taskId,
+    author: input.author ?? "human",
+    content: input.content,
+    createdAt: now,
+  };
+  db.insert(taskCommentsTable).values(row).run();
+  const created = db
+    .select()
+    .from(taskCommentsTable)
+    .where(eq(taskCommentsTable.id, row.id))
+    .get();
+  if (!created) throw new Error("failed to create task comment");
+  return mapTaskComment(created);
+}
+
+export function getTaskComments(taskId: string): TaskComment[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(taskCommentsTable)
+    .where(eq(taskCommentsTable.taskId, taskId))
+    .orderBy(taskCommentsTable.createdAt)
+    .all()
+    .map(mapTaskComment);
+}
+
+export function addTaskDependency(input: {
+  taskId: string;
+  dependsOnTaskId: string;
+}): TaskDependency {
+  ensureSchema();
+  const now = Date.now();
+  const row: typeof taskDependenciesTable.$inferInsert = {
+    id: randomUUID(),
+    taskId: input.taskId,
+    dependsOnTaskId: input.dependsOnTaskId,
+    createdAt: now,
+  };
+  db.insert(taskDependenciesTable).values(row).run();
+  const created = db
+    .select()
+    .from(taskDependenciesTable)
+    .where(eq(taskDependenciesTable.id, row.id))
+    .get();
+  if (!created) throw new Error("failed to create task dependency");
+  return mapTaskDependency(created);
+}
+
+export function getTaskDependencies(taskId: string): TaskDependency[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(taskDependenciesTable)
+    .where(
+      or(eq(taskDependenciesTable.taskId, taskId), eq(taskDependenciesTable.dependsOnTaskId, taskId)),
+    )
+    .orderBy(taskDependenciesTable.createdAt)
+    .all()
+    .map(mapTaskDependency);
+}
+
+export function deleteTaskDependency(id: string): boolean {
+  ensureSchema();
+  const existing = db
+    .select()
+    .from(taskDependenciesTable)
+    .where(eq(taskDependenciesTable.id, id))
+    .get();
+  if (!existing) return false;
+  db.delete(taskDependenciesTable).where(eq(taskDependenciesTable.id, id)).run();
+  return true;
 }
 
 export function getLatestEvents(limit = 80): EventItem[] {

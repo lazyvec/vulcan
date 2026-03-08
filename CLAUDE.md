@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: M0 완료 + Phase 0 완료 + Phase 1 완료 + Phase 2 완료 + Phase 3 완료 → Phase 4 준비
+> **현재 Phase**: M0 완료 + Phase 0~4 완료 → Phase 5 대기
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -22,7 +22,7 @@
 
 ## 설계 나침반
 
-### 현재 (Phase 3 완료)
+### 현재 (Phase 4 완료)
 - **분리 진행**: Next.js(UI) + Hono(API) + SQLite + SSE/WebSocket
 - **API 연결**: Web `/api/*` rewrite → Hono API
 - **어댑터 패턴**: OpenClaw Gateway 이벤트 → Hono `/api/adapter/ingest` → DB → SSE/WebSocket
@@ -49,7 +49,7 @@
 
 ## 시스템 흐름
 
-### 현재 (Phase 3 완료)
+### 현재 (Phase 4 완료)
 - **데이터 수집**: gateway-adapter → Hono `POST /api/adapter/ingest` → DB + SSE/WebSocket
 - **실시간**: Hono `GET /api/stream` (SSE) | `GET /api/events?since=` (폴링)
 - **UI**: Next.js는 API fetch 중심 UI 레이어로 동작
@@ -63,6 +63,7 @@
 - **Mission Control UI**: Tasks/Team/Office 정보 위계/밀도 개선 + confirm 기반 안전 액션 UX 반영
 - **Gateway Ops UI**: Team 화면에서 Gateway 설정/스케줄 운영 제어
 - **Vault UI**: Obsidian 볼트 웹 탐색기 (트리 뷰, 검색, URL 클리핑, 마크다운 렌더링)
+- **태스크 시스템 고도화**: 6-lane 칸반(@dnd-kit), TaskDetailModal(CRUD/코멘트), task_dependencies/task_comments 테이블, 에이전트 할당 연동
 
 ### 목표 (Phase 2~)
 - **양방향**: Hono API ↔ Gateway RPC ↔ OpenClaw 에이전트
@@ -88,7 +89,7 @@
 | 1 | PostgreSQL + Redis + Hono | 0 | 완료 |
 | 2 | WebSocket + Gateway RPC | 1 | 완료 |
 | 3 | 에이전트 생명주기 관리 | 2 | 완료 |
-| 4 | 태스크 시스템 고도화 | 3 | 준비 |
+| 4 | 태스크 시스템 고도화 | 3 | 완료 |
 | 5 | 스킬 마켓플레이스 | 3 | 대기 |
 | 6 | Activity/Audit + 메트릭스 | 3, 4 | 대기 |
 | 7 | Telegram 알림 | 3 | 대기 |

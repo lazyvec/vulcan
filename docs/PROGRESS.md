@@ -1,6 +1,38 @@
 # PROGRESS
 
-<!-- last-session --> **마지막 세션**: 2026-03-07 | 브랜치: `main`
+<!-- last-session --> **마지막 세션**: 2026-03-08 | 브랜치: `main`
+
+## 2026-03-08: Phase 4 태스크 시스템 고도화 완료
+
+### 요약
+Phase 4 전체(3 Batch)를 완료. 태스크 데이터 모델 확장, 6-lane 칸반 + @dnd-kit 드래그앤드롭, TaskDetailModal(생성/수정/삭제/코멘트), 에이전트 할당 연동까지 구현.
+
+### 완료 항목
+
+**Batch 1: 데이터 레이어**
+- ✅ `packages/shared/src/types.ts` — TaskLane 6-lane, TaskPriority, Task 확장 필드, TaskComment, TaskDependency
+- ✅ `packages/shared/src/schemas.ts` — Zod 스키마 추가 (createTask, updateTask, createTaskComment, createTaskDependency)
+- ✅ `apps/api/src/schema.ts` — tasks 테이블 확장 + task_comments, task_dependencies 테이블
+- ✅ `apps/api/src/pg-schema.ts` — PostgreSQL 동일 확장
+- ✅ `apps/api/src/store.ts` — mapTask 확장 + CRUD 11개 함수 (createTask, updateTask, deleteTask, addTaskComment, getTaskComments, addTaskDependency, getTaskDependencies, deleteTaskDependency 등)
+- ✅ `apps/api/src/db.ts` — 레거시 SQLite 부트스트랩에 새 테이블/컬럼/인덱스 추가
+- ✅ `apps/api/src/server.ts` — 새 API 엔드포인트 8개 (GET/POST tasks, PUT/DELETE tasks/:id, GET/POST comments, GET/POST/DELETE deps)
+
+**Batch 2: 칸반 UI 재작성**
+- ✅ `apps/web/components/KanbanBoard.tsx` — @dnd-kit 드래그앤드롭 + 6-lane 그리드 + 우선순위 아이콘/필터 + TaskDetail 연동
+- ✅ `apps/web/components/TaskDetailModal.tsx` — 새 파일. 생성/수정/삭제 + 코멘트 조회/추가 모달
+
+**Batch 3: 에이전트 할당 연동**
+- ✅ `apps/web/lib/types.ts` — TaskComment, TaskDependency, TaskPriority re-export
+- ✅ `apps/web/lib/schema.ts` — tasks 테이블 새 필드 반영
+- ✅ `apps/web/lib/store/sqliteStore.ts` — mapTask 확장
+- ✅ `apps/web/lib/api-server.ts` — getTasks 필터 확장 (projectId, assigneeAgentId, priority)
+
+### 검증
+- lint 통과 (shared + api + web)
+- build 통과 (API + Next.js)
+
+---
 
 ## 2026-03-07: Vault UI 구현 (Obsidian 볼트 웹 탐색기)
 

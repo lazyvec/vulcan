@@ -3,7 +3,7 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 4 — 태스크 시스템 고도화 (시작 전 준비)
+## 현재 Phase: 5 — 스킬 마켓플레이스 (대기)
 
 > M0 + Phase 0 + Phase 1 + Phase 2 완료 + Phase 3 완료 (Batch 8).
 
@@ -80,15 +80,15 @@
   - [x] 정적 검증: lint/build/smoke + gateway-rpc/event-adapter 테스트
   - [x] 실환경 검증: Gateway 연결 상태에서 Team pause/resume/delegate/session E2E 확인 (2026-03-06)
 
-## Phase 4: 태스크 시스템 고도화 (7-10일) — 의존성: Phase 3 | 병렬: Phase 5
+## Phase 4: 태스크 시스템 고도화 (완료: 2026-03-08) — 의존성: Phase 3 | 병렬: Phase 5
 
-- [ ] 태스크 모델 확장 (description, priority, due_at, tags, custom_fields, parent_task_id)
-- [ ] lane 확장: 3-lane → 6-lane (backlog/queued/in_progress/review/done/archived)
-- [ ] 신규 테이블: `task_dependencies`, `task_comments`, `boards`
-- [ ] 태스크 API 확장 (assign, comment, deps)
-- [ ] 에이전트 할당 → Gateway RPC 커맨드 연동
-- [ ] 칸반 UI 재작성 (`@dnd-kit/core` 드래그앤드롭, 상세 모달)
-- [ ] 검증: 드래그앤드롭, 의존성, 코멘트, 에이전트 할당 → 실제 전달
+- [x] 태스크 모델 확장 (description, priority, due_at, tags, parent_task_id)
+- [x] lane 확장: 3-lane → 6-lane (backlog/queued/in_progress/review/done/archived)
+- [x] 신규 테이블: `task_dependencies`, `task_comments`
+- [x] 태스크 API 확장 (CRUD, assign, comment, deps — 8개 엔드포인트)
+- [x] 에이전트 할당 → PUT /api/tasks/:id (assigneeAgentId) + 이벤트/감사 로그
+- [x] 칸반 UI 재작성 (`@dnd-kit/core` 드래그앤드롭, 6-lane, TaskDetailModal)
+- [x] 검증: lint/build 통과
 
 ## Phase 5: 스킬 마켓플레이스 (7-10일) — 의존성: Phase 3 | 병렬: Phase 4
 
