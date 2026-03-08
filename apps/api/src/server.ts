@@ -44,8 +44,11 @@ import {
   getAgentCommands,
   getAgentSkills,
   getAgents,
+  getActivityEvents,
   getAuditLogs,
+  getAuditLogsFiltered,
   getDocs,
+  getEventStats,
   getEventsSince,
   getGateways,
   getLatestEvents,
@@ -1465,6 +1468,29 @@ app.get("/api/events", (c) => {
   return c.json({ events: getLatestEvents(80) });
 });
 
+// ── Activity (filtered + paginated) ─────────────────────────────────────────
+
+app.get("/api/activity/stats", (c) => {
+  const sinceParam = Number(c.req.query("since") ?? "0");
+  const since = Number.isFinite(sinceParam) && sinceParam > 0
+    ? sinceParam
+    : Date.now() - 24 * 60 * 60_000;
+  return c.json({ stats: getEventStats(since) });
+});
+
+app.get("/api/activity", (c) => {
+  const type = c.req.query("type") || undefined;
+  const agentId = c.req.query("agentId") || undefined;
+  const source = c.req.query("source") || undefined;
+  const since = Number(c.req.query("since") ?? "0") || undefined;
+  const until = Number(c.req.query("until") ?? "0") || undefined;
+  const limit = Number(c.req.query("limit") ?? "50") || undefined;
+  const offset = Number(c.req.query("offset") ?? "0") || undefined;
+
+  const result = getActivityEvents({ type, agentId, source, since, until, limit, offset });
+  return c.json(result);
+});
+
 app.post("/api/events", async (c) => {
   let payload: unknown;
   try {
@@ -1797,9 +1823,21 @@ app.post("/api/vault/clip", async (c) => {
 app.get("/api/schedule", (c) => c.json({ schedules: getSchedules() }));
 app.get("/api/gateways", (c) => c.json({ gateways: getGateways() }));
 app.get("/api/audit", (c) => {
-  const limit = Number(c.req.query("limit") ?? "80");
-  const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.min(limit, 300) : 80;
-  return c.json({ logs: getAuditLogs(safeLimit) });
+  const action = c.req.query("action") || undefined;
+  const entityType = c.req.query("entityType") || undefined;
+  const entityId = c.req.query("entityId") || undefined;
+  const since = Number(c.req.query("since") ?? "0") || undefined;
+  const until = Number(c.req.query("until") ?? "0") || undefined;
+  const limit = Number(c.req.query("limit") ?? "80") || undefined;
+  const offset = Number(c.req.query("offset") ?? "0") || undefined;
+
+  if (!action && !entityType && !entityId && !since && !until && !offset) {
+    const safeLimit = typeof limit === "number" && Number.isFinite(limit) && limit > 0 ? Math.min(limit, 300) : 80;
+    return c.json({ logs: getAuditLogs(safeLimit) });
+  }
+
+  const result = getAuditLogsFiltered({ action, entityType, entityId, since, until, limit, offset });
+  return c.json(result);
 });
 
 app.get("/api/gateway/status", (c) => {

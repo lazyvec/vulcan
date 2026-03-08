@@ -218,8 +218,6 @@ function ensureLegacyBootstrap() {
 
     CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log (ts DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log (entity_type, entity_id, ts DESC);
-    CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);
-    CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks (parent_task_id);
     CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments (task_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_task_deps_task ON task_dependencies (task_id);
     CREATE INDEX IF NOT EXISTS idx_task_deps_depends ON task_dependencies (depends_on_task_id);
@@ -259,6 +257,11 @@ function ensureLegacyBootstrap() {
     CREATE INDEX IF NOT EXISTS idx_agent_skills_skill ON agent_skills (skill_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_skills_uniq ON agent_skills (agent_id, skill_name);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_skill_registry_name ON skill_registry (name);
+
+    CREATE INDEX IF NOT EXISTS idx_events_type ON events (type, ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_events_agent ON events (agent_id, ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_events_source ON events (source, ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log (action, ts DESC);
   `);
 
   ensureColumn("tasks", "description", "description TEXT");
@@ -272,6 +275,12 @@ function ensureLegacyBootstrap() {
   ensureColumn("agents", "is_active", "is_active INTEGER NOT NULL DEFAULT 1");
   ensureColumn("agents", "gateway_id", "gateway_id TEXT");
   ensureColumn("agents", "capabilities", "capabilities TEXT NOT NULL DEFAULT '[]'");
+
+  // ensureColumn으로 추가된 컬럼에 의존하는 인덱스는 여기서 생성
+  sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);
+    CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks (parent_task_id);
+  `);
 }
 
 export function ensureSchema() {

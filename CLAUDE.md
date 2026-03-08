@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: M0 완료 + Phase 0~5 완료 → Phase 6 대기
+> **현재 Phase**: M0 완료 + Phase 0~6 완료 → Phase 9 CI/CD 진행
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -22,7 +22,7 @@
 
 ## 설계 나침반
 
-### 현재 (Phase 5 완료)
+### 현재 (Phase 6 완료)
 - **분리 진행**: Next.js(UI) + Hono(API) + SQLite + SSE/WebSocket
 - **API 연결**: Web `/api/*` rewrite → Hono API
 - **어댑터 패턴**: OpenClaw Gateway 이벤트 → Hono `/api/adapter/ingest` → DB → SSE/WebSocket
@@ -35,6 +35,7 @@
 - **Team 제어 패널**: direct/delegate/session/pause/resume/deactivate/reactivate 실행 가능
 - **Gateway 운영 패널**: Team 화면에서 `config.patch`, `cron.list`, `cron.status` 조회/적용 가능
 - **UX 리파인**: Tasks Kanban / Team Agent Control / Office Zone Board 레이아웃 고도화 + lifecycle confirm 단계 추가
+- **Activity/Audit**: 이벤트 타입 체계화(28종+7카테고리), Activity API(필터+페이지네이션+통계), recharts 메트릭스 대시보드, LiveActivityPanel 강화
 
 ### 목표 (Phase 1~)
 - **분리 아키텍처**: Next.js (UI) + Hono (API + WebSocket + Worker) + PostgreSQL + Redis
@@ -65,6 +66,7 @@
 - **Vault UI**: Obsidian 볼트 웹 탐색기 (트리 뷰, 검색, URL 클리핑, 마크다운 렌더링)
 - **태스크 시스템 고도화**: 6-lane 칸반(@dnd-kit), TaskDetailModal(CRUD/코멘트), task_dependencies/task_comments 테이블, 에이전트 할당 연동
 - **스킬 마켓플레이스**: skills/agent_skills/skill_registry 테이블, 8개 API 엔드포인트, 2패널 UI(Catalog/Per Agent), Gateway best-effort 동기화
+- **Activity/Audit 시스템**: GET /api/activity(필터+페이지네이션), GET /api/activity/stats(통계), GET /api/audit(확장), 메트릭스 대시보드(/activity), LiveActivityPanel 카테고리 필터+무한 스크롤
 
 ### 목표 (Phase 2~)
 - **양방향**: Hono API ↔ Gateway RPC ↔ OpenClaw 에이전트
@@ -92,7 +94,7 @@
 | 3 | 에이전트 생명주기 관리 | 2 | 완료 |
 | 4 | 태스크 시스템 고도화 | 3 | 완료 |
 | 5 | 스킬 마켓플레이스 | 3 | 완료 |
-| 6 | Activity/Audit + 메트릭스 | 3, 4 | 대기 |
+| 6 | Activity/Audit + 메트릭스 | 3, 4 | 완료 |
 | 7 | Telegram 알림 | 3 | 대기 |
 | 8 | 승인/거버넌스 | 3, 7 | 대기 |
 | 9 | 테스트 + CI/CD | 1~ | 점진적 |

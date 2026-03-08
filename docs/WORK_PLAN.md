@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 6 — Activity/Audit + 메트릭스 (대기)
+## 현재 Phase: 9 — 테스트 + CI/CD
 
-> M0 + Phase 0~5 완료.
+> M0 + Phase 0~6 완료.
 
 ---
 
@@ -99,13 +99,13 @@
 - [x] 외부 검수 → HIGH/MEDIUM 이슈 수정 완료
 - [x] 검증: lint/build 통과
 
-## Phase 6: Activity/Audit + 메트릭스 (5-7일) — 의존성: Phase 3, 4
+## Phase 6: Activity/Audit + 메트릭스 (완료: 2026-03-08) — 의존성: Phase 3, 4
 
-- [ ] 이벤트 타입 확장 (4종 → 15종+)
-- [ ] Activity API (페이지네이션 + 필터링 + 통계)
-- [ ] 메트릭스 대시보드 (`recharts`)
-- [ ] LiveActivityPanel 강화 (타입 필터, 소스 링크, 무한 스크롤)
-- [ ] 검증: 메트릭스 차트, 활동 필터링
+- [x] 이벤트 타입 확장 (4종 → 28종, 7개 카테고리)
+- [x] Activity API (페이지네이션 + 필터링 + 통계)
+- [x] 메트릭스 대시보드 (`recharts` — BarChart/PieChart + 요약 카드)
+- [x] LiveActivityPanel 강화 (카테고리 필터, 소스 링크, 무한 스크롤, 아이콘/통계)
+- [x] 검증: lint/build 통과
 
 ## Phase 7: Telegram 알림 연동 (3-5일) — 의존성: Phase 3
 

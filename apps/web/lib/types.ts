@@ -1,9 +1,11 @@
 export type {
+  ActivityStats,
   Agent,
   AgentCommand,
   AgentCommandStatus,
   AgentSkill,
   AgentStatus,
+  AuditLogItem,
   DocItem,
   EventItem,
   IngestEventInput,

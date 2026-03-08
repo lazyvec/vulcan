@@ -1,6 +1,8 @@
 import type {
+  ActivityStats,
   Agent,
   AgentSkill,
+  AuditLogItem,
   DocItem,
   EventItem,
   MemoryItem,
@@ -116,4 +118,56 @@ export async function getAgentSkills(agentId: string) {
 export async function getSkillRegistry() {
   const data = await requestJson<{ registry: SkillRegistryEntry[] }>("/api/skill-registry");
   return data.registry;
+}
+
+export async function getActivityEvents(filters?: {
+  type?: string;
+  agentId?: string;
+  source?: string;
+  since?: number;
+  until?: number;
+  limit?: number;
+  offset?: number;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.type) params.set("type", filters.type);
+  if (filters?.agentId) params.set("agentId", filters.agentId);
+  if (filters?.source) params.set("source", filters.source);
+  if (filters?.since) params.set("since", String(filters.since));
+  if (filters?.until) params.set("until", String(filters.until));
+  if (filters?.limit) params.set("limit", String(filters.limit));
+  if (filters?.offset) params.set("offset", String(filters.offset));
+  const suffix = params.toString();
+  const data = await requestJson<{ events: EventItem[]; total: number }>(
+    suffix ? `/api/activity?${suffix}` : "/api/activity",
+  );
+  return data;
+}
+
+export async function getActivityStats(since?: number) {
+  const params = new URLSearchParams();
+  if (since) params.set("since", String(since));
+  const suffix = params.toString();
+  const data = await requestJson<{ stats: ActivityStats }>(
+    suffix ? `/api/activity/stats?${suffix}` : "/api/activity/stats",
+  );
+  return data.stats;
+}
+
+export async function getAuditLogs(filters?: {
+  action?: string;
+  entityType?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.action) params.set("action", filters.action);
+  if (filters?.entityType) params.set("entityType", filters.entityType);
+  if (filters?.limit) params.set("limit", String(filters.limit));
+  if (filters?.offset) params.set("offset", String(filters.offset));
+  const suffix = params.toString();
+  const data = await requestJson<{ logs: AuditLogItem[]; total: number }>(
+    suffix ? `/api/audit?${suffix}` : "/api/audit",
+  );
+  return data;
 }

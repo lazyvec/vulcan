@@ -2,6 +2,57 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-08 | 브랜치: `main`
 
+## 2026-03-08: Phase 6 Activity/Audit + 메트릭스 완료
+
+### 요약
+Phase 6 전체를 완료. 이벤트 타입 체계화(28종 타입 + 7 카테고리), Activity/Audit API 필터링+페이지네이션, recharts 메트릭스 대시보드, LiveActivityPanel 강화를 구현했다.
+
+### 완료 항목
+
+**Batch 1: 데이터 + API 레이어**
+- ✅ `packages/shared/src/constants.ts` — EVENT_TYPES(28종), EVENT_CATEGORIES(7카테고리), EVENT_CATEGORY_LABELS, EVENT_TYPE_ICONS, eventCategoryOf() 추가
+- ✅ `packages/shared/src/types.ts` — ActivityStats 인터페이스 추가
+- ✅ `apps/api/src/db.ts` — events(type,agent_id,source) + audit_log(action) 인덱스 4개 추가
+- ✅ `apps/api/src/store.ts` — getActivityEvents(), getAuditLogsFiltered(), getEventStats() 함수 3개 추가
+- ✅ `apps/api/src/server.ts` — GET /api/activity, GET /api/activity/stats, GET /api/audit 확장
+
+**Batch 2: 메트릭스 대시보드 UI**
+- ✅ `apps/web/package.json` — recharts ^2.15.0 의존성 추가
+- ✅ `apps/web/lib/api-server.ts` — getActivityEvents(), getActivityStats(), getAuditLogs() 추가
+- ✅ `apps/web/lib/types.ts` — ActivityStats, AuditLogItem re-export
+- ✅ `apps/web/components/Sidebar.tsx` — Activity 네비게이션 항목 추가
+- ✅ `apps/web/app/(layout)/activity/page.tsx` — Activity 페이지 Server Component (신규)
+- ✅ `apps/web/components/ActivityDashboard.tsx` — 메트릭스 대시보드 (신규)
+  - 4개 요약 카드 (이벤트 수, 활성 에이전트, 에러, 커맨드 성공률)
+  - 시간대별 이벤트 BarChart, 에이전트별 PieChart, 타입별 분포 horizontal BarChart
+  - Events/Audit 탭 피드 + 카테고리 필터 + Load More 페이지네이션
+  - 엔티티 링크 (agentId → /team, taskId → /tasks)
+
+**Batch 3: LiveActivityPanel 강화**
+- ✅ `apps/web/components/LiveActivityPanel.tsx` — 전면 강화
+  - 이벤트 카테고리 토글 칩 필터 (7개 카테고리)
+  - 소스 링크 (agentId/taskId → next/link 이동)
+  - IntersectionObserver 무한 스크롤
+  - EVENT_TYPE_ICONS 기반 동적 아이콘/색상
+  - 통계 요약 ("N events · N errors (1h)")
+
+### 검증
+- pnpm lint 통과
+- pnpm build 통과 (/activity 라우트 정상 생성)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- ✅ Phase 3 완료
+- ✅ Phase 4 완료
+- ✅ Phase 5 완료
+- ✅ Phase 6 완료
+- ▶️ 다음: Phase 9 테스트 + CI/CD
+
+---
+
 ## 2026-03-08: Phase 5 스킬 마켓플레이스 완료
 
 ### 요약

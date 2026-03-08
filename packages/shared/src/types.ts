@@ -238,6 +238,16 @@ export interface ClipResult {
   savedPath: string;
 }
 
+// ── Activity Stats ──────────────────────────────────────────────────────────
+
+export interface ActivityStats {
+  totalEvents: number;
+  byType: Record<string, number>;
+  byAgent: Record<string, number>;
+  byHour: Array<{ hour: string; count: number }>;
+  errorCount: number;
+}
+
 // ── Skills Marketplace ──────────────────────────────────────────────────────
 
 export type SkillCategory =

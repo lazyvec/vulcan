@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq, gt, like, or, sql } from "drizzle-orm";
 import { statusFromEventType } from "@vulcan/shared/constants";
 import type {
+  ActivityStats,
   Agent,
   AgentCommand,
   AgentCommandMode,
@@ -922,6 +923,193 @@ export function getAuditLogs(limit = 80): AuditLogItem[] {
     .limit(limit)
     .all()
     .map(mapAuditLog);
+}
+
+// ── Activity / Audit Filtered ────────────────────────────────────────────────
+
+export function getActivityEvents(filters?: {
+  type?: string;
+  agentId?: string;
+  source?: string;
+  since?: number;
+  until?: number;
+  limit?: number;
+  offset?: number;
+}): { events: EventItem[]; total: number } {
+  ensureSchema();
+  const conditions: ReturnType<typeof eq>[] = [];
+
+  if (filters?.type) {
+    conditions.push(eq(eventsTable.type, filters.type));
+  }
+  if (filters?.agentId) {
+    conditions.push(eq(eventsTable.agentId, filters.agentId));
+  }
+  if (filters?.source) {
+    conditions.push(eq(eventsTable.source, filters.source));
+  }
+  if (filters?.since && Number.isFinite(filters.since)) {
+    conditions.push(gt(eventsTable.ts, filters.since));
+  }
+  if (filters?.until && Number.isFinite(filters.until)) {
+    conditions.push(sql`${eventsTable.ts} <= ${filters.until}`);
+  }
+
+  const where = conditions.length ? and(...conditions) : undefined;
+
+  const [countRow] = db
+    .select({ count: sql<number>`count(*)` })
+    .from(eventsTable)
+    .where(where)
+    .all();
+  const total = countRow?.count ?? 0;
+
+  const limit =
+    typeof filters?.limit === "number" && Number.isFinite(filters.limit) && filters.limit > 0
+      ? Math.min(filters.limit, 300)
+      : 50;
+  const offset =
+    typeof filters?.offset === "number" && Number.isFinite(filters.offset) && filters.offset >= 0
+      ? filters.offset
+      : 0;
+
+  const events = db
+    .select()
+    .from(eventsTable)
+    .where(where)
+    .orderBy(desc(eventsTable.ts))
+    .limit(limit)
+    .offset(offset)
+    .all()
+    .map(mapEvent);
+
+  return { events, total };
+}
+
+export function getAuditLogsFiltered(filters?: {
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+  since?: number;
+  until?: number;
+  limit?: number;
+  offset?: number;
+}): { logs: AuditLogItem[]; total: number } {
+  ensureSchema();
+  const conditions: ReturnType<typeof eq>[] = [];
+
+  if (filters?.action) {
+    conditions.push(eq(auditLogTable.action, filters.action));
+  }
+  if (filters?.entityType) {
+    conditions.push(eq(auditLogTable.entityType, filters.entityType));
+  }
+  if (filters?.entityId) {
+    conditions.push(eq(auditLogTable.entityId, filters.entityId));
+  }
+  if (filters?.since && Number.isFinite(filters.since)) {
+    conditions.push(gt(auditLogTable.ts, filters.since));
+  }
+  if (filters?.until && Number.isFinite(filters.until)) {
+    conditions.push(sql`${auditLogTable.ts} <= ${filters.until}`);
+  }
+
+  const where = conditions.length ? and(...conditions) : undefined;
+
+  const [countRow] = db
+    .select({ count: sql<number>`count(*)` })
+    .from(auditLogTable)
+    .where(where)
+    .all();
+  const total = countRow?.count ?? 0;
+
+  const limit =
+    typeof filters?.limit === "number" && Number.isFinite(filters.limit) && filters.limit > 0
+      ? Math.min(filters.limit, 300)
+      : 50;
+  const offset =
+    typeof filters?.offset === "number" && Number.isFinite(filters.offset) && filters.offset >= 0
+      ? filters.offset
+      : 0;
+
+  const logs = db
+    .select()
+    .from(auditLogTable)
+    .where(where)
+    .orderBy(desc(auditLogTable.ts))
+    .limit(limit)
+    .offset(offset)
+    .all()
+    .map(mapAuditLog);
+
+  return { logs, total };
+}
+
+export function getEventStats(since: number): ActivityStats {
+  ensureSchema();
+
+  const [totalRow] = db
+    .select({ count: sql<number>`count(*)` })
+    .from(eventsTable)
+    .where(gt(eventsTable.ts, since))
+    .all();
+
+  const byTypeRows = db
+    .select({
+      type: eventsTable.type,
+      count: sql<number>`count(*)`,
+    })
+    .from(eventsTable)
+    .where(gt(eventsTable.ts, since))
+    .groupBy(eventsTable.type)
+    .all();
+
+  const byAgentRows = db
+    .select({
+      agentId: eventsTable.agentId,
+      count: sql<number>`count(*)`,
+    })
+    .from(eventsTable)
+    .where(and(gt(eventsTable.ts, since), sql`${eventsTable.agentId} IS NOT NULL`))
+    .groupBy(eventsTable.agentId)
+    .all();
+
+  const byHourRows = db
+    .select({
+      hour: sql<string>`strftime('%Y-%m-%d %H:00', ${eventsTable.ts} / 1000, 'unixepoch')`,
+      count: sql<number>`count(*)`,
+    })
+    .from(eventsTable)
+    .where(gt(eventsTable.ts, since))
+    .groupBy(sql`strftime('%Y-%m-%d %H:00', ${eventsTable.ts} / 1000, 'unixepoch')`)
+    .orderBy(sql`strftime('%Y-%m-%d %H:00', ${eventsTable.ts} / 1000, 'unixepoch')`)
+    .all();
+
+  const [errorRow] = db
+    .select({ count: sql<number>`count(*)` })
+    .from(eventsTable)
+    .where(and(gt(eventsTable.ts, since), like(eventsTable.type, "%error%")))
+    .all();
+
+  const byType: Record<string, number> = {};
+  for (const row of byTypeRows) {
+    byType[row.type] = row.count;
+  }
+
+  const byAgent: Record<string, number> = {};
+  for (const row of byAgentRows) {
+    if (row.agentId) {
+      byAgent[row.agentId] = row.count;
+    }
+  }
+
+  return {
+    totalEvents: totalRow?.count ?? 0,
+    byType,
+    byAgent,
+    byHour: byHourRows.map((r) => ({ hour: r.hour, count: r.count })),
+    errorCount: errorRow?.count ?? 0,
+  };
 }
 
 // ── Skills Marketplace ──────────────────────────────────────────────────────

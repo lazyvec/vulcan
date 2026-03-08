@@ -10,7 +10,7 @@
     "epoch": 1772897641
   },
   "counters": {
-    "health_failures": 0,
+    "health_failures": 2,
     "warning_failures": 0
   },
   "alerts": {

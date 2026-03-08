@@ -1,6 +1,6 @@
 # Vulcan Roadmap
 
-> **현재 상태**: M0 완료 + Phase 0~5 완료 → Phase 6 준비
+> **현재 상태**: M0 완료 + Phase 0~6 완료 → Phase 9 CI/CD 진행
 > **실행 체크리스트**: `docs/WORK_PLAN.md`
 
 ## 목표 아키텍처
@@ -87,11 +87,12 @@ M0을 깨뜨리지 않고 분리 가능 구조로 준비.
 - 에이전트별 스킬 설치/제거 (best-effort Gateway sync)
 - 마켓플레이스 UI (2패널: Catalog + Per Agent)
 
-## Phase 6: Activity/Audit + 메트릭스 (5-7일)
+## Phase 6: Activity/Audit + 메트릭스 (완료)
 
-- 이벤트 타입 확장 (4종 → 15종+)
-- Activity API (페이지네이션 + 필터링)
-- 메트릭스 대시보드 (`recharts`)
+- 이벤트 타입 체계화 (28종 + 7카테고리)
+- Activity API (필터링 + 페이지네이션 + 통계)
+- 메트릭스 대시보드 (recharts BarChart/PieChart + 요약 카드)
+- LiveActivityPanel 강화 (카테고리 필터, 무한 스크롤, 소스 링크)
 
 ## Phase 7: Telegram 알림 연동 (3-5일)
 
