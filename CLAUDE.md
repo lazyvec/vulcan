@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: M0 완료 + Phase 0~4 완료 → Phase 5 대기
+> **현재 Phase**: M0 완료 + Phase 0~5 완료 → Phase 6 대기
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -22,7 +22,7 @@
 
 ## 설계 나침반
 
-### 현재 (Phase 4 완료)
+### 현재 (Phase 5 완료)
 - **분리 진행**: Next.js(UI) + Hono(API) + SQLite + SSE/WebSocket
 - **API 연결**: Web `/api/*` rewrite → Hono API
 - **어댑터 패턴**: OpenClaw Gateway 이벤트 → Hono `/api/adapter/ingest` → DB → SSE/WebSocket
@@ -64,12 +64,13 @@
 - **Gateway Ops UI**: Team 화면에서 Gateway 설정/스케줄 운영 제어
 - **Vault UI**: Obsidian 볼트 웹 탐색기 (트리 뷰, 검색, URL 클리핑, 마크다운 렌더링)
 - **태스크 시스템 고도화**: 6-lane 칸반(@dnd-kit), TaskDetailModal(CRUD/코멘트), task_dependencies/task_comments 테이블, 에이전트 할당 연동
+- **스킬 마켓플레이스**: skills/agent_skills/skill_registry 테이블, 8개 API 엔드포인트, 2패널 UI(Catalog/Per Agent), Gateway best-effort 동기화
 
 ### 목표 (Phase 2~)
 - **양방향**: Hono API ↔ Gateway RPC ↔ OpenClaw 에이전트
 - **실시간**: WebSocket (Hono ↔ 프론트엔드) + Redis Pub/Sub
 - **제어**: BullMQ 커맨드 큐 → Gateway RPC → 에이전트
-- **추가 UI**: Skills, Analytics, Approvals
+- **추가 UI**: Analytics, Approvals
 
 ## 도구
 
@@ -90,7 +91,7 @@
 | 2 | WebSocket + Gateway RPC | 1 | 완료 |
 | 3 | 에이전트 생명주기 관리 | 2 | 완료 |
 | 4 | 태스크 시스템 고도화 | 3 | 완료 |
-| 5 | 스킬 마켓플레이스 | 3 | 대기 |
+| 5 | 스킬 마켓플레이스 | 3 | 완료 |
 | 6 | Activity/Audit + 메트릭스 | 3, 4 | 대기 |
 | 7 | Telegram 알림 | 3 | 대기 |
 | 8 | 승인/거버넌스 | 3, 7 | 대기 |

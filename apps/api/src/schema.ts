@@ -170,6 +170,44 @@ export const agentCommandsTable = sqliteTable(
   }),
 );
 
+export const skillsTable = sqliteTable("skills", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  displayName: text("display_name").notNull().default(""),
+  description: text("description").notNull().default(""),
+  category: text("category").notNull().default("other"),
+  iconKey: text("icon_key").notNull().default("zap"),
+  tags: text("tags").notNull().default("[]"),
+  isBuiltin: integer("is_builtin").notNull().default(0),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const agentSkillsTable = sqliteTable(
+  "agent_skills",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    skillId: text("skill_id").notNull(),
+    skillName: text("skill_name").notNull(),
+    installedAt: integer("installed_at").notNull(),
+    syncedAt: integer("synced_at").notNull(),
+  },
+  (table) => ({
+    idxAgentSkillsAgent: index("idx_agent_skills_agent").on(table.agentId),
+    idxAgentSkillsSkill: index("idx_agent_skills_skill").on(table.skillId),
+    idxAgentSkillsUniq: index("idx_agent_skills_uniq").on(table.agentId, table.skillName),
+  }),
+);
+
+export const skillRegistryTable = sqliteTable("skill_registry", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  discoveredFrom: text("discovered_from").notNull(),
+  firstSeenAt: integer("first_seen_at").notNull(),
+  lastSeenAt: integer("last_seen_at").notNull(),
+});
+
 export const auditLogTable = sqliteTable(
   "audit_log",
   {

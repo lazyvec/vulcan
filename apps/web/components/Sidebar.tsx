@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/vault", label: "Vault" },
   { href: "/team", label: "Team" },
   { href: "/office", label: "Office" },
+  { href: "/skills", label: "Skills" },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

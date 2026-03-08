@@ -1,10 +1,13 @@
 import type {
   Agent,
+  AgentSkill,
   DocItem,
   EventItem,
   MemoryItem,
   Project,
   Schedule,
+  Skill,
+  SkillRegistryEntry,
   Task,
   TaskLane,
   TaskPriority,
@@ -92,4 +95,25 @@ export async function getSchedules() {
 export async function getVaultNotes(): Promise<VaultNoteSummary[]> {
   const data = await requestJson<{ notes: VaultNoteSummary[] }>("/api/vault/notes");
   return data.notes;
+}
+
+export async function getSkills(filters?: { category?: string; q?: string }) {
+  const params = new URLSearchParams();
+  if (filters?.category) params.set("category", filters.category);
+  if (filters?.q) params.set("q", filters.q);
+  const suffix = params.toString();
+  const data = await requestJson<{ skills: Skill[] }>(
+    suffix ? `/api/skills?${suffix}` : "/api/skills",
+  );
+  return data.skills;
+}
+
+export async function getAgentSkills(agentId: string) {
+  const data = await requestJson<{ skills: AgentSkill[] }>(`/api/agents/${agentId}/skills`);
+  return data.skills;
+}
+
+export async function getSkillRegistry() {
+  const data = await requestJson<{ registry: SkillRegistryEntry[] }>("/api/skill-registry");
+  return data.registry;
 }

@@ -2,6 +2,69 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-08 | 브랜치: `main`
 
+## 2026-03-08: Phase 5 스킬 마켓플레이스 완료
+
+### 요약
+Phase 5 전체를 완료. 스킬 데이터 모델(skills/agent_skills/skill_registry 3개 테이블), Gateway 동기화 API 8개 엔드포인트, 2패널 마켓플레이스 UI(Catalog/Per Agent 탭)를 구현했다.
+
+### 완료 항목
+
+**Batch 1: 데이터 레이어**
+- ✅ `packages/shared/src/types.ts` — Skill, AgentSkill, SkillRegistryEntry, SkillCategory 타입
+- ✅ `packages/shared/src/schemas.ts` — skillCategorySchema, upsertSkillInputSchema, installSkillInputSchema
+- ✅ `apps/api/src/schema.ts` — skillsTable, agentSkillsTable, skillRegistryTable (SQLite)
+- ✅ `apps/api/src/pg-schema.ts` — 동일 3개 테이블 PostgreSQL 버전
+- ✅ `apps/api/src/db.ts` — DDL 부트스트랩에 3개 테이블 + 5개 인덱스
+- ✅ `apps/api/src/store.ts` — 스킬 CRUD 10개 함수 (트랜잭션 기반 syncAgentSkillsFromGateway 포함)
+
+**Batch 2: API 레이어**
+- ✅ `apps/api/src/server.ts` — 8개 API 엔드포인트 추가
+  - `GET /api/skills` (카탈로그, category/q 필터)
+  - `GET /api/skills/by-id/:id` (단건 조회)
+  - `PUT /api/skills/by-name/:name` (upsert)
+  - `GET /api/agents/:id/skills` (에이전트 스킬 목록)
+  - `POST /api/agents/:id/skills` (설치 + Gateway sync)
+  - `DELETE /api/agents/:id/skills/:skillName` (제거 + Gateway sync)
+  - `POST /api/skills/sync` (전체 동기화)
+  - `GET /api/skill-registry` (레지스트리)
+- ✅ `apps/web/lib/api-server.ts` — getSkills, getAgentSkills, getSkillRegistry 함수
+
+**Batch 3: UI 레이어**
+- ✅ `apps/web/components/Sidebar.tsx` — Skills 네비게이션 추가
+- ✅ `apps/web/app/(layout)/skills/page.tsx` — Skills 페이지 Server Component
+- ✅ `apps/web/components/SkillsMarketplace.tsx` — 2패널 마켓플레이스 UI
+  - 왼쪽: 카테고리 필터 + 검색 + 스킬 목록 + Sync 버튼 + 레지스트리
+  - 오른쪽: Catalog 탭 (스킬 상세 + Install/Remove) + Per Agent 탭 (에이전트별 관리)
+  - 에러 토스트 표시, 접근성(aria-pressed) 반영
+
+### 외부 리뷰 (코드 검수)
+- 판정: **CONDITIONAL PASS → 수정 후 PASS**
+- 코드 품질 4.0/5, 아키텍처 4.5/5, 보안 3.5/5, 성능 3.0→4.0/5, UX 3.5→4.0/5
+- HIGH 이슈 3건 수정 완료:
+  - H-1: sync N+1 → SQLite 트랜잭션 적용
+  - H-2: PG discoveredFrom uuid→text 타입 수정
+  - H-3: API 경로 충돌 → `/api/skills/by-id/:id`, `/api/skills/by-name/:name` 분리
+- MEDIUM 이슈 3건 수정 완료:
+  - M-1: UI 에러 토스트 추가
+  - M-3: handleInstall/handleRemove refreshSkills 일관성 통일
+  - M-4: idx_agent_skills_skill 인덱스 추가
+
+### 검증
+- pnpm lint 통과
+- pnpm build 통과 (/skills 라우트 정상 생성)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- ✅ Phase 3 완료
+- ✅ Phase 4 완료
+- ✅ Phase 5 완료
+- ▶️ 다음: Phase 6 Activity/Audit + 메트릭스
+
+---
+
 ## 2026-03-08: Phase 4 태스크 시스템 고도화 완료
 
 ### 요약

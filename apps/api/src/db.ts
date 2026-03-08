@@ -223,6 +223,42 @@ function ensureLegacyBootstrap() {
     CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments (task_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_task_deps_task ON task_dependencies (task_id);
     CREATE INDEX IF NOT EXISTS idx_task_deps_depends ON task_dependencies (depends_on_task_id);
+
+    CREATE TABLE IF NOT EXISTS skills (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      display_name TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT 'other',
+      icon_key TEXT NOT NULL DEFAULT 'zap',
+      tags TEXT NOT NULL DEFAULT '[]',
+      is_builtin INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_skills (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      skill_id TEXT NOT NULL,
+      skill_name TEXT NOT NULL,
+      installed_at INTEGER NOT NULL,
+      synced_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS skill_registry (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      discovered_from TEXT NOT NULL,
+      first_seen_at INTEGER NOT NULL,
+      last_seen_at INTEGER NOT NULL
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_skills_name ON skills (name);
+    CREATE INDEX IF NOT EXISTS idx_agent_skills_agent ON agent_skills (agent_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_skills_skill ON agent_skills (skill_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_skills_uniq ON agent_skills (agent_id, skill_name);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_skill_registry_name ON skill_registry (name);
   `);
 
   ensureColumn("tasks", "description", "description TEXT");

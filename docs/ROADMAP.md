@@ -1,6 +1,6 @@
 # Vulcan Roadmap
 
-> **현재 상태**: M0 완료 + Phase 0 완료 + Phase 1 완료 + Phase 2 완료 + Phase 3 완료 → Phase 4 준비
+> **현재 상태**: M0 완료 + Phase 0~5 완료 → Phase 6 준비
 > **실행 체크리스트**: `docs/WORK_PLAN.md`
 
 ## 목표 아키텍처
@@ -74,18 +74,18 @@ M0을 깨뜨리지 않고 분리 가능 구조로 준비.
 - BullMQ 워커 (커맨드 큐, 헬스체크)
 - 에이전트 관리 UI + 감사 로깅
 
-## Phase 4: 태스크 시스템 고도화 (7-10일) ← Phase 5와 병렬
+## Phase 4: 태스크 시스템 고도화 (7-10일, 완료) ← Phase 5와 병렬
 
 - 태스크 모델 확장 (priority, due_at, tags, dependencies, comments)
 - 6-lane 칸반 + 드래그앤드롭 (`@dnd-kit`)
 - 에이전트 할당 → Gateway RPC 연동
 - 태스크 상세 모달
 
-## Phase 5: 스킬 마켓플레이스 (7-10일) ← Phase 4와 병렬
+## Phase 5: 스킬 마켓플레이스 (7-10일, 완료) ← Phase 4와 병렬
 
-- 스킬 데이터 모델 + Gateway 동기화
-- 에이전트별 스킬 설치/제거
-- 마켓플레이스 UI
+- 스킬 데이터 모델 (skills/agent_skills/skill_registry) + Gateway 동기화
+- 에이전트별 스킬 설치/제거 (best-effort Gateway sync)
+- 마켓플레이스 UI (2패널: Catalog + Per Agent)
 
 ## Phase 6: Activity/Audit + 메트릭스 (5-7일)
 

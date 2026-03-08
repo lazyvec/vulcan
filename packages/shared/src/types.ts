@@ -237,3 +237,44 @@ export interface ClipResult {
   url: string;
   savedPath: string;
 }
+
+// ── Skills Marketplace ──────────────────────────────────────────────────────
+
+export type SkillCategory =
+  | "coding"
+  | "research"
+  | "writing"
+  | "data"
+  | "communication"
+  | "automation"
+  | "other";
+
+export interface Skill {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  category: SkillCategory;
+  iconKey: string;
+  tags: string[];
+  isBuiltin: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface AgentSkill {
+  id: string;
+  agentId: string;
+  skillId: string;
+  skillName: string;
+  installedAt: number;
+  syncedAt: number;
+}
+
+export interface SkillRegistryEntry {
+  id: string;
+  name: string;
+  discoveredFrom: string;
+  firstSeenAt: number;
+  lastSeenAt: number;
+}

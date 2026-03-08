@@ -175,6 +175,35 @@ export const realtimeServerMessageSchema = z.union([
   }),
 ]);
 
+// ── Skills Marketplace ──────────────────────────────────────────────────────
+
+export const skillCategorySchema = z.enum([
+  "coding",
+  "research",
+  "writing",
+  "data",
+  "communication",
+  "automation",
+  "other",
+]);
+
+export const upsertSkillInputSchema = z.object({
+  name: z.string().min(1),
+  displayName: z.string().min(1).optional(),
+  description: z.string().optional(),
+  category: skillCategorySchema.optional(),
+  iconKey: z.string().min(1).optional(),
+  tags: z.array(z.string().min(1)).optional(),
+  isBuiltin: z.boolean().optional(),
+});
+
+export const installSkillInputSchema = z.object({
+  skillName: z.string().min(1),
+});
+
+export type UpsertSkillInput = z.infer<typeof upsertSkillInputSchema>;
+export type InstallSkillInput = z.infer<typeof installSkillInputSchema>;
+
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;

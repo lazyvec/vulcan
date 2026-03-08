@@ -15,10 +15,12 @@ import {
   delegateCommandInputSchema,
   directCommandInputSchema,
   ingestPayloadSchema,
+  installSkillInputSchema,
   realtimeClientMessageSchema,
   taskLanePatchSchema,
   updateAgentInputSchema,
   updateTaskInputSchema,
+  upsertSkillInputSchema,
 } from "@vulcan/shared/schemas";
 import type {
   AgentCommand,
@@ -40,6 +42,7 @@ import {
   getAgentById,
   getAgentCommandById,
   getAgentCommands,
+  getAgentSkills,
   getAgents,
   getAuditLogs,
   getDocs,
@@ -49,15 +52,23 @@ import {
   getMemoryItems,
   getProjects,
   getSchedules,
+  getSkillById,
+  getSkillRegistry,
+  getSkills,
   getTaskById,
   getTaskComments,
   getTaskDependencies,
   getTasks,
+  installSkillToAgent,
+  removeSkillFromAgent,
+  syncAgentSkillsFromGateway,
   updateAgent,
   updateAgentCommand,
   updateTask,
   updateTaskLane,
   upsertGateway,
+  upsertSkill,
+  upsertSkillRegistry,
 } from "./store";
 import { ensureSchema, getSqlite } from "./db";
 import {
@@ -1540,6 +1551,172 @@ app.get("/api/memory", (c) => {
 app.get("/api/docs", (c) => {
   const q = c.req.query("q") ?? "";
   return c.json({ docs: getDocs(q) });
+});
+
+// ── Skills Marketplace ──────────────────────────────────────────────────────
+
+app.get("/api/skills", (c) => {
+  const category = c.req.query("category") || undefined;
+  const q = c.req.query("q") || undefined;
+  return c.json({ skills: getSkills({ category, q }) });
+});
+
+app.get("/api/skills/by-id/:id", (c) => {
+  const skill = getSkillById(c.req.param("id"));
+  if (!skill) {
+    return c.json({ error: "skill not found" }, 404);
+  }
+  return c.json({ skill });
+});
+
+app.put("/api/skills/by-name/:name", async (c) => {
+  const name = c.req.param("name");
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = upsertSkillInputSchema.safeParse({ ...isRecord(payload) ? payload : {}, name });
+  if (!parsed.success) {
+    return c.json({ error: "invalid skill payload", issues: extractIssueItems(parsed.error) }, 400);
+  }
+
+  const skill = upsertSkill(parsed.data);
+  writeAudit({
+    action: "skill.upsert",
+    entityType: "skill",
+    entityId: skill.id,
+    after: skill,
+  });
+  return c.json({ skill });
+});
+
+app.get("/api/agents/:id/skills", (c) => {
+  const agentId = c.req.param("id");
+  const agent = getAgentById(agentId);
+  if (!agent) {
+    return c.json({ error: "agent not found" }, 404);
+  }
+  return c.json({ skills: getAgentSkills(agentId) });
+});
+
+app.post("/api/agents/:id/skills", async (c) => {
+  const agentId = c.req.param("id");
+  const agent = getAgentById(agentId);
+  if (!agent) {
+    return c.json({ error: "agent not found" }, 404);
+  }
+
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON payload" }, 400);
+  }
+
+  const parsed = installSkillInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json({ error: "invalid install payload", issues: extractIssueItems(parsed.error) }, 400);
+  }
+
+  const agentSkill = installSkillToAgent({ agentId, skillName: parsed.data.skillName });
+
+  // Gateway best-effort 동기화: agent.skills 배열 업데이트
+  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null = null;
+  try {
+    const currentSkills = getAgentSkills(agentId).map((s) => s.skillName);
+    updateAgent(agentId, { skills: currentSkills });
+    const result = await gatewayRpcClient.agentsUpdate({ agentId, skills: currentSkills });
+    gatewayResult = { ok: true, result };
+  } catch (error) {
+    gatewayResult = { ok: false, error: getErrorMessage(error) };
+  }
+
+  writeAudit({
+    action: "skill.install",
+    entityType: "agent_skill",
+    entityId: agentSkill.id,
+    after: agentSkill,
+    metadata: { gatewayResult },
+  });
+
+  return c.json({ agentSkill, gateway: gatewayResult }, 201);
+});
+
+app.delete("/api/agents/:id/skills/:skillName", async (c) => {
+  const agentId = c.req.param("id");
+  const skillName = c.req.param("skillName");
+  const agent = getAgentById(agentId);
+  if (!agent) {
+    return c.json({ error: "agent not found" }, 404);
+  }
+
+  const removed = removeSkillFromAgent(agentId, skillName);
+  if (!removed) {
+    return c.json({ error: "skill not installed on agent" }, 404);
+  }
+
+  // Gateway best-effort 동기화
+  let gatewayResult: { ok: boolean; result?: unknown; error?: string } | null = null;
+  try {
+    const currentSkills = getAgentSkills(agentId).map((s) => s.skillName);
+    updateAgent(agentId, { skills: currentSkills });
+    const result = await gatewayRpcClient.agentsUpdate({ agentId, skills: currentSkills });
+    gatewayResult = { ok: true, result };
+  } catch (error) {
+    gatewayResult = { ok: false, error: getErrorMessage(error) };
+  }
+
+  writeAudit({
+    action: "skill.remove",
+    entityType: "agent_skill",
+    entityId: `${agentId}:${skillName}`,
+    metadata: { agentId, skillName, gatewayResult },
+  });
+
+  return c.json({ ok: true, gateway: gatewayResult });
+});
+
+app.post("/api/skills/sync", async (c) => {
+  const agents = getAgents({ includeInactive: true });
+  const results: Array<{ agentId: string; agentName: string; skills: string[]; error?: string }> = [];
+
+  for (const agent of agents) {
+    try {
+      // Gateway agents.list에서 스킬 정보 가져오기
+      const gatewaySkills = agent.skills ?? [];
+
+      syncAgentSkillsFromGateway(agent.id, gatewaySkills);
+
+      // 스킬 레지스트리 업데이트
+      for (const skillName of gatewaySkills) {
+        upsertSkillRegistry(skillName, agent.id);
+      }
+
+      results.push({ agentId: agent.id, agentName: agent.name, skills: gatewaySkills });
+    } catch (error) {
+      results.push({
+        agentId: agent.id,
+        agentName: agent.name,
+        skills: [],
+        error: getErrorMessage(error),
+      });
+    }
+  }
+
+  writeAudit({
+    action: "skill.sync",
+    entityType: "skill",
+    metadata: { syncedAgents: results.length },
+  });
+
+  return c.json({ synced: results });
+});
+
+app.get("/api/skill-registry", (c) => {
+  return c.json({ registry: getSkillRegistry() });
 });
 
 // ── Obsidian Vault ──────────────────────────────────────────────────────────

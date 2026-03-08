@@ -247,6 +247,54 @@ export const agentCommandsPgTable = pgTable(
   }),
 );
 
+export const skillsPgTable = pgTable("skills", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  displayName: text("display_name").notNull().default(""),
+  description: text("description").notNull().default(""),
+  category: text("category").notNull().default("other"),
+  iconKey: text("icon_key").notNull().default("zap"),
+  tags: jsonb("tags").$type<string[]>().notNull().default([]),
+  isBuiltin: integer("is_builtin").notNull().default(0),
+  createdAt: nowTs("created_at"),
+  updatedAt: nowTs("updated_at"),
+});
+
+export const agentSkillsPgTable = pgTable(
+  "agent_skills",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: uuid("agent_id").notNull(),
+    skillId: uuid("skill_id").notNull(),
+    skillName: text("skill_name").notNull(),
+    installedAt: nowTs("installed_at"),
+    syncedAt: nowTs("synced_at"),
+  },
+  (table) => ({
+    idxAgentSkillsAgent: index("idx_agent_skills_agent_pg").on(table.agentId),
+    idxAgentSkillsSkill: index("idx_agent_skills_skill_pg").on(table.skillId),
+    idxAgentSkillsUniq: index("idx_agent_skills_uniq_pg").on(table.agentId, table.skillName),
+    fkAgentSkillsAgent: foreignKey({
+      name: "fk_agent_skills_agent",
+      columns: [table.agentId],
+      foreignColumns: [agentsPgTable.id],
+    }).onDelete("cascade"),
+    fkAgentSkillsSkill: foreignKey({
+      name: "fk_agent_skills_skill",
+      columns: [table.skillId],
+      foreignColumns: [skillsPgTable.id],
+    }).onDelete("cascade"),
+  }),
+);
+
+export const skillRegistryPgTable = pgTable("skill_registry", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  discoveredFrom: text("discovered_from").notNull(),
+  firstSeenAt: nowTs("first_seen_at"),
+  lastSeenAt: nowTs("last_seen_at"),
+});
+
 export const auditLogPgTable = pgTable(
   "audit_log",
   {

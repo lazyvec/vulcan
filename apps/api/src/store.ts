@@ -6,6 +6,7 @@ import type {
   AgentCommand,
   AgentCommandMode,
   AgentCommandStatus,
+  AgentSkill,
   AgentStatus,
   AuditLogItem,
   DocItem,
@@ -15,15 +16,19 @@ import type {
   MemoryItem,
   Project,
   Schedule,
+  Skill,
+  SkillCategory,
+  SkillRegistryEntry,
   Task,
   TaskComment,
   TaskDependency,
   TaskLane,
   TaskPriority,
 } from "@vulcan/shared/types";
-import { db, ensureSchema } from "./db";
+import { db, ensureSchema, getSqlite } from "./db";
 import {
   agentCommandsTable,
+  agentSkillsTable,
   agentsTable,
   auditLogTable,
   docsTable,
@@ -32,6 +37,8 @@ import {
   memoryItemsTable,
   projectsTable,
   schedulesTable,
+  skillRegistryTable,
+  skillsTable,
   taskCommentsTable,
   taskDependenciesTable,
   tasksTable,
@@ -915,6 +922,287 @@ export function getAuditLogs(limit = 80): AuditLogItem[] {
     .limit(limit)
     .all()
     .map(mapAuditLog);
+}
+
+// ── Skills Marketplace ──────────────────────────────────────────────────────
+
+function mapSkill(row: typeof skillsTable.$inferSelect): Skill {
+  return {
+    id: row.id,
+    name: row.name,
+    displayName: row.displayName,
+    description: row.description,
+    category: row.category as SkillCategory,
+    iconKey: row.iconKey,
+    tags: parseStringArray(row.tags),
+    isBuiltin: row.isBuiltin !== 0,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapAgentSkill(row: typeof agentSkillsTable.$inferSelect): AgentSkill {
+  return {
+    id: row.id,
+    agentId: row.agentId,
+    skillId: row.skillId,
+    skillName: row.skillName,
+    installedAt: row.installedAt,
+    syncedAt: row.syncedAt,
+  };
+}
+
+function mapSkillRegistry(row: typeof skillRegistryTable.$inferSelect): SkillRegistryEntry {
+  return {
+    id: row.id,
+    name: row.name,
+    discoveredFrom: row.discoveredFrom,
+    firstSeenAt: row.firstSeenAt,
+    lastSeenAt: row.lastSeenAt,
+  };
+}
+
+export function getSkills(filters?: { category?: string; q?: string }): Skill[] {
+  ensureSchema();
+  const conditions = [];
+
+  if (filters?.category) {
+    conditions.push(eq(skillsTable.category, filters.category));
+  }
+
+  if (filters?.q?.trim()) {
+    const query = `%${filters.q.trim()}%`;
+    conditions.push(
+      or(
+        like(skillsTable.name, query),
+        like(skillsTable.displayName, query),
+        like(skillsTable.description, query),
+        like(skillsTable.tags, query),
+      ),
+    );
+  }
+
+  return db
+    .select()
+    .from(skillsTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(skillsTable.name)
+    .all()
+    .map(mapSkill);
+}
+
+export function getSkillById(id: string): Skill | null {
+  ensureSchema();
+  const row = db.select().from(skillsTable).where(eq(skillsTable.id, id)).get();
+  return row ? mapSkill(row) : null;
+}
+
+export function getSkillByName(name: string): Skill | null {
+  ensureSchema();
+  const row = db.select().from(skillsTable).where(eq(skillsTable.name, name)).get();
+  return row ? mapSkill(row) : null;
+}
+
+export function upsertSkill(input: {
+  name: string;
+  displayName?: string;
+  description?: string;
+  category?: string;
+  iconKey?: string;
+  tags?: string[];
+  isBuiltin?: boolean;
+}): Skill {
+  ensureSchema();
+  const now = Date.now();
+  const existing = db.select().from(skillsTable).where(eq(skillsTable.name, input.name)).get();
+
+  if (existing) {
+    const nextValues: Partial<typeof skillsTable.$inferInsert> = { updatedAt: now };
+    if (typeof input.displayName === "string") nextValues.displayName = input.displayName;
+    if (typeof input.description === "string") nextValues.description = input.description;
+    if (typeof input.category === "string") nextValues.category = input.category;
+    if (typeof input.iconKey === "string") nextValues.iconKey = input.iconKey;
+    if (Array.isArray(input.tags)) nextValues.tags = JSON.stringify(input.tags);
+    if (typeof input.isBuiltin === "boolean") nextValues.isBuiltin = input.isBuiltin ? 1 : 0;
+
+    db.update(skillsTable).set(nextValues).where(eq(skillsTable.id, existing.id)).run();
+    const updated = db.select().from(skillsTable).where(eq(skillsTable.id, existing.id)).get();
+    if (!updated) throw new Error("failed to update skill");
+    return mapSkill(updated);
+  }
+
+  const row: typeof skillsTable.$inferInsert = {
+    id: randomUUID(),
+    name: input.name,
+    displayName: input.displayName ?? input.name,
+    description: input.description ?? "",
+    category: input.category ?? "other",
+    iconKey: input.iconKey ?? "zap",
+    tags: JSON.stringify(input.tags ?? []),
+    isBuiltin: input.isBuiltin ? 1 : 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  db.insert(skillsTable).values(row).run();
+  const created = db.select().from(skillsTable).where(eq(skillsTable.id, row.id)).get();
+  if (!created) throw new Error("failed to create skill");
+  return mapSkill(created);
+}
+
+export function getAgentSkills(agentId: string): AgentSkill[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(agentSkillsTable)
+    .where(eq(agentSkillsTable.agentId, agentId))
+    .orderBy(agentSkillsTable.skillName)
+    .all()
+    .map(mapAgentSkill);
+}
+
+export function installSkillToAgent(input: { agentId: string; skillName: string }): AgentSkill {
+  ensureSchema();
+  const now = Date.now();
+
+  // 이미 설치된 경우 기존 반환
+  const existing = db
+    .select()
+    .from(agentSkillsTable)
+    .where(
+      and(
+        eq(agentSkillsTable.agentId, input.agentId),
+        eq(agentSkillsTable.skillName, input.skillName),
+      ),
+    )
+    .get();
+  if (existing) return mapAgentSkill(existing);
+
+  // 스킬이 없으면 자동 등록
+  let skill = getSkillByName(input.skillName);
+  if (!skill) {
+    skill = upsertSkill({ name: input.skillName });
+  }
+
+  const row: typeof agentSkillsTable.$inferInsert = {
+    id: randomUUID(),
+    agentId: input.agentId,
+    skillId: skill.id,
+    skillName: input.skillName,
+    installedAt: now,
+    syncedAt: now,
+  };
+
+  db.insert(agentSkillsTable).values(row).run();
+  const created = db
+    .select()
+    .from(agentSkillsTable)
+    .where(eq(agentSkillsTable.id, row.id))
+    .get();
+  if (!created) throw new Error("failed to install skill");
+  return mapAgentSkill(created);
+}
+
+export function removeSkillFromAgent(agentId: string, skillName: string): boolean {
+  ensureSchema();
+  const existing = db
+    .select()
+    .from(agentSkillsTable)
+    .where(
+      and(
+        eq(agentSkillsTable.agentId, agentId),
+        eq(agentSkillsTable.skillName, skillName),
+      ),
+    )
+    .get();
+  if (!existing) return false;
+  db.delete(agentSkillsTable).where(eq(agentSkillsTable.id, existing.id)).run();
+  return true;
+}
+
+export function syncAgentSkillsFromGateway(agentId: string, gatewaySkillNames: string[]): void {
+  ensureSchema();
+  const sqlite = getSqlite();
+
+  sqlite.transaction(() => {
+    const now = Date.now();
+
+    // 현재 DB 스킬 목록
+    const current = getAgentSkills(agentId);
+    const currentNames = new Set(current.map((s) => s.skillName));
+    const gatewayNames = new Set(gatewaySkillNames);
+
+    // Gateway에 있고 DB에 없는 → 설치
+    for (const name of gatewaySkillNames) {
+      if (!currentNames.has(name)) {
+        installSkillToAgent({ agentId, skillName: name });
+      }
+    }
+
+    // DB에 있고 Gateway에 없는 → 제거
+    for (const skill of current) {
+      if (!gatewayNames.has(skill.skillName)) {
+        removeSkillFromAgent(agentId, skill.skillName);
+      }
+    }
+
+    // syncedAt 갱신
+    db.update(agentSkillsTable)
+      .set({ syncedAt: now })
+      .where(eq(agentSkillsTable.agentId, agentId))
+      .run();
+  })();
+}
+
+export function upsertSkillRegistry(name: string, discoveredFrom: string): SkillRegistryEntry {
+  ensureSchema();
+  const now = Date.now();
+  const existing = db
+    .select()
+    .from(skillRegistryTable)
+    .where(eq(skillRegistryTable.name, name))
+    .get();
+
+  if (existing) {
+    db.update(skillRegistryTable)
+      .set({ lastSeenAt: now, discoveredFrom })
+      .where(eq(skillRegistryTable.id, existing.id))
+      .run();
+    const updated = db
+      .select()
+      .from(skillRegistryTable)
+      .where(eq(skillRegistryTable.id, existing.id))
+      .get();
+    if (!updated) throw new Error("failed to update skill registry");
+    return mapSkillRegistry(updated);
+  }
+
+  const row: typeof skillRegistryTable.$inferInsert = {
+    id: randomUUID(),
+    name,
+    discoveredFrom,
+    firstSeenAt: now,
+    lastSeenAt: now,
+  };
+
+  db.insert(skillRegistryTable).values(row).run();
+  const created = db
+    .select()
+    .from(skillRegistryTable)
+    .where(eq(skillRegistryTable.id, row.id))
+    .get();
+  if (!created) throw new Error("failed to create skill registry entry");
+  return mapSkillRegistry(created);
+}
+
+export function getSkillRegistry(): SkillRegistryEntry[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(skillRegistryTable)
+    .orderBy(skillRegistryTable.name)
+    .all()
+    .map(mapSkillRegistry);
 }
 
 export function countRecords() {

@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 5 — 스킬 마켓플레이스 (대기)
+## 현재 Phase: 6 — Activity/Audit + 메트릭스 (대기)
 
-> M0 + Phase 0 + Phase 1 + Phase 2 완료 + Phase 3 완료 (Batch 8).
+> M0 + Phase 0~5 완료.
 
 ---
 
@@ -90,13 +90,14 @@
 - [x] 칸반 UI 재작성 (`@dnd-kit/core` 드래그앤드롭, 6-lane, TaskDetailModal)
 - [x] 검증: lint/build 통과
 
-## Phase 5: 스킬 마켓플레이스 (7-10일) — 의존성: Phase 3 | 병렬: Phase 4
+## Phase 5: 스킬 마켓플레이스 (완료: 2026-03-08) — 의존성: Phase 3 | 병렬: Phase 4
 
-- [ ] 스킬 데이터 모델 (`skills`, `agent_skills`, `skill_registry`)
-- [ ] Gateway RPC로 스킬 동기화/설치/제거
-- [ ] 스킬 API + 마켓플레이스 UI (카탈로그, 상세, 에이전트별 관리)
-- [ ] 사이드바에 "Skills" 추가
-- [ ] 검증: 스킬 목록 동기화, 에이전트에 설치/제거
+- [x] 스킬 데이터 모델 (`skills`, `agent_skills`, `skill_registry`) — 3개 테이블 + 5개 인덱스
+- [x] Gateway RPC로 스킬 동기화/설치/제거 — best-effort agents.update 연동
+- [x] 스킬 API 8개 엔드포인트 + 마켓플레이스 UI (2패널: Catalog/Per Agent)
+- [x] 사이드바에 "Skills" 추가
+- [x] 외부 검수 → HIGH/MEDIUM 이슈 수정 완료
+- [x] 검증: lint/build 통과
 
 ## Phase 6: Activity/Audit + 메트릭스 (5-7일) — 의존성: Phase 3, 4
 
