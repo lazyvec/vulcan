@@ -17,6 +17,22 @@
     "adapter": "pnpm --filter @vulcan/api adapter:gateway",
     "test:smoke": "pnpm --filter @vulcan/web test:smoke",
     "db:generate": "pnpm --filter @vulcan/web db:generate",
-    "db:migrate": "pnpm --filter @vulcan/web db:migrate"
+    "db:migrate": "pnpm --filter @vulcan/web db:migrate",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "packages/shared/src/**/*.ts": [
+      "pnpm --filter @vulcan/shared lint"
+    ],
+    "apps/api/src/**/*.ts": [
+      "pnpm --filter @vulcan/api lint"
+    ],
+    "apps/web/**/*.{ts,tsx}": [
+      "pnpm --filter @vulcan/web lint"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2"
   }
 }

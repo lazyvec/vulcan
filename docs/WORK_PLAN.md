@@ -125,11 +125,11 @@
 
 ## Phase 9: 테스트 + CI/CD (점진적, Phase 1~) — 의존성: Phase 1+
 
+- [x] GitHub Actions CI (`lint → test → build` 파이프라인)
+- [x] Husky + lint-staged 프리커밋 훅
 - [ ] Vitest 유닛 테스트
 - [ ] Hono test client 통합 테스트
 - [ ] Playwright 확장 (주요 플로우 커버)
-- [ ] GitHub Actions CI (`lint → typecheck → unit → build → integration → e2e`)
-- [ ] Husky + lint-staged 프리커밋 훅
 - [ ] 검증: CI green
 
 ## Phase 10: Docker 배포 (4-6일) — 의존성: 전체
