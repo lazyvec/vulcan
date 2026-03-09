@@ -133,12 +133,16 @@
 - [ ] Playwright 확장 (주요 플로우 커버) — 기존 6개 smoke 유지, 필요 시 별도 세션
 - [x] 검증: CI green (63개 테스트 + lint + build 통과)
 
-## Phase 10: Docker 배포 (4-6일) — 의존성: 전체
+## Phase 10: Docker Compose 인프라 컨테이너화 (완료: 2026-03-09) — 의존성: 전체
 
-- [ ] Dockerfile (web, api 멀티스테이지 빌드)
-- [ ] docker-compose.yml (web + api + worker + postgres + redis)
-- [ ] PM2 → Docker Compose 전환
-- [ ] 검증: `docker compose up -d` 원커맨드 구동
+- [x] docker-compose.yml (PostgreSQL 16 Alpine + Redis 7 Alpine, 인프라만)
+- [x] .env.docker (Docker Compose 전용 환경변수)
+- [x] ecosystem.config.js DATABASE_URL/REDIS_URL 기본값 설정
+- [x] apps/api/.env.example Docker 연결 예시 추가
+- [x] 루트 package.json infra:up/down/logs 스크립트 추가
+- [x] 검증: `docker compose up -d` → PostgreSQL/Redis healthy, 접속 확인
+- [ ] Dockerfile (web, api 멀티스테이지 빌드) — 필요 시 별도 세션
+- [ ] PM2 → Docker Compose 전환 — 현재 PM2 유지 (App은 Docker화 보류)
 
 ## Phase 11: Observability/Governance 업그레이드 (백로그 예정)
 

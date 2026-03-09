@@ -19,6 +19,9 @@
     "test:smoke": "pnpm --filter @vulcan/web test:smoke",
     "db:generate": "pnpm --filter @vulcan/web db:generate",
     "db:migrate": "pnpm --filter @vulcan/web db:migrate",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f",
     "prepare": "husky"
   },
   "lint-staged": {

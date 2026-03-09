@@ -1,0 +1,47 @@
+# Vulcan 인프라 컨테이너 (PostgreSQL + Redis)
+# App(api/web/adapter)은 PM2로 관리, 인프라만 Docker Compose로 관리
+#
+# 사용법:
+#   pnpm infra:up     # 컨테이너 시작
+#   pnpm infra:down   # 컨테이너 중지
+#   pnpm infra:logs   # 로그 확인
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vulcan-postgres
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_DB: vulcan
+      POSTGRES_USER: vulcan
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - vulcan-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vulcan -d vulcan"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: vulcan-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - vulcan-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  vulcan-pgdata:
+  vulcan-redis:

@@ -2,6 +2,41 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-09 | 브랜치: `main`
 
+## 2026-03-09: Phase 10 — Docker Compose 인프라 컨테이너화
+
+### 요약
+PostgreSQL + Redis를 Docker Compose로 관리하도록 인프라 컨테이너화를 완료했다.
+App(api/web/adapter)은 PM2 유지, 인프라만 Docker로 격리 관리.
+기존 로컬 PostgreSQL(5432)/Redis(6379)와 충돌 방지를 위해 5433/6380 포트 사용.
+
+### 완료 항목
+- ✅ `docker-compose.yml` — PostgreSQL 16 Alpine + Redis 7 Alpine, healthcheck, 볼륨 영속
+- ✅ `.env.docker` — Docker Compose 전용 POSTGRES_PASSWORD
+- ✅ `ecosystem.config.js` — DATABASE_URL/REDIS_URL 기본값 설정 (5433/6380)
+- ✅ `apps/api/.env.example` — Docker 연결 예시 주석 추가
+- ✅ `package.json` (루트) — `infra:up`, `infra:down`, `infra:logs` 스크립트
+- ✅ `.gitignore` — `.env.docker` 예외 추가
+
+### 검증
+- `docker compose up -d` — 컨테이너 정상 시작
+- `docker compose ps` — postgres/redis healthy
+- PostgreSQL 16.13 접속 확인 (Docker exec)
+- Redis PONG 응답 확인 (Docker exec)
+- `pnpm lint` — 통과
+- `pnpm build` — 통과
+
+### 설계 결정
+- 포트 5433/6380: 기존 로컬 서비스(5432/6379)와 공존
+- App Docker화 보류: PM2 유지 (Gateway 연결, 디버깅 용이)
+- 볼륨: `vulcan-pgdata`, `vulcan-redis` (데이터 영속)
+
+### 현재 상태
+- ✅ M0 ~ Phase 10(인프라) 완료
+- 🗂️ Phase 10 잔여: App Dockerfile, PM2→Docker 전환 (필요 시 별도 세션)
+- 🗂️ Phase 11~12 예정(백로그)
+
+---
+
 ## 2026-03-09: Phase 9 — Vitest 유닛/통합 테스트 + CI 강화
 
 ### 요약
