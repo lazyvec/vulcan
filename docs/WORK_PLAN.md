@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 9 — 테스트 + CI/CD
+## 현재 Phase: 8~10 병행 진행 — 승인/거버넌스 + 테스트/CI + Docker 배포
 
-> M0 + Phase 0~6 완료.
+> M0 + Phase 0~7 완료. Phase 8~10 진행 중.
 
 ---
 
@@ -107,12 +107,12 @@
 - [x] LiveActivityPanel 강화 (카테고리 필터, 소스 링크, 무한 스크롤, 아이콘/통계)
 - [x] 검증: lint/build 통과
 
-## Phase 7: Telegram 알림 연동 (3-5일) — 의존성: Phase 3
+## Phase 7: Telegram 알림 연동 (3-5일) — 의존성: Phase 3 (완료: 2026-03-08)
 
-- [ ] 알림 서비스 (Telegram Bot API 또는 Gateway RPC `chat.send`)
-- [ ] 알림 설정 (이벤트 타입별 구독/해제, `notification_preferences` 테이블)
-- [ ] BullMQ 알림 큐
-- [ ] 검증: Telegram 알림 수신 (에러, 태스크 완료)
+- [x] 알림 서비스 (Telegram Bot API 또는 Gateway RPC `chat.send`)
+- [x] 알림 설정 (이벤트 타입별 구독/해제, `notification_preferences` 테이블)
+- [x] BullMQ 알림 큐
+- [x] 검증: Telegram 알림 수신 (에러, 태스크 완료)
 
 ## Phase 8: 승인/거버넌스 (5-7일) — 의존성: Phase 3, 7
 
@@ -138,6 +138,27 @@
 - [ ] docker-compose.yml (web + api + worker + postgres + redis)
 - [ ] PM2 → Docker Compose 전환
 - [ ] 검증: `docker compose up -d` 원커맨드 구동
+
+## Phase 11: Observability/Governance 업그레이드 (백로그 예정)
+
+> 목적: Govrix + PM Skills + Everything-Claude-Code에서 필요한 요소만 선택 흡수해 Vulcan 운영 품질을 한 단계 끌어올린다.
+
+- [ ] Govrix PoC: 프록시 기반 LLM 트래픽 계측(cost/token/latency) + Vulcan ingest 연결
+- [ ] Govrix UI 연동 전략: 대체가 아닌 병행(모듈형) 통합 설계
+- [ ] PII/감사 추적 정책 실험 (Merkle/tamper-evidence 개념 검토 포함)
+- [ ] PM Skills 워크플로우를 Vulcan planning command 체계에 이식(`/discover`→`/strategy`→`/write-prd` 흐름)
+- [ ] everything-claude-code에서 hook/profile/verification-loop 핵심 모듈만 선별 도입
+- [ ] 과도한 도입 방지 가드: 토큰비/복잡도 상한 정의 + 기능 플래그화
+- [ ] 라이선스/저작권 최종 검증 체크리스트(상업 사용, 공지 의무, NOTICE) 문서화
+
+## Phase 12: Agency Agents 레퍼런스 트랙 (백로그 예정)
+
+> 목적: agency-agents 계열 멀티 에이전트 오케스트레이션 아이디어를 Vulcan/Hermes 운영에 적용 가능 여부 검토.
+
+- [ ] 레퍼런스 분석: `msitarzewski/agency-agents` 구조/역할/워크플로우 매핑
+- [ ] Vulcan 현재 아키텍처와 충돌/중복 지점 파악
+- [ ] 부분 흡수 후보 선정(팀 오케스트레이션, 역할 분리, 워크플로우 템플릿)
+- [ ] PoC 범위 정의(작은 실험 1개)
 
 ---
 

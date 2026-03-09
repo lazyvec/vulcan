@@ -2,6 +2,85 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-08 | 브랜치: `main`
 
+## 2026-03-09: Phase 11 백로그 정의 (예정)
+
+### 요약
+사용자 요청으로 Phase 11(Observability/Governance 업그레이드) 예정 항목을 문서화했다.
+현재는 Phase 8~10 병행 진행 상태를 유지하고, Phase 11은 후속 작업용 백로그로 관리한다.
+
+### 추가된 예정 범위
+- ✅ Govrix 기능군 선택 도입 계획(트래픽 계측/PII/감사)
+- ✅ PM Skills 워크플로우 이식 계획(Discovery→Strategy→PRD)
+- ✅ everything-claude-code 핵심 모듈 선별 도입 계획(hook profile/verification/security)
+- ✅ 토큰비·복잡도 가드레일 + 기능 플래그 전략
+- ✅ 라이선스/저작권 최종 검증 체크리스트 작업 항목
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- ✅ Phase 3 완료
+- ✅ Phase 4 완료
+- ✅ Phase 5 완료
+- ✅ Phase 6 완료
+- ✅ Phase 7 완료
+- 🚧 Phase 8~10 진행 중
+- 🗂️ Phase 11 예정(백로그)
+
+---
+
+## 2026-03-08: Phase 7 Telegram 알림 시스템 구현 (Herald Bot)
+
+### 요약
+Phase 7 전체를 완료. 이벤트 발생 시 Telegram 실시간 알림 파이프라인 전체를 구축했다.
+`@vulcan_herald_bot`을 활용하여 이벤트 → 필터링 → BullMQ 큐(또는 로컬 폴백) → Telegram Bot API 발송 → 로그 기록 흐름을 완성.
+
+### 완료 항목
+
+**Batch 1: 데이터 + 알림 서비스**
+- ✅ `packages/shared/src/types.ts` — NotificationCategory, NotificationPreference, NotificationLog 타입
+- ✅ `packages/shared/src/schemas.ts` — updateNotificationPreferencesSchema (Zod)
+- ✅ `apps/api/src/schema.ts` — notificationPreferencesTable, notificationLogsTable (SQLite)
+- ✅ `apps/api/src/pg-schema.ts` — 동일 2개 테이블 (PostgreSQL)
+- ✅ `apps/api/src/db.ts` — DDL 부트스트랩 + 인덱스
+- ✅ `apps/api/src/store.ts` — CRUD 4개 함수 (getNotificationPreferences, upsertNotificationPreferences, appendNotificationLog, getNotificationLogs)
+- ✅ `apps/api/src/telegram.ts` — **신규** Telegram Bot API 직접 호출, 이벤트 메시지 포맷, 카테고리/조용한시간 필터
+- ✅ `apps/api/src/queue.ts` — NotificationQueueJobData, getNotificationQueue, enqueueNotificationJob, notification 워커
+
+**Batch 2: API + 이벤트 후크 연동**
+- ✅ `apps/api/src/server.ts` — 4개 엔드포인트 (GET/PUT preferences, POST test, GET logs) + 이벤트 구독 후크
+- ✅ 이벤트 후크: subscribeEvents → shouldNotify 필터 → BullMQ 큐 enqueue (Redis 없으면 직접 발송 폴백)
+
+**Batch 3: UI**
+- ✅ `apps/web/components/Sidebar.tsx` — Notifications 항목 추가
+- ✅ `apps/web/app/(layout)/notifications/page.tsx` — **신규** Server Component
+- ✅ `apps/web/components/NotificationSettings.tsx` — **신규** 카테고리 토글(7종), 조용한 시간(KST), 테스트 발송, 발송 이력
+- ✅ `apps/web/lib/api-server.ts` — getNotificationPreferences, getNotificationLogs
+- ✅ `apps/web/lib/types.ts` — NotificationCategory, NotificationPreference, NotificationLog re-export
+
+**기타**
+- ✅ `package.json` — lint-staged에서 tsc -p와 파일 인자 충돌 해결 (bash -c 래핑)
+
+### 검증
+- tsc --noEmit (api + web) 통과
+- pnpm lint 통과
+- pnpm build 통과 (/notifications 라우트 정상 생성)
+
+### 현재 상태
+- ✅ M0 완료
+- ✅ Phase 0 완료
+- ✅ Phase 1 완료
+- ✅ Phase 2 완료
+- ✅ Phase 3 완료
+- ✅ Phase 4 완료
+- ✅ Phase 5 완료
+- ✅ Phase 6 완료
+- ✅ Phase 7 완료
+- ▶️ 다음: Phase 8 승인/거버넌스 또는 Phase 9 테스트 + CI/CD
+
+---
+
 ## 2026-03-08: Phase 6 Activity/Audit + 메트릭스 완료
 
 ### 요약

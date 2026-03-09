@@ -29,6 +29,41 @@ max_warn_h = int(max_warn_h)
 kst = ZoneInfo("Asia/Seoul")
 now = datetime.now(timezone.utc)
 
+def latest_openclaw_log():
+    p = Path('/tmp/openclaw')
+    if not p.exists():
+        return None
+    logs = sorted(p.glob('openclaw-*.log'), key=lambda x: x.stat().st_mtime, reverse=True)
+    return logs[0] if logs else None
+
+def provider_signal(provider_name: str):
+    log = latest_openclaw_log()
+    if not log:
+        return {'provider': provider_name, 'status': 'unknown', 'detail': 'log unavailable'}
+
+    txt = log.read_text(errors='ignore')
+    lines = txt.splitlines()[-2500:]
+    p = provider_name.lower()
+    matched = [ln for ln in lines if p in ln.lower()]
+    if not matched:
+        return {'provider': provider_name, 'status': 'unknown', 'detail': 'no recent provider lines'}
+
+    rate_hits = sum(1 for ln in matched if 'rate limit' in ln.lower() or '429' in ln)
+    err_hits = sum(1 for ln in matched if 'error' in ln.lower() or 'failed' in ln.lower())
+
+    if rate_hits > 0:
+        st = 'limited'
+    elif err_hits > 0:
+        st = 'warning'
+    else:
+        st = 'ok'
+
+    return {
+        'provider': provider_name,
+        'status': st,
+        'detail': f'rate_limit_hits={rate_hits}, error_hits={err_hits} (last 2500 lines)'
+    }
+
 def parse_ts(s):
     return datetime.fromisoformat(s.replace('Z', '+00:00'))
 
@@ -78,6 +113,9 @@ main = load_usage(main_p, 'claude-main', 'Pro')
 work = load_usage(work_p, 'claude-work', 'Max')
 accounts = [sub, main, work]
 
+gemini_sig = provider_signal('gemini')
+codex_sig = provider_signal('codex')
+
 routing = 'UNKNOWN'
 reason = 'insufficient data'
 
@@ -124,6 +162,13 @@ if max_warn:
     lines.append('')
     lines.append('## Warning')
     lines.append(f'- {max_warn}')
+
+lines.append('')
+lines.append('## Cross-Provider Signals (Heuristic)')
+lines.append('| Provider | Signal | Detail |')
+lines.append('|---|---|---|')
+for sig in [codex_sig, gemini_sig]:
+    lines.append(f"| {sig['provider']} | {sig['status']} | {sig['detail']} |")
 
 Path(out).write_text('\n'.join(lines) + '\n')
 print(f"[ok] wrote {out}")

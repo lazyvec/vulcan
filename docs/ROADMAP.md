@@ -1,6 +1,6 @@
 # Vulcan Roadmap
 
-> **현재 상태**: M0 완료 + Phase 0~6 완료 → Phase 9 CI/CD 진행
+> **현재 상태**: M0 완료 + Phase 0~7 완료 → Phase 8~10 병행 진행
 > **실행 체크리스트**: `docs/WORK_PLAN.md`
 
 ## 목표 아키텍처
@@ -118,6 +118,17 @@ M0을 깨뜨리지 않고 분리 가능 구조로 준비.
 
 - Docker Compose (web + api + worker + postgres + redis)
 - PM2 → Docker Compose 전환
+
+## Phase 11: Observability/Governance 업그레이드 (예정)
+
+> 외부 레퍼런스(Govrix, PM Skills, everything-claude-code)에서 필요한 기능만 선별 흡수.
+
+- Govrix 계열 기능 PoC: LLM 트래픽 계측(cost/token/latency), PII 플래그, 감사 추적 파이프라인
+- Vulcan 통합 원칙: Govrix 대체가 아닌 모듈 병행(ingest/대시보드 연동)
+- PM Skills 기반 기획 워크플로우 표준화 (discover → strategy → PRD 체인)
+- ECC 패턴 선택 도입: hook profile, verification loop, security scan, continuous-learning
+- 운영 가드레일: 토큰비/복잡도 상한, 기능 플래그, 단계별 롤아웃
+- 라이선스/저작권 점검 자동화 문서화
 
 ---
 

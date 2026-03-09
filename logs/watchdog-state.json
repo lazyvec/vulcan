@@ -20,5 +20,15 @@
     "warning": {
       "active": false
     }
+  },
+  "warning_log_signal": {
+    "hash": "a785598262078602fd2b07518bf87b24a8a4249bac204c64aade9fe6252b9462",
+    "time": "2026-03-09 10:45:02 KST",
+    "epoch": 1773020702
+  },
+  "warning_log_signal_resolved": {
+    "hash": "1327503323b80983a5c3d2a9746293e5ab18ca754bbdcfc0e82d8439d80fb038",
+    "time": "2026-03-09 12:45:16 KST",
+    "epoch": 1773027916
   }
 }
