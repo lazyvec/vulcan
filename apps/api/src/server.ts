@@ -2937,57 +2937,67 @@ app.post("/api/approvals/:id/resolve", async (c) => {
 
 app.get("/", (c) => c.json({ service: "vulcan-api", ok: true }));
 
-const port = Number(process.env.VULCAN_API_PORT ?? "8787");
+// 테스트에서 app 인스턴스를 사용할 수 있도록 export
+export { app };
 
-const server = serve(
-  {
-    fetch: app.fetch,
-    port,
-    hostname: "127.0.0.1",
-  },
-  (info) => {
-    console.log(`[vulcan-api] listening on http://${info.address}:${info.port}`);
-  },
-);
+// 직접 실행 시에만 서버 시작 (테스트에서 import할 때는 실행하지 않음)
+const isDirectRun =
+  process.argv[1]?.endsWith("server.ts") ||
+  process.argv[1]?.endsWith("server.js");
 
-injectWebSocket(server);
+if (isDirectRun) {
+  const port = Number(process.env.VULCAN_API_PORT ?? "8787");
 
-let isShuttingDown = false;
+  const server = serve(
+    {
+      fetch: app.fetch,
+      port,
+      hostname: "127.0.0.1",
+    },
+    (info) => {
+      console.log(`[vulcan-api] listening on http://${info.address}:${info.port}`);
+    },
+  );
 
-async function shutdown(signal: string) {
-  if (isShuttingDown) {
-    return;
+  injectWebSocket(server);
+
+  let isShuttingDown = false;
+
+  async function shutdown(signal: string) {
+    if (isShuttingDown) {
+      return;
+    }
+    isShuttingDown = true;
+
+    console.log(`[vulcan-api] shutting down (${signal})`);
+
+    if (healthcheckQueueTimer) {
+      clearInterval(healthcheckQueueTimer);
+      healthcheckQueueTimer = null;
+    }
+
+    // Phase 8: 승인 타임아웃 정리
+    for (const timer of approvalTimeouts.values()) {
+      clearTimeout(timer);
+    }
+    approvalTimeouts.clear();
+
+    stopTelegramPolling();
+    gatewayRpcClient.stop();
+    await closeQueueResources().catch((error) => {
+      console.error("[vulcan-api] queue shutdown failed", error);
+    });
+
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+    });
   }
-  isShuttingDown = true;
 
-  console.log(`[vulcan-api] shutting down (${signal})`);
-
-  if (healthcheckQueueTimer) {
-    clearInterval(healthcheckQueueTimer);
-    healthcheckQueueTimer = null;
-  }
-
-  // Phase 8: 승인 타임아웃 정리
-  for (const timer of approvalTimeouts.values()) {
-    clearTimeout(timer);
-  }
-  approvalTimeouts.clear();
-
-  stopTelegramPolling();
-  gatewayRpcClient.stop();
-  await closeQueueResources().catch((error) => {
-    console.error("[vulcan-api] queue shutdown failed", error);
+  process.once("SIGINT", () => {
+    void shutdown("SIGINT");
   });
 
-  await new Promise<void>((resolve) => {
-    server.close(() => resolve());
+  process.once("SIGTERM", () => {
+    void shutdown("SIGTERM");
   });
 }
-
-process.once("SIGINT", () => {
-  void shutdown("SIGINT");
-});
-
-process.once("SIGTERM", () => {
-  void shutdown("SIGTERM");
-});

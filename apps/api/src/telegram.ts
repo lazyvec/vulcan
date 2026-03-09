@@ -319,7 +319,7 @@ export function formatApprovalResultMessage(
   return `${originalText}\n\n<b>${statusLabel}</b>${by}`;
 }
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

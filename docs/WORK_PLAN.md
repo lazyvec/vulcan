@@ -127,10 +127,11 @@
 
 - [x] GitHub Actions CI (`lint → test → build` 파이프라인)
 - [x] Husky + lint-staged 프리커밋 훅
-- [ ] Vitest 유닛 테스트
-- [ ] Hono test client 통합 테스트
-- [ ] Playwright 확장 (주요 플로우 커버)
-- [ ] 검증: CI green
+- [x] Vitest 유닛 테스트 (48개: telegram, store, constants)
+- [x] Store 통합 테스트 (15개: Agent/Task/Event/Approval CRUD, 임시 SQLite)
+- [x] CI에서 Vitest 실행 + 테스트 실패 시 빌드 실패
+- [ ] Playwright 확장 (주요 플로우 커버) — 기존 6개 smoke 유지, 필요 시 별도 세션
+- [x] 검증: CI green (63개 테스트 + lint + build 통과)
 
 ## Phase 10: Docker 배포 (4-6일) — 의존성: 전체
 

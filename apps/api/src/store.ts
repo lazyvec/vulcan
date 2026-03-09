@@ -59,7 +59,7 @@ import {
 
 const DEFAULT_SOURCE = "openclaw";
 
-function parseStringArray(raw: string | null | undefined): string[] {
+export function parseStringArray(raw: string | null | undefined): string[] {
   if (!raw) {
     return [];
   }
@@ -71,7 +71,7 @@ function parseStringArray(raw: string | null | undefined): string[] {
   }
 }
 
-function parseJsonRecord(raw: string | null | undefined): Record<string, unknown> {
+export function parseJsonRecord(raw: string | null | undefined): Record<string, unknown> {
   if (!raw) {
     return {};
   }

@@ -1,6 +1,51 @@
 # PROGRESS
 
-<!-- last-session --> **마지막 세션**: 2026-03-08 | 브랜치: `main`
+<!-- last-session --> **마지막 세션**: 2026-03-09 | 브랜치: `main`
+
+## 2026-03-09: Phase 9 — Vitest 유닛/통합 테스트 + CI 강화
+
+### 요약
+Vitest를 도입하여 63개 테스트를 추가하고, CI에서 테스트 실패 시 빌드가 실패하도록 강화했다.
+
+### 완료 항목
+
+**Vitest 도입**
+- ✅ `apps/api/vitest.config.ts` — ESM + @vulcan/shared alias 설정
+- ✅ `apps/api/package.json` — vitest devDep + `test`/`test:watch` 스크립트
+
+**유닛 테스트 (48개)**
+- ✅ `telegram.test.ts` — escapeHtml, shouldNotify(기본필터/카테고리/타입/silentHours), formatEventMessage, formatApprovalRequestMessage, formatApprovalResultMessage, getApprovalInlineKeyboard
+- ✅ `store.test.ts` — parseStringArray, parseJsonRecord (null/undefined/빈값/유효JSON/잘못된JSON)
+- ✅ `constants.test.ts` — eventCategoryOf(모든 28종 타입→7카테고리 매핑), statusFromEventType
+
+**Store 통합 테스트 (15개)**
+- ✅ `__tests__/store-integration.test.ts` — 임시 SQLite DB로 실제 CRUD 검증
+  - Agent CRUD (생성/조회/수정/비활성화)
+  - Task CRUD (생성/조회/수정/레인변경/삭제/코멘트)
+  - Event Ingestion (저장/조회/통계)
+  - Approval Policy CRUD (생성/수정)
+  - Audit Log, countRecords
+
+**CI 강화**
+- ✅ `.github/workflows/ci.yml` — Vitest 실행 단계 추가 (테스트 실패 시 CI 실패)
+- ✅ `package.json` (루트) — `test` 스크립트 추가
+
+**코드 변경**
+- ✅ `store.ts` — `parseStringArray`, `parseJsonRecord` export 추가
+- ✅ `telegram.ts` — `escapeHtml` export 추가
+- ✅ `server.ts` — `app` export + 직접 실행 시에만 서버 시작 (테스트에서 import 가능)
+
+### 검증
+- `pnpm test` — 63개 테스트 통과 (4 파일, 1.46s)
+- `pnpm lint` — shared + api + web 타입체크/린트 통과
+- `pnpm build` — 전체 빌드 성공
+
+### 잔여/후속
+- Playwright 확장: 기존 6개 smoke 테스트 유지, 필요 시 별도 세션
+- Hono app 통합 테스트: server.ts 팩토리 패턴 리팩토링 후 가능 (Gateway/BullMQ 의존성 분리 필요)
+- 기존 Node.js test (gateway-rpc): 동작하므로 Vitest 포팅 보류
+
+---
 
 ## 2026-03-09: Phase 8 승인/거버넌스 — Telegram 인라인 키보드 승인
 
