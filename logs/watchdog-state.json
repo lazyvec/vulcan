@@ -1,34 +1,19 @@
 {
-  "high_failures": {
-    "hash": "a6874374bde8555a3387843874e2af55609558a3bd7ba2f23f2536be31439b1d",
-    "time": "2026-03-08 00:40:01 KST",
-    "epoch": 1772898001
-  },
-  "gateway_down": {
-    "hash": "9d0ab293dd37219b6d63c04e3041955a5a27c3d8a71c7615db36d1efc8aee6e5",
-    "time": "2026-03-08 00:34:01 KST",
-    "epoch": 1772897641
-  },
   "counters": {
-    "health_failures": 1,
-    "warning_failures": 0
+    "health_failures": 0,
+    "warning_failures": 4
   },
   "alerts": {
     "critical": {
       "active": false
     },
     "warning": {
-      "active": false
+      "active": true
     }
   },
   "warning_log_signal": {
-    "hash": "a785598262078602fd2b07518bf87b24a8a4249bac204c64aade9fe6252b9462",
-    "time": "2026-03-09 10:45:02 KST",
-    "epoch": 1773020702
-  },
-  "warning_log_signal_resolved": {
-    "hash": "1327503323b80983a5c3d2a9746293e5ab18ca754bbdcfc0e82d8439d80fb038",
-    "time": "2026-03-09 12:45:16 KST",
-    "epoch": 1773027916
+    "hash": "7025e08a28df7233cf3e2547bfb6cecd7187314909cf74be00dbd98566d94b01",
+    "time": "2026-03-10 01:07:01 KST",
+    "epoch": 1773072421
   }
 }

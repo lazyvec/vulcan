@@ -237,10 +237,11 @@ export function shouldNotify(
 ): boolean {
   const category = eventCategoryOf(event.type);
 
-  // 설정 없을 때 기본 필터 적용 (운영성 이벤트 제외)
+  // 운영성 이벤트는 항상 제외 (prefs 유무 무관)
+  if (DEFAULT_EXCLUDED_CATEGORIES.has(category)) return false;
+  if (DEFAULT_EXCLUDED_TYPES.has(event.type)) return false;
+
   if (!prefs) {
-    if (DEFAULT_EXCLUDED_CATEGORIES.has(category)) return false;
-    if (DEFAULT_EXCLUDED_TYPES.has(event.type)) return false;
     return true;
   }
 
