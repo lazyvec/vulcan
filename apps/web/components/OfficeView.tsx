@@ -63,12 +63,14 @@ const COMMAND_STATUS_LABELS: Record<AgentCommand["status"], string> = {
   queued: "Queued",
   sent: "Sent",
   failed: "Failed",
+  pending_approval: "Pending Approval",
 };
 
 const COMMAND_STATUS_COLORS: Record<AgentCommand["status"], string> = {
   queued: "text-amber-300 border-amber-500/40 bg-amber-500/10",
   sent: "text-green-300 border-green-500/40 bg-green-500/10",
   failed: "text-red-300 border-red-500/40 bg-red-500/10",
+  pending_approval: "text-purple-300 border-purple-500/40 bg-purple-500/10",
 };
 
 function formatTime(ts: number) {

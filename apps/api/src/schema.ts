@@ -235,6 +235,48 @@ export const notificationLogsTable = sqliteTable(
   }),
 );
 
+// ── Approval / Governance (Phase 8) ────────────────────────────────────────
+
+export const approvalPoliciesTable = sqliteTable(
+  "approval_policies",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    matchAgentId: text("match_agent_id"),
+    matchMode: text("match_mode"),
+    matchCommandPattern: text("match_command_pattern"),
+    autoApproveMinutes: integer("auto_approve_minutes"),
+    isActive: integer("is_active").notNull().default(1),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => ({
+    idxApprovalPoliciesActive: index("idx_approval_policies_active").on(table.isActive),
+  }),
+);
+
+export const approvalsTable = sqliteTable(
+  "approvals",
+  {
+    id: text("id").primaryKey(),
+    agentCommandId: text("agent_command_id").notNull(),
+    policyId: text("policy_id").notNull(),
+    status: text("status").notNull().default("pending"),
+    requestedBy: text("requested_by").notNull().default("human"),
+    resolvedBy: text("resolved_by"),
+    resolvedReason: text("resolved_reason"),
+    expiresAt: integer("expires_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => ({
+    idxApprovalsCommandId: index("idx_approvals_command_id").on(table.agentCommandId),
+    idxApprovalsStatus: index("idx_approvals_status").on(table.status),
+    idxApprovalsExpires: index("idx_approvals_expires").on(table.expiresAt),
+  }),
+);
+
 export const auditLogTable = sqliteTable(
   "audit_log",
   {

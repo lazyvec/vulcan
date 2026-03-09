@@ -322,6 +322,58 @@ export const notificationLogsPgTable = pgTable(
   }),
 );
 
+// ── Approval / Governance (Phase 8) ────────────────────────────────────────
+
+export const approvalPoliciesPgTable = pgTable(
+  "approval_policies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    matchAgentId: uuid("match_agent_id"),
+    matchMode: text("match_mode"),
+    matchCommandPattern: text("match_command_pattern"),
+    autoApproveMinutes: integer("auto_approve_minutes"),
+    isActive: integer("is_active").notNull().default(1),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
+  },
+  (table) => ({
+    idxApprovalPoliciesActive: index("idx_approval_policies_active").on(table.isActive),
+  }),
+);
+
+export const approvalsPgTable = pgTable(
+  "approvals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentCommandId: uuid("agent_command_id").notNull(),
+    policyId: uuid("policy_id").notNull(),
+    status: text("status").notNull().default("pending"),
+    requestedBy: text("requested_by").notNull().default("human"),
+    resolvedBy: text("resolved_by"),
+    resolvedReason: text("resolved_reason"),
+    expiresAt: timestamp("expires_at", { withTimezone: false }),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
+  },
+  (table) => ({
+    idxApprovalsCommandId: index("idx_approvals_command_id").on(table.agentCommandId),
+    idxApprovalsStatus: index("idx_approvals_status").on(table.status),
+    idxApprovalsExpires: index("idx_approvals_expires").on(table.expiresAt),
+    fkApprovalsCommand: foreignKey({
+      name: "fk_approvals_command",
+      columns: [table.agentCommandId],
+      foreignColumns: [agentCommandsPgTable.id],
+    }).onDelete("cascade"),
+    fkApprovalsPolicy: foreignKey({
+      name: "fk_approvals_policy",
+      columns: [table.policyId],
+      foreignColumns: [approvalPoliciesPgTable.id],
+    }).onDelete("cascade"),
+  }),
+);
+
 export const auditLogPgTable = pgTable(
   "audit_log",
   {

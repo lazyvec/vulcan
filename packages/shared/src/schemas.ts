@@ -233,6 +233,37 @@ export type UpdateNotificationPreferencesInput = z.infer<
   typeof updateNotificationPreferencesSchema
 >;
 
+// ── Approval / Governance (Phase 8) ──────────────────────────────────────────
+
+export const createApprovalPolicyInputSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  matchAgentId: z.string().min(1).nullable().optional(),
+  matchMode: z.enum(["delegate", "direct"]).nullable().optional(),
+  matchCommandPattern: z.string().min(1).nullable().optional(),
+  autoApproveMinutes: z.number().int().positive().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const updateApprovalPolicyInputSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  matchAgentId: z.string().min(1).nullable().optional(),
+  matchMode: z.enum(["delegate", "direct"]).nullable().optional(),
+  matchCommandPattern: z.string().min(1).nullable().optional(),
+  autoApproveMinutes: z.number().int().positive().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const resolveApprovalInputSchema = z.object({
+  action: z.enum(["approve", "reject"]),
+  reason: z.string().optional(),
+});
+
+export type CreateApprovalPolicyInput = z.infer<typeof createApprovalPolicyInputSchema>;
+export type UpdateApprovalPolicyInput = z.infer<typeof updateApprovalPolicyInputSchema>;
+export type ResolveApprovalInput = z.infer<typeof resolveApprovalInputSchema>;
+
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;

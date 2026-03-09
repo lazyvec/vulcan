@@ -138,7 +138,37 @@ export interface GatewayInfo {
 }
 
 export type AgentCommandMode = "delegate" | "direct";
-export type AgentCommandStatus = "queued" | "sent" | "failed";
+export type AgentCommandStatus = "queued" | "sent" | "failed" | "pending_approval";
+
+// ── Approval / Governance (Phase 8) ────────────────────────────────────────
+
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired";
+
+export interface ApprovalPolicy {
+  id: string;
+  name: string;
+  description: string;
+  matchAgentId: string | null;
+  matchMode: AgentCommandMode | null;
+  matchCommandPattern: string | null;
+  autoApproveMinutes: number | null;
+  isActive: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Approval {
+  id: string;
+  agentCommandId: string;
+  policyId: string;
+  status: ApprovalStatus;
+  requestedBy: string;
+  resolvedBy: string | null;
+  resolvedReason: string | null;
+  expiresAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
 
 export interface AgentCommand {
   id: string;

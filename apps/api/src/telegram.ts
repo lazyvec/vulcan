@@ -103,6 +103,31 @@ export function getDefaultNotificationChatId(): string {
   return getDefaultChatId();
 }
 
+// ── Approval Notification (Phase 8) ─────────────────────────────────────────
+
+export function formatApprovalRequestMessage(input: {
+  approvalId: string;
+  agentId: string;
+  mode: string;
+  policyName: string;
+  messagePreview: string;
+}): string {
+  const baseUrl = process.env.VULCAN_BASE_URL ?? "http://localhost:3000";
+  const approveUrl = `${baseUrl}/approvals?action=approve&id=${input.approvalId}`;
+  const rejectUrl = `${baseUrl}/approvals?action=reject&id=${input.approvalId}`;
+
+  const lines: string[] = [];
+  lines.push(`<b>🔐 승인 요청</b>`);
+  lines.push(`<b>에이전트:</b> ${escapeHtml(input.agentId)}`);
+  lines.push(`<b>모드:</b> ${escapeHtml(input.mode)}`);
+  lines.push(`<b>정책:</b> ${escapeHtml(input.policyName)}`);
+  lines.push(`<b>내용:</b> ${escapeHtml(input.messagePreview)}`);
+  lines.push("");
+  lines.push(`<a href="${escapeHtml(approveUrl)}">✅ 승인</a>  |  <a href="${escapeHtml(rejectUrl)}">❌ 거절</a>`);
+
+  return lines.join("\n");
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")

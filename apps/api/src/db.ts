@@ -286,6 +286,37 @@ function ensureLegacyBootstrap() {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_notification_prefs_user ON notification_preferences (user_id);
     CREATE INDEX IF NOT EXISTS idx_notification_logs_sent_at ON notification_logs (sent_at DESC);
+
+    CREATE TABLE IF NOT EXISTS approval_policies (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      match_agent_id TEXT,
+      match_mode TEXT,
+      match_command_pattern TEXT,
+      auto_approve_minutes INTEGER,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS approvals (
+      id TEXT PRIMARY KEY,
+      agent_command_id TEXT NOT NULL,
+      policy_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      requested_by TEXT NOT NULL DEFAULT 'human',
+      resolved_by TEXT,
+      resolved_reason TEXT,
+      expires_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_approval_policies_active ON approval_policies (is_active);
+    CREATE INDEX IF NOT EXISTS idx_approvals_command_id ON approvals (agent_command_id);
+    CREATE INDEX IF NOT EXISTS idx_approvals_status ON approvals (status);
+    CREATE INDEX IF NOT EXISTS idx_approvals_expires ON approvals (expires_at);
   `);
 
   ensureColumn("tasks", "description", "description TEXT");

@@ -2,6 +2,8 @@ import type {
   ActivityStats,
   Agent,
   AgentSkill,
+  Approval,
+  ApprovalPolicy,
   AuditLogItem,
   DocItem,
   EventItem,
@@ -168,6 +170,29 @@ export async function getNotificationLogs(limit = 50) {
     `/api/notifications/logs?limit=${limit}`,
   );
   return data.logs;
+}
+
+// ── Approval / Governance (Phase 8) ──────────────────────────────────────────
+
+export async function getApprovalPolicies() {
+  const data = await requestJson<{ policies: ApprovalPolicy[] }>("/api/approval-policies");
+  return data.policies;
+}
+
+export async function getApprovals(filters?: { status?: string; limit?: number }) {
+  const params = new URLSearchParams();
+  if (filters?.status) params.set("status", filters.status);
+  if (filters?.limit) params.set("limit", String(filters.limit));
+  const suffix = params.toString();
+  const data = await requestJson<{ approvals: Approval[] }>(
+    suffix ? `/api/approvals?${suffix}` : "/api/approvals",
+  );
+  return data.approvals;
+}
+
+export async function getPendingApprovalCount() {
+  const data = await requestJson<{ count: number }>("/api/approvals/pending-count");
+  return data.count;
 }
 
 export async function getAuditLogs(filters?: {

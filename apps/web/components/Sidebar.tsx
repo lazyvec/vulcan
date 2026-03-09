@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
@@ -14,11 +15,32 @@ const NAV_ITEMS = [
   { href: "/office", label: "Office" },
   { href: "/skills", label: "Skills" },
   { href: "/activity", label: "Activity" },
+  { href: "/approvals", label: "Approvals" },
   { href: "/notifications", label: "Notifications" },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    async function poll() {
+      try {
+        const res = await fetch("/api/approvals/pending-count");
+        const data = await res.json();
+        if (active && typeof data.count === "number") {
+          setPendingCount(data.count);
+        }
+      } catch { /* ignore */ }
+    }
+    void poll();
+    const timer = setInterval(poll, 30_000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, []);
 
   return (
     <aside
@@ -56,6 +78,11 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                 <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]" />
               )}
               {item.label}
+              {item.href === "/approvals" && pendingCount > 0 && (
+                <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-xs font-semibold text-white">
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}

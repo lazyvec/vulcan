@@ -8,6 +8,7 @@ import { logger } from "hono/logger";
 import { streamSSE } from "hono/streaming";
 import {
   createAgentInputSchema,
+  createApprovalPolicyInputSchema,
   createEventSchema,
   createTaskCommentInputSchema,
   createTaskDependencyInputSchema,
@@ -17,8 +18,10 @@ import {
   ingestPayloadSchema,
   installSkillInputSchema,
   realtimeClientMessageSchema,
+  resolveApprovalInputSchema,
   taskLanePatchSchema,
   updateAgentInputSchema,
+  updateApprovalPolicyInputSchema,
   updateNotificationPreferencesSchema,
   updateTaskInputSchema,
   upsertSkillInputSchema,
@@ -26,6 +29,7 @@ import {
 import type {
   AgentCommand,
   AgentCommandStatus,
+  Approval,
   RealtimeServerMessage,
 } from "@vulcan/shared/types";
 import {
@@ -77,6 +81,18 @@ import {
   upsertNotificationPreferences,
   appendNotificationLog,
   getNotificationLogs,
+  getApprovalPolicies,
+  getApprovalPolicyById,
+  createApprovalPolicy,
+  updateApprovalPolicy,
+  findMatchingPolicy,
+  createApproval,
+  getApprovals,
+  getApprovalById,
+  getApprovalByCommandId,
+  resolveApproval,
+  getPendingExpiredApprovals,
+  getPendingApprovalCount,
 } from "./store";
 import { ensureSchema, getSqlite } from "./db";
 import {
@@ -97,6 +113,7 @@ import {
   type NotificationQueueJobData,
 } from "./queue";
 import {
+  formatApprovalRequestMessage,
   formatEventMessage,
   getDefaultNotificationChatId,
   sendTelegramMessage,
@@ -514,6 +531,9 @@ if (queueWorkersReady) {
   }, 30_000);
 }
 
+// Phase 8: 서버 시작 시 pending 승인 타임아웃 복구
+restorePendingApprovalTimeouts();
+
 // Phase 7: Telegram 알림 — 이벤트 구독 후크
 subscribeEvents((event) => {
   const prefs = getNotificationPreferences();
@@ -895,6 +915,52 @@ app.post("/api/agents/:id/delegate", async (c) => {
     payloadJson: stringifyJson(parsed.data),
   });
 
+  // ── 승인 게이트 (Phase 8) ──
+  const matchedPolicy = findMatchingPolicy({
+    agentId: targetAgentId,
+    mode: "delegate",
+    command: parsed.data.message,
+  });
+
+  if (matchedPolicy) {
+    const expiresAt = matchedPolicy.autoApproveMinutes
+      ? Date.now() + matchedPolicy.autoApproveMinutes * 60_000
+      : null;
+
+    updateAgentCommand(command.id, { status: "pending_approval" });
+
+    const approval = createApproval({
+      agentCommandId: command.id,
+      policyId: matchedPolicy.id,
+      expiresAt,
+    });
+
+    writeAudit({
+      action: "agent.delegate.pending_approval",
+      entityType: "agent_command",
+      entityId: command.id,
+      after: { ...command, status: "pending_approval" },
+      metadata: {
+        policyId: matchedPolicy.id,
+        policyName: matchedPolicy.name,
+        approvalId: approval.id,
+        targetAgentId,
+      },
+    });
+
+    sendApprovalNotification(approval, matchedPolicy, targetAgentId, "delegate", parsed.data.message);
+
+    if (expiresAt) {
+      scheduleApprovalTimeout(approval.id, expiresAt - Date.now());
+    }
+
+    return c.json(
+      { command: { ...command, status: "pending_approval" as const }, approval, queued: false },
+      202,
+    );
+  }
+  // ── 승인 게이트 끝 ──
+
   try {
     const queued = await enqueueCommandJob({
       commandId: command.id,
@@ -1040,6 +1106,52 @@ app.post("/api/agents/:id/command", async (c) => {
     command: "chat.send",
     payloadJson: stringifyJson(parsed.data),
   });
+
+  // ── 승인 게이트 (Phase 8) ──
+  const matchedDirectPolicy = findMatchingPolicy({
+    agentId,
+    mode: "direct",
+    command: parsed.data.message,
+  });
+
+  if (matchedDirectPolicy) {
+    const expiresAt = matchedDirectPolicy.autoApproveMinutes
+      ? Date.now() + matchedDirectPolicy.autoApproveMinutes * 60_000
+      : null;
+
+    updateAgentCommand(command.id, { status: "pending_approval" });
+
+    const approval = createApproval({
+      agentCommandId: command.id,
+      policyId: matchedDirectPolicy.id,
+      expiresAt,
+    });
+
+    writeAudit({
+      action: "agent.command.pending_approval",
+      entityType: "agent_command",
+      entityId: command.id,
+      after: { ...command, status: "pending_approval" },
+      metadata: {
+        policyId: matchedDirectPolicy.id,
+        policyName: matchedDirectPolicy.name,
+        approvalId: approval.id,
+        target: parsed.data.to ?? agentId,
+      },
+    });
+
+    sendApprovalNotification(approval, matchedDirectPolicy, agentId, "direct", parsed.data.message);
+
+    if (expiresAt) {
+      scheduleApprovalTimeout(approval.id, expiresAt - Date.now());
+    }
+
+    return c.json(
+      { command: { ...command, status: "pending_approval" as const }, approval, queued: false },
+      202,
+    );
+  }
+  // ── 승인 게이트 끝 ──
 
   try {
     const queued = await enqueueCommandJob({
@@ -2394,6 +2506,244 @@ app.get("/api/health", async (c) => {
   return c.json(payload, status);
 });
 
+// ── Approval / Governance API (Phase 8) ────────────────────────────────────
+
+// 승인 알림 Telegram 발송
+async function sendApprovalNotification(
+  approval: Approval,
+  policy: { name: string },
+  agentId: string,
+  mode: string,
+  message: string,
+) {
+  try {
+    const chatId = getDefaultNotificationChatId();
+    if (!chatId) return;
+    const text = formatApprovalRequestMessage({
+      approvalId: approval.id,
+      agentId,
+      mode,
+      policyName: policy.name,
+      messagePreview: message.slice(0, 200),
+    });
+    await sendTelegramMessage(chatId, text);
+  } catch (err) {
+    console.error("[vulcan-api] approval notification failed", err);
+  }
+}
+
+// 자동 승인 타임아웃 스케줄링
+const approvalTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleApprovalTimeout(approvalId: string, delayMs: number) {
+  const timer = setTimeout(() => {
+    approvalTimeouts.delete(approvalId);
+    void executeApprovalAutoApprove(approvalId);
+  }, delayMs);
+  approvalTimeouts.set(approvalId, timer);
+}
+
+async function executeApprovalAutoApprove(approvalId: string) {
+  const approval = getApprovalById(approvalId);
+  if (!approval || approval.status !== "pending") return;
+
+  const resolved = resolveApproval(approvalId, {
+    action: "approve",
+    reason: "자동 승인 (타임아웃)",
+    resolvedBy: "system",
+  });
+
+  writeAudit({
+    action: "approval.auto_approved",
+    entityType: "approval",
+    entityId: approvalId,
+    after: resolved,
+    metadata: { commandId: approval.agentCommandId },
+  });
+
+  if (resolved) {
+    await executeApprovedCommand(approval.agentCommandId);
+  }
+}
+
+async function executeApprovedCommand(commandId: string) {
+  const cmd = getAgentCommandById(commandId);
+  if (!cmd) return;
+
+  try {
+    const queued = await enqueueCommandJob({
+      commandId: cmd.id,
+      mode: cmd.mode as "delegate" | "direct",
+      agentId: cmd.agentId,
+      message: JSON.parse(cmd.payloadJson).message ?? "",
+      taskLabel: JSON.parse(cmd.payloadJson).taskLabel,
+      to: JSON.parse(cmd.payloadJson).to,
+      metadata: JSON.parse(cmd.payloadJson).metadata,
+    });
+
+    if (queued) {
+      updateAgentCommand(cmd.id, { status: "queued" });
+      writeAudit({
+        action: `agent.${cmd.mode}.queued`,
+        entityType: "agent_command",
+        entityId: cmd.id,
+        after: { ...cmd, status: "queued" },
+        metadata: { queue: "bullmq", via: "approval_resolved" },
+      });
+    }
+  } catch (error) {
+    updateAgentCommand(cmd.id, {
+      status: "failed",
+      error: getErrorMessage(error),
+      executedAt: Date.now(),
+    });
+  }
+}
+
+// 서버 시작 시 pending 타임아웃 복구
+function restorePendingApprovalTimeouts() {
+  const pending = getPendingExpiredApprovals();
+  for (const a of pending) {
+    void executeApprovalAutoApprove(a.id);
+  }
+  // 아직 만료 안 된 pending 건들
+  const allPending = getApprovals({ status: "pending", limit: 300 });
+  for (const a of allPending) {
+    if (a.expiresAt && a.expiresAt > Date.now()) {
+      scheduleApprovalTimeout(a.id, a.expiresAt - Date.now());
+    }
+  }
+}
+
+// 정책 CRUD
+app.get("/api/approval-policies", (c) => {
+  const policies = getApprovalPolicies();
+  return c.json({ policies });
+});
+
+app.post("/api/approval-policies", async (c) => {
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON" }, 400);
+  }
+  const parsed = createApprovalPolicyInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json({ error: "invalid input", issues: extractIssueItems(parsed.error) }, 400);
+  }
+  const policy = createApprovalPolicy(parsed.data);
+  writeAudit({
+    action: "approval_policy.created",
+    entityType: "approval_policy",
+    entityId: policy.id,
+    after: policy,
+  });
+  return c.json({ policy }, 201);
+});
+
+app.put("/api/approval-policies/:id", async (c) => {
+  const id = c.req.param("id");
+  const existing = getApprovalPolicyById(id);
+  if (!existing) return c.json({ error: "policy not found" }, 404);
+
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON" }, 400);
+  }
+  const parsed = updateApprovalPolicyInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json({ error: "invalid input", issues: extractIssueItems(parsed.error) }, 400);
+  }
+  const updated = updateApprovalPolicy(id, parsed.data);
+  writeAudit({
+    action: "approval_policy.updated",
+    entityType: "approval_policy",
+    entityId: id,
+    before: existing,
+    after: updated,
+  });
+  return c.json({ policy: updated });
+});
+
+// 승인 목록 / 대기 건수 / 단건 조회
+app.get("/api/approvals", (c) => {
+  const status = c.req.query("status") as "pending" | "approved" | "rejected" | "expired" | "all" | undefined;
+  const limit = c.req.query("limit") ? Number(c.req.query("limit")) : undefined;
+  const approvals = getApprovals({ status: status || undefined, limit });
+  return c.json({ approvals });
+});
+
+app.get("/api/approvals/pending-count", (c) => {
+  const count = getPendingApprovalCount();
+  return c.json({ count });
+});
+
+app.get("/api/approvals/:id", (c) => {
+  const id = c.req.param("id");
+  const approval = getApprovalById(id);
+  if (!approval) return c.json({ error: "approval not found" }, 404);
+  return c.json({ approval });
+});
+
+// 승인/거절 resolve
+app.post("/api/approvals/:id/resolve", async (c) => {
+  const id = c.req.param("id");
+  const existing = getApprovalById(id);
+  if (!existing) return c.json({ error: "approval not found" }, 404);
+  if (existing.status !== "pending") {
+    return c.json({ error: `approval already ${existing.status}` }, 409);
+  }
+
+  let payload: unknown;
+  try {
+    payload = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid JSON" }, 400);
+  }
+  const parsed = resolveApprovalInputSchema.safeParse(payload);
+  if (!parsed.success) {
+    return c.json({ error: "invalid input", issues: extractIssueItems(parsed.error) }, 400);
+  }
+
+  // 타임아웃 취소
+  const timer = approvalTimeouts.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    approvalTimeouts.delete(id);
+  }
+
+  const resolved = resolveApproval(id, {
+    action: parsed.data.action,
+    reason: parsed.data.reason,
+  });
+
+  writeAudit({
+    action: `approval.${parsed.data.action === "approve" ? "approved" : "rejected"}`,
+    entityType: "approval",
+    entityId: id,
+    before: existing,
+    after: resolved,
+    metadata: { commandId: existing.agentCommandId, reason: parsed.data.reason },
+  });
+
+  if (parsed.data.action === "approve") {
+    await executeApprovedCommand(existing.agentCommandId);
+    return c.json({ approval: resolved, executed: true });
+  }
+
+  // reject → 커맨드 failed
+  updateAgentCommand(existing.agentCommandId, {
+    status: "failed",
+    error: `승인 거절: ${parsed.data.reason ?? "사유 없음"}`,
+    executedAt: Date.now(),
+  });
+
+  return c.json({ approval: resolved, executed: false });
+});
+
 app.get("/", (c) => c.json({ service: "vulcan-api", ok: true }));
 
 const port = Number(process.env.VULCAN_API_PORT ?? "8787");
@@ -2425,6 +2775,12 @@ async function shutdown(signal: string) {
     clearInterval(healthcheckQueueTimer);
     healthcheckQueueTimer = null;
   }
+
+  // Phase 8: 승인 타임아웃 정리
+  for (const timer of approvalTimeouts.values()) {
+    clearTimeout(timer);
+  }
+  approvalTimeouts.clear();
 
   gatewayRpcClient.stop();
   await closeQueueResources().catch((error) => {

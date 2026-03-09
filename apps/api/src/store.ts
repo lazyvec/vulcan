@@ -9,6 +9,9 @@ import type {
   AgentCommandStatus,
   AgentSkill,
   AgentStatus,
+  Approval,
+  ApprovalPolicy,
+  ApprovalStatus,
   AuditLogItem,
   DocItem,
   EventItem,
@@ -36,6 +39,8 @@ import {
   agentCommandsTable,
   agentSkillsTable,
   agentsTable,
+  approvalPoliciesTable,
+  approvalsTable,
   auditLogTable,
   docsTable,
   eventsTable,
@@ -1572,4 +1577,326 @@ export function countRecords() {
     commands: commandsCount?.count ?? 0,
     auditLogs: auditCount?.count ?? 0,
   };
+}
+
+// ── Approval / Governance (Phase 8) ──────────────────────────────────────────
+
+function mapApprovalPolicy(
+  row: typeof approvalPoliciesTable.$inferSelect,
+): ApprovalPolicy {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    matchAgentId: row.matchAgentId,
+    matchMode: row.matchMode as AgentCommandMode | null,
+    matchCommandPattern: row.matchCommandPattern,
+    autoApproveMinutes: row.autoApproveMinutes,
+    isActive: row.isActive !== 0,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapApproval(
+  row: typeof approvalsTable.$inferSelect,
+): Approval {
+  return {
+    id: row.id,
+    agentCommandId: row.agentCommandId,
+    policyId: row.policyId,
+    status: row.status as ApprovalStatus,
+    requestedBy: row.requestedBy,
+    resolvedBy: row.resolvedBy,
+    resolvedReason: row.resolvedReason,
+    expiresAt: row.expiresAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export function getApprovalPolicies(options?: { activeOnly?: boolean }): ApprovalPolicy[] {
+  ensureSchema();
+  const q = db.select().from(approvalPoliciesTable);
+  if (options?.activeOnly) {
+    return q
+      .where(eq(approvalPoliciesTable.isActive, 1))
+      .orderBy(desc(approvalPoliciesTable.createdAt))
+      .all()
+      .map(mapApprovalPolicy);
+  }
+  return q
+    .orderBy(desc(approvalPoliciesTable.createdAt))
+    .all()
+    .map(mapApprovalPolicy);
+}
+
+export function getApprovalPolicyById(id: string): ApprovalPolicy | null {
+  ensureSchema();
+  const row = db
+    .select()
+    .from(approvalPoliciesTable)
+    .where(eq(approvalPoliciesTable.id, id))
+    .get();
+  return row ? mapApprovalPolicy(row) : null;
+}
+
+export function createApprovalPolicy(input: {
+  name: string;
+  description?: string;
+  matchAgentId?: string | null;
+  matchMode?: string | null;
+  matchCommandPattern?: string | null;
+  autoApproveMinutes?: number | null;
+  isActive?: boolean;
+}): ApprovalPolicy {
+  ensureSchema();
+  const now = Date.now();
+  const row: typeof approvalPoliciesTable.$inferInsert = {
+    id: randomUUID(),
+    name: input.name,
+    description: input.description ?? "",
+    matchAgentId: input.matchAgentId ?? null,
+    matchMode: input.matchMode ?? null,
+    matchCommandPattern: input.matchCommandPattern ?? null,
+    autoApproveMinutes: input.autoApproveMinutes ?? null,
+    isActive: input.isActive === false ? 0 : 1,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.insert(approvalPoliciesTable).values(row).run();
+  const created = db
+    .select()
+    .from(approvalPoliciesTable)
+    .where(eq(approvalPoliciesTable.id, row.id))
+    .get();
+  if (!created) throw new Error("failed to create approval policy");
+  return mapApprovalPolicy(created);
+}
+
+export function updateApprovalPolicy(
+  id: string,
+  input: {
+    name?: string;
+    description?: string;
+    matchAgentId?: string | null;
+    matchMode?: string | null;
+    matchCommandPattern?: string | null;
+    autoApproveMinutes?: number | null;
+    isActive?: boolean;
+  },
+): ApprovalPolicy | null {
+  ensureSchema();
+  const updateSet: Partial<typeof approvalPoliciesTable.$inferInsert> = {
+    updatedAt: Date.now(),
+  };
+  if (typeof input.name === "string") updateSet.name = input.name;
+  if (typeof input.description === "string") updateSet.description = input.description;
+  if (Object.prototype.hasOwnProperty.call(input, "matchAgentId")) {
+    updateSet.matchAgentId = input.matchAgentId ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "matchMode")) {
+    updateSet.matchMode = input.matchMode ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "matchCommandPattern")) {
+    updateSet.matchCommandPattern = input.matchCommandPattern ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, "autoApproveMinutes")) {
+    updateSet.autoApproveMinutes = input.autoApproveMinutes ?? null;
+  }
+  if (typeof input.isActive === "boolean") {
+    updateSet.isActive = input.isActive ? 1 : 0;
+  }
+
+  db.update(approvalPoliciesTable)
+    .set(updateSet)
+    .where(eq(approvalPoliciesTable.id, id))
+    .run();
+  const row = db
+    .select()
+    .from(approvalPoliciesTable)
+    .where(eq(approvalPoliciesTable.id, id))
+    .get();
+  return row ? mapApprovalPolicy(row) : null;
+}
+
+export function findMatchingPolicy(criteria: {
+  agentId: string;
+  mode: AgentCommandMode;
+  command: string;
+}): ApprovalPolicy | null {
+  ensureSchema();
+  const activePolicies = db
+    .select()
+    .from(approvalPoliciesTable)
+    .where(eq(approvalPoliciesTable.isActive, 1))
+    .all()
+    .map(mapApprovalPolicy);
+
+  let bestMatch: ApprovalPolicy | null = null;
+  let bestScore = -1;
+
+  for (const policy of activePolicies) {
+    let score = 0;
+    let matches = true;
+
+    if (policy.matchAgentId) {
+      if (policy.matchAgentId === criteria.agentId) {
+        score += 4;
+      } else {
+        matches = false;
+      }
+    }
+
+    if (policy.matchMode) {
+      if (policy.matchMode === criteria.mode) {
+        score += 2;
+      } else {
+        matches = false;
+      }
+    }
+
+    if (policy.matchCommandPattern) {
+      try {
+        const re = new RegExp(policy.matchCommandPattern, "i");
+        if (re.test(criteria.command)) {
+          score += 1;
+        } else {
+          matches = false;
+        }
+      } catch {
+        matches = false;
+      }
+    }
+
+    if (matches && score > bestScore) {
+      bestScore = score;
+      bestMatch = policy;
+    }
+  }
+
+  return bestMatch;
+}
+
+export function createApproval(input: {
+  agentCommandId: string;
+  policyId: string;
+  requestedBy?: string;
+  expiresAt?: number | null;
+}): Approval {
+  ensureSchema();
+  const now = Date.now();
+  const row: typeof approvalsTable.$inferInsert = {
+    id: randomUUID(),
+    agentCommandId: input.agentCommandId,
+    policyId: input.policyId,
+    status: "pending",
+    requestedBy: input.requestedBy ?? "human",
+    resolvedBy: null,
+    resolvedReason: null,
+    expiresAt: input.expiresAt ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.insert(approvalsTable).values(row).run();
+  const created = db
+    .select()
+    .from(approvalsTable)
+    .where(eq(approvalsTable.id, row.id))
+    .get();
+  if (!created) throw new Error("failed to create approval");
+  return mapApproval(created);
+}
+
+export function getApprovals(filters?: {
+  status?: ApprovalStatus | "all";
+  limit?: number;
+}): Approval[] {
+  ensureSchema();
+  const conditions = [];
+  if (filters?.status && filters.status !== "all") {
+    conditions.push(eq(approvalsTable.status, filters.status));
+  }
+  const limit =
+    typeof filters?.limit === "number" && Number.isFinite(filters.limit) && filters.limit > 0
+      ? Math.min(filters.limit, 300)
+      : 80;
+
+  return db
+    .select()
+    .from(approvalsTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(approvalsTable.createdAt))
+    .limit(limit)
+    .all()
+    .map(mapApproval);
+}
+
+export function getApprovalById(id: string): Approval | null {
+  ensureSchema();
+  const row = db
+    .select()
+    .from(approvalsTable)
+    .where(eq(approvalsTable.id, id))
+    .get();
+  return row ? mapApproval(row) : null;
+}
+
+export function getApprovalByCommandId(commandId: string): Approval | null {
+  ensureSchema();
+  const row = db
+    .select()
+    .from(approvalsTable)
+    .where(eq(approvalsTable.agentCommandId, commandId))
+    .get();
+  return row ? mapApproval(row) : null;
+}
+
+export function resolveApproval(
+  id: string,
+  input: { action: "approve" | "reject"; reason?: string; resolvedBy?: string },
+): Approval | null {
+  ensureSchema();
+  const status: ApprovalStatus = input.action === "approve" ? "approved" : "rejected";
+  db.update(approvalsTable)
+    .set({
+      status,
+      resolvedBy: input.resolvedBy ?? "human",
+      resolvedReason: input.reason ?? null,
+      updatedAt: Date.now(),
+    })
+    .where(eq(approvalsTable.id, id))
+    .run();
+  const row = db
+    .select()
+    .from(approvalsTable)
+    .where(eq(approvalsTable.id, id))
+    .get();
+  return row ? mapApproval(row) : null;
+}
+
+export function getPendingExpiredApprovals(): Approval[] {
+  ensureSchema();
+  const now = Date.now();
+  return db
+    .select()
+    .from(approvalsTable)
+    .where(
+      and(
+        eq(approvalsTable.status, "pending"),
+        sql`${approvalsTable.expiresAt} IS NOT NULL AND ${approvalsTable.expiresAt} <= ${now}`,
+      ),
+    )
+    .all()
+    .map(mapApproval);
+}
+
+export function getPendingApprovalCount(): number {
+  ensureSchema();
+  const [row] = db
+    .select({ count: sql<number>`count(*)` })
+    .from(approvalsTable)
+    .where(eq(approvalsTable.status, "pending"))
+    .all();
+  return row?.count ?? 0;
 }

@@ -26,4 +26,7 @@ export type {
   NotificationCategory,
   NotificationPreference,
   NotificationLog,
+  ApprovalPolicy,
+  Approval,
+  ApprovalStatus,
 } from "@vulcan/shared/types";
