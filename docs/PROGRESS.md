@@ -25,13 +25,19 @@ App(api/web/adapter)은 PM2 유지, 인프라만 Docker로 격리 관리.
 - `pnpm lint` — 통과
 - `pnpm build` — 통과
 
+### PM2 운영 연결
+- ✅ `ecosystem.config.js` — DATABASE_URL/REDIS_URL을 환경변수 기반(`infraEnv`)으로 전환
+- ✅ BullMQ `enqueueHealthcheckJob` jobId 콜론 버그 수정 (`:` → `-`)
+- ✅ `~/.bashrc` — `REDIS_URL=redis://127.0.0.1:6380` 추가
+- ✅ PM2 재시작 후 검증: PostgreSQL connected + Redis connected + workers true + Gateway connected
+
 ### 설계 결정
-- 포트 5433/6380: 기존 로컬 서비스(5432/6379)와 공존
+- PostgreSQL: 기존 로컬(5432) 유지 (실데이터 보존), Docker PG(5433)는 백업/테스트용
+- Redis: Docker(6380)에서 제공 → BullMQ 큐/워커 실제 활성화
 - App Docker화 보류: PM2 유지 (Gateway 연결, 디버깅 용이)
-- 볼륨: `vulcan-pgdata`, `vulcan-redis` (데이터 영속)
 
 ### 현재 상태
-- ✅ M0 ~ Phase 10(인프라) 완료
+- ✅ M0 ~ Phase 10(인프라) 완료, Redis 실연결 활성화
 - 🗂️ Phase 10 잔여: App Dockerfile, PM2→Docker 전환 (필요 시 별도 세션)
 - 🗂️ Phase 11~12 예정(백로그)
 
