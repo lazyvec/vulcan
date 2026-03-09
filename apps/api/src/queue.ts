@@ -217,7 +217,7 @@ export async function enqueueHealthcheckJob(payload: HealthcheckQueueJobData = {
   }
 
   await queue.add("gateway-healthcheck", payload, {
-    jobId: `gateway-healthcheck:${Math.floor(Date.now() / 30_000)}`,
+    jobId: `gateway-healthcheck-${Math.floor(Date.now() / 30_000)}`,
     removeOnComplete: 100,
     removeOnFail: 100,
   });

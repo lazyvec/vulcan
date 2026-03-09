@@ -16,6 +16,15 @@ const gatewayAuthEnv = {
     : {}),
 };
 
+const infraEnv = {
+  ...(process.env.DATABASE_URL
+    ? { DATABASE_URL: process.env.DATABASE_URL }
+    : {}),
+  ...(process.env.REDIS_URL
+    ? { REDIS_URL: process.env.REDIS_URL }
+    : {}),
+};
+
 module.exports = {
   apps: [
     {
@@ -32,8 +41,7 @@ module.exports = {
         NODE_ENV: "production",
         VULCAN_API_PORT: "8787",
         VULCAN_CORS_ORIGIN: "*",
-        DATABASE_URL: "postgresql://vulcan:vulcan_dev@127.0.0.1:5433/vulcan",
-        REDIS_URL: "redis://127.0.0.1:6380",
+        ...infraEnv,
         OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",
         VULCAN_GATEWAY_CLIENT_ID: "gateway-client",
         VULCAN_GATEWAY_CLIENT_VERSION: "vulcan-api/0.1.0",
@@ -47,8 +55,7 @@ module.exports = {
         NODE_ENV: "production",
         VULCAN_API_PORT: "8787",
         VULCAN_CORS_ORIGIN: "*",
-        DATABASE_URL: "postgresql://vulcan:vulcan_dev@127.0.0.1:5433/vulcan",
-        REDIS_URL: "redis://127.0.0.1:6380",
+        ...infraEnv,
         OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",
         VULCAN_GATEWAY_CLIENT_ID: "gateway-client",
         VULCAN_GATEWAY_CLIENT_VERSION: "vulcan-api/0.1.0",
