@@ -130,7 +130,7 @@
 - [x] Vitest 유닛 테스트 (48개: telegram, store, constants)
 - [x] Store 통합 테스트 (15개: Agent/Task/Event/Approval CRUD, 임시 SQLite)
 - [x] CI에서 Vitest 실행 + 테스트 실패 시 빌드 실패
-- [ ] Playwright 확장 (주요 플로우 커버) — 기존 6개 smoke 유지, 필요 시 별도 세션
+- [x] Playwright 확장 (16개 smoke: 7페이지 렌더링 + 네비게이션 + API health + 크로스페이지)
 - [x] 검증: CI green (63개 테스트 + lint + build 통과)
 
 ## Phase 10: Docker Compose 인프라 컨테이너화 (완료: 2026-03-09) — 의존성: 전체

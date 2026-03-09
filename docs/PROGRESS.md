@@ -2,6 +2,28 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-09 | 브랜치: `main`
 
+## 2026-03-09: Phase 9 — Playwright 테스트 확장 (6 → 16)
+
+### 요약
+기존 6개 smoke 테스트를 16개로 확장. 7개 페이지 렌더링, 사이드바 네비게이션, API health, 크로스 페이지 이동 검증 추가.
+
+### 완료 항목
+- ✅ `apps/web/tests/smoke/vulcan.smoke.spec.ts` — 10개 테스트 추가 (총 16개)
+  - 페이지 렌더링: team, activity, skills, approvals, vault, notifications, memory
+  - 네비게이션: 12개 사이드바 링크 전체 검증
+  - API: `/api/health` → `ok: true` 확인
+  - 크로스 페이지: Tasks → Team → Activity 순차 이동
+- ✅ `apps/web/app/(layout)/vault/error.tsx` — Vault 에러 fallback 추가 (API 미가용 시 graceful)
+- ✅ `apps/api/package.json` — dev/start 스크립트에 `--env-file-if-exists=.env` 추가 (Vault 503 해결)
+- ✅ `docs/WORK_PLAN.md` — Phase 9 Playwright 항목 완료 체크
+
+### 검증
+- `pnpm test:smoke` — 16/16 통과 (28.2s), Vault 포함 전체 정상 렌더링
+- `pnpm lint` — 통과
+- `pnpm build` — 통과
+
+---
+
 ## 2026-03-09: Phase 10 — Docker Compose 인프라 컨테이너화
 
 ### 요약
