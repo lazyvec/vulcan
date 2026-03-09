@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { setDefaultAutoSelectFamily } from "node:net";
 import { Client } from "pg";
+
+// IPv6 ENETUNREACH 방지 — Telegram API 등 외부 fetch에 필요
+setDefaultAutoSelectFamily(false);
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
 import { cors } from "hono/cors";
@@ -2616,15 +2620,19 @@ async function executeApprovedCommand(commandId: string) {
   const cmd = getAgentCommandById(commandId);
   if (!cmd) return;
 
+  let payload: Record<string, unknown> = {};
+  try { payload = JSON.parse(cmd.payloadJson); } catch { /* ignore */ }
+
+  // BullMQ 큐 시도
   try {
     const queued = await enqueueCommandJob({
       commandId: cmd.id,
       mode: cmd.mode as "delegate" | "direct",
       agentId: cmd.agentId,
-      message: JSON.parse(cmd.payloadJson).message ?? "",
-      taskLabel: JSON.parse(cmd.payloadJson).taskLabel,
-      to: JSON.parse(cmd.payloadJson).to,
-      metadata: JSON.parse(cmd.payloadJson).metadata,
+      message: (payload.message as string) ?? "",
+      taskLabel: payload.taskLabel as string | undefined,
+      to: payload.to as string | undefined,
+      metadata: payload.metadata as Record<string, unknown> | undefined,
     });
 
     if (queued) {
@@ -2636,12 +2644,75 @@ async function executeApprovedCommand(commandId: string) {
         after: { ...cmd, status: "queued" },
         metadata: { queue: "bullmq", via: "approval_resolved" },
       });
+      return;
     }
   } catch (error) {
     updateAgentCommand(cmd.id, {
       status: "failed",
       error: getErrorMessage(error),
       executedAt: Date.now(),
+    });
+    return;
+  }
+
+  // Redis 없을 때 inline 실행 폴백
+  try {
+    const message = (payload.message as string) ?? "";
+    const targetAgentId = cmd.mode === "delegate"
+      ? (payload.to as string) ?? "hermes"
+      : cmd.agentId;
+
+    let relayMessage = message;
+    if (cmd.mode === "delegate") {
+      relayMessage = buildDelegateRelayMessage({
+        targetAgentId,
+        taskLabel: payload.taskLabel as string | undefined,
+        message,
+      });
+    }
+
+    const sessionKey = await resolveGatewaySessionKeyForAgent(
+      cmd.mode === "delegate" ? "hermes" : targetAgentId,
+      getAgentById(cmd.mode === "delegate" ? "hermes" : targetAgentId)?.config,
+    );
+
+    if (!sessionKey) {
+      throw new Error(`gateway session key not resolved for ${targetAgentId}`);
+    }
+
+    const gatewayResult = await gatewayRpcClient.chatSend({
+      sessionKey,
+      message: relayMessage,
+      idempotencyKey: cmd.id,
+    });
+
+    updateAgentCommand(cmd.id, {
+      status: "sent",
+      gatewayCommandId: extractGatewayCommandId(gatewayResult),
+      executedAt: Date.now(),
+      error: null,
+    });
+
+    writeAudit({
+      action: `agent.${cmd.mode}.sent`,
+      entityType: "agent_command",
+      entityId: cmd.id,
+      after: { ...cmd, status: "sent" },
+      metadata: { queue: "inline", via: "approval_resolved", gatewayResult },
+    });
+  } catch (error) {
+    updateAgentCommand(cmd.id, {
+      status: "failed",
+      error: getErrorMessage(error),
+      executedAt: Date.now(),
+    });
+
+    writeAudit({
+      action: `agent.${cmd.mode}.failed`,
+      entityType: "agent_command",
+      entityId: cmd.id,
+      after: { ...cmd, status: "failed" },
+      metadata: { queue: "inline", via: "approval_resolved", error: getErrorMessage(error) },
     });
   }
 }

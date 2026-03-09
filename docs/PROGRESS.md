@@ -41,13 +41,36 @@ Phase 8 승인/거버넌스의 Telegram 승인 경로를 구현했다.
 - Webhook 대신 **Long Polling** (2초 간격) — Tailscale 내부 네트워크 외부 노출 방지
 - `TELEGRAM_WEBHOOK_URL` 환경변수 불필요
 
+### 버그 수정 (E2E 검증 중 발견)
+
+**1. 알림 스팸 (heartbeat/sync 이벤트)**
+- ✅ `apps/api/src/telegram.ts` — `shouldNotify`에 기본 제외 필터 추가
+  - `DEFAULT_EXCLUDED_CATEGORIES`: `system`, `legacy`
+  - `DEFAULT_EXCLUDED_TYPES`: `sync`, `ping`, `system.sync`, `system.health`
+
+**2. 승인 후 커맨드 상태 미갱신**
+- ✅ `apps/api/src/server.ts` — `executeApprovedCommand`에 inline Gateway RPC 실행 폴백 추가
+  - Redis 없을 때 BullMQ 큐 대신 직접 Gateway RPC 실행
+
+**3. Node.js fetch IPv6 ETIMEDOUT**
+- ✅ `apps/api/src/server.ts` — `setDefaultAutoSelectFamily(false)` 추가
+  - Node.js v22 undici의 IPv6 자동 선택으로 인한 Telegram API 연결 실패 해결
+
+**4. PM2 환경변수 미전달**
+- ✅ `ecosystem.config.js` — `telegramEnv` 조건부 스프레드 추가
+  - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`를 PM2 환경에 주입
+
 ### 검증
 - `pnpm lint` 통과
 - `pnpm build` 통과
+- **실환경 E2E 검증 완료**:
+  - delegate 커맨드 → 승인 정책 매칭 → Telegram 인라인 키보드 발송 (messageId=44)
+  - Telegram 승인 버튼 클릭 → status=`approved`, resolvedBy=`telegram`
+  - 커맨드 상태 `pending_approval` → `sent` (executedAt 기록)
+  - 알림 스팸 없음 (heartbeat/sync 필터링 정상)
 
 ### 현재 상태
-- ✅ M0 ~ Phase 7 완료
-- 🚧 Phase 8 진행 중 (Telegram 인라인 키보드 승인 완료)
+- ✅ M0 ~ Phase 8 완료
 - 🚧 Phase 9~10 병행 진행
 - 🗂️ Phase 11~12 예정(백로그)
 

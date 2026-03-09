@@ -1,3 +1,12 @@
+const telegramEnv = {
+  ...(process.env.TELEGRAM_BOT_TOKEN
+    ? { TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN }
+    : {}),
+  ...(process.env.TELEGRAM_CHAT_ID
+    ? { TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID }
+    : {}),
+};
+
 const gatewayAuthEnv = {
   ...(process.env.OPENCLAW_GATEWAY_TOKEN
     ? { OPENCLAW_GATEWAY_TOKEN: process.env.OPENCLAW_GATEWAY_TOKEN }
@@ -32,6 +41,7 @@ module.exports = {
         VULCAN_GATEWAY_RECONNECT_BASE_MS: "1000",
         VULCAN_GATEWAY_RECONNECT_MAX_MS: "30000",
         ...gatewayAuthEnv,
+        ...telegramEnv,
       },
       env_production: {
         NODE_ENV: "production",
@@ -46,6 +56,7 @@ module.exports = {
         VULCAN_GATEWAY_RECONNECT_BASE_MS: "1000",
         VULCAN_GATEWAY_RECONNECT_MAX_MS: "30000",
         ...gatewayAuthEnv,
+        ...telegramEnv,
       },
     },
     {
@@ -94,6 +105,7 @@ module.exports = {
         ADAPTER_MAX_BATCH: "12",
         ADAPTER_DRY_RUN: "0",
         ...gatewayAuthEnv,
+        ...telegramEnv,
       },
       env_production: {
         NODE_ENV: "production",
@@ -110,6 +122,7 @@ module.exports = {
         ADAPTER_MAX_BATCH: "12",
         ADAPTER_DRY_RUN: "0",
         ...gatewayAuthEnv,
+        ...telegramEnv,
       },
     },
   ],

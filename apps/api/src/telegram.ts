@@ -227,15 +227,22 @@ export function formatEventMessage(event: EventItem): string {
   return lines.join("\n");
 }
 
+// 기본 제외 카테고리: 운영성 이벤트 (heartbeat, health check, sync 등)
+const DEFAULT_EXCLUDED_CATEGORIES = new Set(["system", "legacy"]);
+const DEFAULT_EXCLUDED_TYPES = new Set(["sync", "ping", "system.sync", "system.health"]);
+
 export function shouldNotify(
   event: EventItem,
   prefs: NotificationPreference | null,
 ): boolean {
+  const category = eventCategoryOf(event.type);
+
+  // 설정 없을 때 기본 필터 적용 (운영성 이벤트 제외)
   if (!prefs) {
+    if (DEFAULT_EXCLUDED_CATEGORIES.has(category)) return false;
+    if (DEFAULT_EXCLUDED_TYPES.has(event.type)) return false;
     return true;
   }
-
-  const category = eventCategoryOf(event.type);
 
   if (prefs.enabledCategories.length > 0 && !prefs.enabledCategories.includes(category as never)) {
     return false;
