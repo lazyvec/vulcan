@@ -114,14 +114,14 @@
 - [x] BullMQ 알림 큐
 - [x] 검증: Telegram 알림 수신 (에러, 태스크 완료)
 
-## Phase 8: 승인/거버넌스 (5-7일) — 의존성: Phase 3, 7
+## Phase 8: 승인/거버넌스 (5-7일) — 의존성: Phase 3, 7 (진행 중)
 
-- [ ] 승인 모델 (`approvals`, `approval_policies`)
-- [ ] 커맨드 파이프라인 연동 (정책 매칭 → 승인 대기)
-- [ ] Telegram 승인 (딥링크 → Vulcan UI 처리)
-- [ ] 자동 승인 타임아웃
-- [ ] UI 승인 패널 (대기 목록 + 배지)
-- [ ] 검증: 승인 요청 → 알림 → 승인 → 커맨드 실행
+- [x] 승인 모델 (`approvals`, `approval_policies`)
+- [x] 커맨드 파이프라인 연동 (정책 매칭 → 승인 대기)
+- [x] Telegram 승인 (인라인 키보드 + Long Polling, Herald Bot)
+- [x] 자동 승인 타임아웃
+- [x] UI 승인 패널 (대기 목록 + 배지)
+- [ ] 검증: 실환경 E2E (승인 요청 → Telegram 인라인 버튼 → 승인 → 커맨드 실행)
 
 ## Phase 9: 테스트 + CI/CD (점진적, Phase 1~) — 의존성: Phase 1+
 

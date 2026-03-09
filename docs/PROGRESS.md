@@ -2,6 +2,57 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-08 | 브랜치: `main`
 
+## 2026-03-09: Phase 8 승인/거버넌스 — Telegram 인라인 키보드 승인
+
+### 요약
+Phase 8 승인/거버넌스의 Telegram 승인 경로를 구현했다.
+기존 웹 URL 딥링크 방식에서 **Telegram 인라인 키보드 버튼**으로 전환하고,
+외부 노출 없이 동작하도록 **Long Polling** 방식을 채택했다.
+
+### 완료 항목
+
+**데이터 모델**
+- ✅ `packages/shared/src/types.ts` — `Approval`에 `telegramMessageId: number | null` 추가
+- ✅ `apps/api/src/schema.ts` — `approvalsTable`에 `telegram_message_id` 컬럼 추가
+- ✅ `apps/api/src/pg-schema.ts` — `approvalsPgTable`에 동일 컬럼 추가
+- ✅ `apps/api/src/db.ts` — `ensureColumn` 자동 마이그레이션 추가
+- ✅ `apps/api/src/store.ts` — `mapApproval` 필드 매핑 + `updateApprovalTelegramMessageId()` 함수 추가
+
+**Telegram API 확장**
+- ✅ `apps/api/src/telegram.ts`
+  - `sendTelegramMessage` — `replyMarkup` 파라미터 + `messageId` 반환 추가
+  - `editTelegramMessage` — 승인 처리 후 메시지 업데이트 (버튼 제거 + 결과 표시)
+  - `answerCallbackQuery` — 버튼 클릭 시 toast 알림
+  - `getApprovalInlineKeyboard` — 승인/거절 인라인 키보드 생성
+  - `formatApprovalResultMessage` — 결과 텍스트 포맷 (✅ 승인됨 / ❌ 거절됨 / ⏰ 자동 승인됨)
+  - `startTelegramPolling` / `stopTelegramPolling` — Long Polling 기반 콜백 수신
+  - `formatApprovalRequestMessage` — URL 딥링크 제거, 텍스트만 반환
+
+**서버 로직**
+- ✅ `apps/api/src/server.ts`
+  - `handleTelegramCallback` — 인라인 키보드 콜백 처리 (파싱 → resolve → 피드백 → 메시지 업데이트)
+  - `sendApprovalNotification` — 인라인 키보드 첨부 + message_id 저장
+  - `updateApprovalTelegramMsg` — 승인/거절/자동승인 시 원본 메시지를 결과로 교체
+  - 서버 시작 시 자동 polling 시작, shutdown 시 정리
+  - 웹 UI resolve 시에도 Telegram 메시지 업데이트
+
+**설계 결정**
+- Herald Bot (`@vulcan_herald_bot`) 전용 Alert 봇 사용 (기존 설정 활용)
+- Webhook 대신 **Long Polling** (2초 간격) — Tailscale 내부 네트워크 외부 노출 방지
+- `TELEGRAM_WEBHOOK_URL` 환경변수 불필요
+
+### 검증
+- `pnpm lint` 통과
+- `pnpm build` 통과
+
+### 현재 상태
+- ✅ M0 ~ Phase 7 완료
+- 🚧 Phase 8 진행 중 (Telegram 인라인 키보드 승인 완료)
+- 🚧 Phase 9~10 병행 진행
+- 🗂️ Phase 11~12 예정(백로그)
+
+---
+
 ## 2026-03-09: Phase 11 백로그 정의 (예정)
 
 ### 요약
@@ -14,19 +65,6 @@
 - ✅ everything-claude-code 핵심 모듈 선별 도입 계획(hook profile/verification/security)
 - ✅ 토큰비·복잡도 가드레일 + 기능 플래그 전략
 - ✅ 라이선스/저작권 최종 검증 체크리스트 작업 항목
-
-### 현재 상태
-- ✅ M0 완료
-- ✅ Phase 0 완료
-- ✅ Phase 1 완료
-- ✅ Phase 2 완료
-- ✅ Phase 3 완료
-- ✅ Phase 4 완료
-- ✅ Phase 5 완료
-- ✅ Phase 6 완료
-- ✅ Phase 7 완료
-- 🚧 Phase 8~10 진행 중
-- 🗂️ Phase 11 예정(백로그)
 
 ---
 

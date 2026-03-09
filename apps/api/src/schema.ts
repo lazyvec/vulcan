@@ -267,6 +267,7 @@ export const approvalsTable = sqliteTable(
     resolvedBy: text("resolved_by"),
     resolvedReason: text("resolved_reason"),
     expiresAt: integer("expires_at"),
+    telegramMessageId: integer("telegram_message_id"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },

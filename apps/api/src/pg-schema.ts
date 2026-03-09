@@ -354,6 +354,7 @@ export const approvalsPgTable = pgTable(
     resolvedBy: text("resolved_by"),
     resolvedReason: text("resolved_reason"),
     expiresAt: timestamp("expires_at", { withTimezone: false }),
+    telegramMessageId: integer("telegram_message_id"),
     createdAt: nowTs("created_at"),
     updatedAt: nowTs("updated_at"),
   },

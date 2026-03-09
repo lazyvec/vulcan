@@ -166,6 +166,7 @@ export interface Approval {
   resolvedBy: string | null;
   resolvedReason: string | null;
   expiresAt: number | null;
+  telegramMessageId: number | null;
   createdAt: number;
   updatedAt: number;
 }

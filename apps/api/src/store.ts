@@ -1610,6 +1610,7 @@ function mapApproval(
     resolvedBy: row.resolvedBy,
     resolvedReason: row.resolvedReason,
     expiresAt: row.expiresAt,
+    telegramMessageId: row.telegramMessageId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -1873,6 +1874,17 @@ export function resolveApproval(
     .where(eq(approvalsTable.id, id))
     .get();
   return row ? mapApproval(row) : null;
+}
+
+export function updateApprovalTelegramMessageId(
+  id: string,
+  telegramMessageId: number,
+): void {
+  ensureSchema();
+  db.update(approvalsTable)
+    .set({ telegramMessageId })
+    .where(eq(approvalsTable.id, id))
+    .run();
 }
 
 export function getPendingExpiredApprovals(): Approval[] {

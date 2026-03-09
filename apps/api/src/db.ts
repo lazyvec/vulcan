@@ -319,6 +319,8 @@ function ensureLegacyBootstrap() {
     CREATE INDEX IF NOT EXISTS idx_approvals_expires ON approvals (expires_at);
   `);
 
+  ensureColumn("approvals", "telegram_message_id", "telegram_message_id INTEGER");
+
   ensureColumn("tasks", "description", "description TEXT");
   ensureColumn("tasks", "priority", "priority TEXT NOT NULL DEFAULT 'medium'");
   ensureColumn("tasks", "due_at", "due_at INTEGER");

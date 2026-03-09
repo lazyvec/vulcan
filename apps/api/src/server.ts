@@ -93,6 +93,7 @@ import {
   resolveApproval,
   getPendingExpiredApprovals,
   getPendingApprovalCount,
+  updateApprovalTelegramMessageId,
 } from "./store";
 import { ensureSchema, getSqlite } from "./db";
 import {
@@ -113,12 +114,19 @@ import {
   type NotificationQueueJobData,
 } from "./queue";
 import {
+  answerCallbackQuery,
+  editTelegramMessage,
   formatApprovalRequestMessage,
+  formatApprovalResultMessage,
   formatEventMessage,
+  getApprovalInlineKeyboard,
   getDefaultNotificationChatId,
   sendTelegramMessage,
   shouldNotify,
+  startTelegramPolling,
+  stopTelegramPolling,
 } from "./telegram";
+import type { TelegramCallbackQuery } from "./telegram";
 import { getGatewayRpcClient } from "./gateway-rpc";
 import {
   listVaultNotes,
@@ -533,6 +541,9 @@ if (queueWorkersReady) {
 
 // Phase 8: 서버 시작 시 pending 승인 타임아웃 복구
 restorePendingApprovalTimeouts();
+
+// Telegram long polling 시작 (인라인 키보드 콜백 수신)
+void startTelegramPolling(handleTelegramCallback);
 
 // Phase 7: Telegram 알림 — 이벤트 구독 후크
 subscribeEvents((event) => {
@@ -2526,9 +2537,43 @@ async function sendApprovalNotification(
       policyName: policy.name,
       messagePreview: message.slice(0, 200),
     });
-    await sendTelegramMessage(chatId, text);
+    const replyMarkup = getApprovalInlineKeyboard(approval.id);
+    const result = await sendTelegramMessage(chatId, text, "HTML", replyMarkup);
+    if (result.ok && result.messageId) {
+      updateApprovalTelegramMessageId(approval.id, result.messageId);
+    }
   } catch (err) {
     console.error("[vulcan-api] approval notification failed", err);
+  }
+}
+
+// 승인 결과를 Telegram 메시지에 반영
+async function updateApprovalTelegramMsg(
+  approval: Approval,
+  action: "approve" | "reject" | "auto_approve",
+  resolvedBy?: string,
+) {
+  if (!approval.telegramMessageId) return;
+  const chatId = getDefaultNotificationChatId();
+  if (!chatId) return;
+
+  try {
+    const cmd = getAgentCommandById(approval.agentCommandId);
+    let preview = "";
+    if (cmd) {
+      try { preview = (JSON.parse(cmd.payloadJson).message ?? "").slice(0, 200); } catch { /* ignore */ }
+    }
+    const text = formatApprovalRequestMessage({
+      approvalId: approval.id,
+      agentId: cmd?.agentId ?? "",
+      mode: cmd?.mode ?? "",
+      policyName: "",
+      messagePreview: preview,
+    });
+    const resultText = formatApprovalResultMessage(text, action, resolvedBy);
+    await editTelegramMessage(chatId, approval.telegramMessageId, resultText);
+  } catch (err) {
+    console.error("[vulcan-api] telegram message update failed", err);
   }
 }
 
@@ -2562,6 +2607,7 @@ async function executeApprovalAutoApprove(approvalId: string) {
   });
 
   if (resolved) {
+    void updateApprovalTelegramMsg(approval, "auto_approve", "system");
     await executeApprovedCommand(approval.agentCommandId);
   }
 }
@@ -2612,6 +2658,77 @@ function restorePendingApprovalTimeouts() {
     if (a.expiresAt && a.expiresAt > Date.now()) {
       scheduleApprovalTimeout(a.id, a.expiresAt - Date.now());
     }
+  }
+}
+
+// ── Telegram Polling 콜백 핸들러 ────────────────────────────────────────────
+
+async function handleTelegramCallback(cbq: TelegramCallbackQuery): Promise<void> {
+  if (!cbq.data || !cbq.message) return;
+
+  // callback_data: "approval:{action}:{approvalId}"
+  const parts = cbq.data.split(":");
+  if (parts.length !== 3 || parts[0] !== "approval") return;
+
+  const action = parts[1] as "approve" | "reject";
+  const approvalId = parts[2];
+
+  if (action !== "approve" && action !== "reject") return;
+
+  const existing = getApprovalById(approvalId);
+  if (!existing) {
+    await answerCallbackQuery(cbq.id, "승인 요청을 찾을 수 없습니다");
+    return;
+  }
+
+  if (existing.status !== "pending") {
+    await answerCallbackQuery(cbq.id, `이미 처리됨: ${existing.status}`);
+    return;
+  }
+
+  // 타임아웃 취소
+  const timer = approvalTimeouts.get(approvalId);
+  if (timer) {
+    clearTimeout(timer);
+    approvalTimeouts.delete(approvalId);
+  }
+
+  const resolved = resolveApproval(approvalId, {
+    action,
+    reason: action === "approve" ? "Telegram 승인" : "Telegram 거절",
+    resolvedBy: "telegram",
+  });
+
+  writeAudit({
+    action: `approval.${action === "approve" ? "approved" : "rejected"}`,
+    entityType: "approval",
+    entityId: approvalId,
+    before: existing,
+    after: resolved,
+    metadata: { commandId: existing.agentCommandId, via: "telegram_inline_keyboard" },
+  });
+
+  // 버튼 클릭 피드백
+  await answerCallbackQuery(
+    cbq.id,
+    action === "approve" ? "✅ 승인 처리됨" : "❌ 거절 처리됨",
+  );
+
+  // 메시지 업데이트 (버튼 제거 + 결과 표시)
+  void updateApprovalTelegramMsg(
+    { ...existing, telegramMessageId: cbq.message.message_id },
+    action,
+    "telegram",
+  );
+
+  if (action === "approve") {
+    await executeApprovedCommand(existing.agentCommandId);
+  } else {
+    updateAgentCommand(existing.agentCommandId, {
+      status: "failed",
+      error: "승인 거절 (Telegram)",
+      executedAt: Date.now(),
+    });
   }
 }
 
@@ -2729,6 +2846,9 @@ app.post("/api/approvals/:id/resolve", async (c) => {
     metadata: { commandId: existing.agentCommandId, reason: parsed.data.reason },
   });
 
+  // Telegram 메시지 업데이트
+  void updateApprovalTelegramMsg(existing, parsed.data.action, "web");
+
   if (parsed.data.action === "approve") {
     await executeApprovedCommand(existing.agentCommandId);
     return c.json({ approval: resolved, executed: true });
@@ -2782,6 +2902,7 @@ async function shutdown(signal: string) {
   }
   approvalTimeouts.clear();
 
+  stopTelegramPolling();
   gatewayRpcClient.stop();
   await closeQueueResources().catch((error) => {
     console.error("[vulcan-api] queue shutdown failed", error);
