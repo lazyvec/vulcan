@@ -1,17 +1,17 @@
 # Account Status (KST)
 
-- Generated at: 2026-03-09 14:05:01 KST
+- Generated at: 2026-03-09 19:05:01 KST
 - Thresholds: Pro 5h<20% or weekly<20% => insufficient
 
 | Account | Tier | Plan | 5h Remain | Weekly Remain | 5h Reset | Weekly Reset | Status |
 |---|---|---:|---:|---:|---|---|---|
-| claude-sub | Pro | Pro | 0% | 53% | 2026-03-09 14:00:01 KST | 2026-03-15 00:00:00 KST | INSUFFICIENT |
-| claude-main | Pro | Pro | 90% | 70% | 2026-03-09 18:00:00 KST | 2026-03-15 01:00:00 KST | OK |
+| claude-sub | Pro | Pro | 50% | 48% | 2026-03-09 20:00:00 KST | 2026-03-15 00:00:00 KST | OK |
+| claude-main | Pro | Pro | 4% | 61% | 2026-03-09 18:00:00 KST | 2026-03-15 01:00:00 KST | INSUFFICIENT |
 | claude-work | Max | Max | 88% | 65% | 2026-03-09 07:00:00 KST | 2026-03-13 12:00:00 KST | OK |
 
 ## Routing Recommendation
-- Route now: **claude-main**
-- Reason: Pro-first fallback: sub insufficient, main sufficient
+- Route now: **claude-sub**
+- Reason: Pro-first: sub has sufficient 5h/weekly balance
 
 ## Cross-Provider Signals (Heuristic)
 | Provider | Signal | Detail |
