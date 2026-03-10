@@ -62,7 +62,9 @@
 - [ ] 메모리 타임라인 뷰 — 에이전트 기억 진화 시각화 — 2026-03-10
   - 참고: [ClawBridge](https://github.com/dreamwing/clawbridge) Memory Timeline
 
-### 기타
+### 메모리 고도화
+- [ ] Hierarchical Compaction Tree — 일일 로그→주간 요약→월간 인덱스 drill-down 구조 — 2026-03-10
+  - 참고: [@0xvinsohn 컨텍스트 가이드](https://www.threads.com/@0xvinsohn/post/DViCnxHEqrA) "원본 절대 삭제 금지, 요약 계층화"
 - [ ] proactive memory 실험 (mem0 / supermemory / memU 비교) — 2026-03-06
 - [ ] 모바일 미션 컨트롤 (PWA 또는 사이드카) — 2026-03-10
   - 참고: [ClawBridge](https://github.com/dreamwing/clawbridge) 모바일 중심 대시보드
