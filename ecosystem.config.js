@@ -25,6 +25,11 @@ const infraEnv = {
     : {}),
 };
 
+// IPv4 강제 — 서버에 글로벌 IPv6 없음
+const nodeIpv4Env = {
+  NODE_OPTIONS: "--dns-result-order=ipv4first",
+};
+
 module.exports = {
   apps: [
     {
@@ -38,6 +43,7 @@ module.exports = {
       kill_timeout: 5000,
       time: true,
       env: {
+        ...nodeIpv4Env,
         NODE_ENV: "production",
         VULCAN_API_PORT: "8787",
         VULCAN_CORS_ORIGIN: "*",
@@ -52,6 +58,7 @@ module.exports = {
         ...telegramEnv,
       },
       env_production: {
+        ...nodeIpv4Env,
         NODE_ENV: "production",
         VULCAN_API_PORT: "8787",
         VULCAN_CORS_ORIGIN: "*",
@@ -77,11 +84,13 @@ module.exports = {
       kill_timeout: 5000,
       time: true,
       env: {
+        ...nodeIpv4Env,
         NODE_ENV: "production",
         PORT: "3001",
         NEXT_PUBLIC_VULCAN_WS_URL: "ws://127.0.0.1:8787/api/ws",
       },
       env_production: {
+        ...nodeIpv4Env,
         NODE_ENV: "production",
         PORT: "3001",
         NEXT_PUBLIC_VULCAN_WS_URL: "ws://127.0.0.1:8787/api/ws",
@@ -98,6 +107,7 @@ module.exports = {
       kill_timeout: 5000,
       time: true,
       env: {
+        ...nodeIpv4Env,
         NODE_ENV: "production",
         VULCAN_INGEST_URL: "http://127.0.0.1:8787/api/adapter/ingest",
         OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",
@@ -115,6 +125,7 @@ module.exports = {
         ...telegramEnv,
       },
       env_production: {
+        ...nodeIpv4Env,
         NODE_ENV: "production",
         VULCAN_INGEST_URL: "http://127.0.0.1:8787/api/adapter/ingest",
         OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",

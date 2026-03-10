@@ -2,6 +2,19 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-10 | 브랜치: `main`
 
+## 2026-03-10: 텔레그램 미디어 다운로드 실패 수정 (IPv6→IPv4 강제)
+
+### 원인
+서버에 글로벌 IPv6 주소 없음 → Node.js가 IPv6 우선 시도 → 텔레그램 파일 다운로드 타임아웃 → "Failed to download media" 에러
+
+### 변경 파일
+- `ecosystem.config.js` — 모든 PM2 앱에 `NODE_OPTIONS=--dns-result-order=ipv4first` 추가
+- `~/.bashrc` — 전역 `NODE_OPTIONS` 환경변수 추가
+- `~/.openclaw/openclaw.json` — `channels.telegram.network.autoSelectFamily=false`
+- `~/.config/systemd/user/openclaw-gateway.service.d/override.conf` — `OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=1` + `OPENCLAW_TELEGRAM_DNS_RESULT_ORDER=ipv4first`
+
+---
+
 ## 2026-03-10: 문서 전면 현행화 — Phase 10 완료 반영
 
 ### 요약

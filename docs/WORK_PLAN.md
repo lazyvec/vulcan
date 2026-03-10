@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 8~10 병행 진행 — 승인/거버넌스 + 테스트/CI + Docker 배포
+## 현재 Phase: 0~10 완료 → Phase 11~12 백로그
 
-> M0 + Phase 0~7 완료. Phase 8~10 진행 중.
+> M0 + Phase 0~10 완료. 다음: Phase 11 (Observability) 또는 Phase 12 (agency-agents).
 
 ---
 
