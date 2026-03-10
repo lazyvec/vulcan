@@ -5,6 +5,7 @@ import {
   CheckCircle,
   Edit3,
   Eye,
+  FileEdit,
   FileText,
   FilePlus,
   FolderClosed,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import type { VaultNoteSummary, VaultNote } from "@vulcan/shared/types";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { MarkdownEditor } from "./MarkdownEditor";
 
 /* ── 유틸 ──────────────────────────────────────────── */
 
@@ -226,6 +228,67 @@ function DeleteConfirmModal({
   );
 }
 
+/* ── 이름 변경 모달 ───────────────────────────────── */
+
+function RenameNoteModal({
+  currentPath,
+  onClose,
+  onRename,
+}: {
+  currentPath: string;
+  onClose: () => void;
+  onRename: (newPath: string) => void;
+}) {
+  const [newPath, setNewPath] = useState(currentPath);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const handleSubmit = () => {
+    let p = newPath.trim();
+    if (!p || p === currentPath) return;
+    if (!p.endsWith(".md")) p += ".md";
+    onRename(p);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="vulcan-card w-full max-w-md p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">
+          노트 이름 변경
+        </h3>
+        <p className="mb-2 text-xs text-[var(--color-tertiary)]">
+          현재: <span className="font-mono">{currentPath}</span>
+        </p>
+        <input
+          ref={inputRef}
+          type="text"
+          value={newPath}
+          onChange={(e) => setNewPath(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+          placeholder="새 경로"
+          className="vulcan-input mb-4 w-full"
+        />
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="vulcan-button-ghost">
+            취소
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!newPath.trim() || newPath.trim() === currentPath}
+            className="vulcan-button disabled:opacity-50"
+          >
+            변경
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── 트리 노드 컴포넌트 (React.memo) ─────────────── */
 
 const TreeItem = memo(function TreeItem({
@@ -329,8 +392,10 @@ export function VaultExplorer({
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  /* rename 상태 */
+  const [showRenameModal, setShowRenameModal] = useState(false);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
-  const editorRef = useRef<HTMLTextAreaElement>(null);
   const { toasts, show: showToast } = useToast();
 
   /* 검색 */
@@ -420,8 +485,6 @@ export function VaultExplorer({
     setEditContent(noteContent.content);
     setEditing(true);
     setShowPreview(false);
-    // textarea에 포커스
-    setTimeout(() => editorRef.current?.focus(), 50);
   }, [noteContent]);
 
   /* 편집 취소 */
@@ -513,6 +576,67 @@ export function VaultExplorer({
     }
   }, [selectedPath, query, doSearch, showToast]);
 
+  /* 노트 이름 변경 */
+  const handleRenameNote = useCallback(
+    async (newPath: string) => {
+      if (!selectedPath) return;
+      try {
+        const res = await fetch(
+          `/api/vault/notes/${encodeURIComponent(selectedPath)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ newPath }),
+          },
+        );
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? `${res.status}`);
+        }
+        const data = await res.json();
+        setShowRenameModal(false);
+        setSelectedPath(data.note.path);
+        setNoteContent(data.note);
+        showToast("success", "이름 변경 완료");
+        doSearch(query);
+      } catch (err) {
+        showToast(
+          "error",
+          `이름 변경 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`,
+        );
+      }
+    },
+    [selectedPath, query, doSearch, showToast],
+  );
+
+  /* 이미지 붙여넣기/업로드 */
+  const handleImageUpload = useCallback(
+    async (file: File) => {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/vault/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? `${res.status}`);
+        }
+        const data = await res.json();
+        const mdImage = `![${data.fileName}](${data.relativePath})`;
+        setEditContent((prev) => prev + `\n${mdImage}\n`);
+        showToast("success", `이미지 업로드: ${data.fileName}`);
+      } catch (err) {
+        showToast(
+          "error",
+          `업로드 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`,
+        );
+      }
+    },
+    [showToast],
+  );
+
   /* 폴더 토글 */
   const toggleFolder = useCallback((path: string) => {
     setExpandedFolders((prev) => {
@@ -522,21 +646,6 @@ export function VaultExplorer({
       return next;
     });
   }, []);
-
-  /* Ctrl+S 단축키 */
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (editing && (e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        saveNote();
-      }
-      if (editing && e.key === "Escape") {
-        cancelEditing();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [editing, saveNote, cancelEditing]);
 
   const tree = useMemo(() => buildTree(notes), [notes]);
 
@@ -566,6 +675,13 @@ export function VaultExplorer({
           notePath={selectedPath}
           onClose={() => setShowDeleteModal(false)}
           onConfirm={handleDeleteNote}
+        />
+      )}
+      {showRenameModal && selectedPath && (
+        <RenameNoteModal
+          currentPath={selectedPath}
+          onClose={() => setShowRenameModal(false)}
+          onRename={handleRenameNote}
         />
       )}
 
@@ -713,6 +829,13 @@ export function VaultExplorer({
                         <Edit3 size={16} />
                       </button>
                       <button
+                        onClick={() => setShowRenameModal(true)}
+                        className="vulcan-button-ghost p-2"
+                        title="이름 변경"
+                      >
+                        <FileEdit size={16} />
+                      </button>
+                      <button
                         onClick={() => setShowDeleteModal(true)}
                         className="vulcan-button-ghost p-2 text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
                         title="삭제"
@@ -727,15 +850,14 @@ export function VaultExplorer({
               {/* 본문 영역 */}
               {editing ? (
                 <div className={`flex min-h-0 flex-1 ${showPreview ? "divide-x divide-[var(--color-border)]" : ""}`}>
-                  {/* 에디터 */}
-                  <div className={`flex flex-col ${showPreview ? "w-1/2" : "w-full"}`}>
-                    <textarea
-                      ref={editorRef}
+                  {/* CodeMirror 에디터 */}
+                  <div className={`min-h-0 ${showPreview ? "w-1/2" : "w-full"}`}>
+                    <MarkdownEditor
                       value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      className="min-h-0 flex-1 resize-none bg-transparent p-6 font-mono text-sm text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-tertiary)]"
-                      placeholder="마크다운을 입력하세요..."
-                      spellCheck={false}
+                      onChange={setEditContent}
+                      onSave={saveNote}
+                      onCancel={cancelEditing}
+                      onImagePaste={handleImageUpload}
                     />
                   </div>
                   {/* 프리뷰 */}

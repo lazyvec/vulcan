@@ -144,6 +144,8 @@ import {
   writeVaultNote,
   createVaultNote,
   deleteVaultNote,
+  renameVaultNote,
+  uploadToVault,
 } from "./vault";
 
 const app = new Hono();
@@ -2152,6 +2154,75 @@ app.delete("/api/vault/notes/*", async (c) => {
     if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
     if (msg.includes("traversal")) return c.json({ error: "not found" }, 404);
     if (msg.includes("ENOENT")) return c.json({ error: "not found" }, 404);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.patch("/api/vault/notes/*", async (c) => {
+  try {
+    const prefix = "/api/vault/notes/";
+    const relPath = c.req.path.startsWith(prefix)
+      ? decodeURIComponent(c.req.path.slice(prefix.length))
+      : "";
+    if (!relPath) return c.json({ error: "path required" }, 400);
+    const body = await c.req.json();
+    const newPath = isRecord(body) && typeof body.newPath === "string" ? body.newPath : "";
+    if (!newPath) return c.json({ error: "newPath is required" }, 400);
+    const note = await renameVaultNote(relPath, newPath);
+    writeAudit({
+      action: "vault.rename",
+      entityType: "vault_note",
+      entityId: relPath,
+      after: { oldPath: relPath, newPath: note.path, title: note.title },
+    });
+    const event = appendEvent({
+      type: "vault.rename",
+      source: "vulcan-api",
+      summary: `노트 이름 변경: ${relPath} → ${note.path}`,
+      payloadJson: JSON.stringify({ oldPath: relPath, newPath: note.path }),
+    });
+    publishEvent(event);
+    return c.json({ note });
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
+    if (msg.includes("traversal")) return c.json({ error: "not found" }, 404);
+    if (msg.includes("ENOENT")) return c.json({ error: "not found" }, 404);
+    if (msg.includes("already exists")) return c.json({ error: "already exists" }, 409);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.post("/api/vault/upload", async (c) => {
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get("file");
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: "file is required" }, 400);
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const result = await uploadToVault(file.name, buffer);
+
+    writeAudit({
+      action: "vault.upload",
+      entityType: "vault_attachment",
+      entityId: result.relativePath,
+      after: result,
+    });
+    const event = appendEvent({
+      type: "vault.upload",
+      source: "vulcan-api",
+      summary: `첨부 업로드: ${result.fileName}`,
+      payloadJson: JSON.stringify(result),
+    });
+    publishEvent(event);
+    return c.json(result, 201);
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
+    if (msg.includes("traversal")) return c.json({ error: "invalid file path" }, 400);
     return c.json({ error: msg }, 500);
   }
 });

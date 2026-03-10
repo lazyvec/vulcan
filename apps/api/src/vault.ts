@@ -3,7 +3,7 @@
  * obsidian-skills를 TypeScript로 포팅 + path traversal 방어
  */
 
-import { readFile, writeFile, readdir, stat, mkdir, unlink, access } from "node:fs/promises";
+import { readFile, writeFile, readdir, stat, mkdir, unlink, access, rename } from "node:fs/promises";
 import { join, relative, extname, basename, resolve, dirname } from "node:path";
 import matter from "gray-matter";
 import type { VaultNote, VaultNoteSummary, ClipResult } from "@vulcan/shared/types";
@@ -186,6 +186,60 @@ export async function deleteVaultNote(relPath: string): Promise<void> {
   const abs = resolve(join(vaultPath, relPath));
   assertInsideVault(abs, vaultPath);
   await unlink(abs); // ENOENT → 404
+}
+
+export async function renameVaultNote(
+  oldRelPath: string,
+  newRelPath: string,
+): Promise<VaultNote> {
+  const vaultPath = getVaultPath();
+  const oldAbs = resolve(join(vaultPath, oldRelPath));
+  const newAbs = resolve(join(vaultPath, newRelPath));
+  assertInsideVault(oldAbs, vaultPath);
+  assertInsideVault(newAbs, vaultPath);
+
+  // 원본 존재 확인
+  await stat(oldAbs); // ENOENT → 404
+
+  // 대상이 이미 존재하면 에러
+  try {
+    await access(newAbs);
+    throw new Error("already exists");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+
+  // 대상 디렉토리 생성
+  await mkdir(dirname(newAbs), { recursive: true });
+  await rename(oldAbs, newAbs);
+
+  // 변경된 노트 반환
+  return readVaultNote(newRelPath);
+}
+
+export async function uploadToVault(
+  fileName: string,
+  data: Buffer,
+): Promise<{ fileName: string; relativePath: string }> {
+  const vaultPath = getVaultPath();
+  const attachmentsDir = join(vaultPath, "attachments");
+  await mkdir(attachmentsDir, { recursive: true });
+
+  // 파일명 충돌 방지
+  const ext = extname(fileName);
+  const base = basename(fileName, ext);
+  const safeName = base.replace(/[^a-zA-Z0-9가-힣_-]/g, "_");
+  const timestamp = Date.now();
+  const finalName = `${safeName}-${timestamp}${ext}`;
+  const filePath = join(attachmentsDir, finalName);
+
+  assertInsideVault(filePath, vaultPath);
+  await writeFile(filePath, data);
+
+  return {
+    fileName: finalName,
+    relativePath: `attachments/${finalName}`,
+  };
 }
 
 export async function clipUrlToVault(url: string): Promise<ClipResult> {
