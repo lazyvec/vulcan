@@ -3,8 +3,8 @@
  * obsidian-skills를 TypeScript로 포팅 + path traversal 방어
  */
 
-import { readFile, writeFile, readdir, stat, mkdir } from "node:fs/promises";
-import { join, relative, extname, basename, resolve } from "node:path";
+import { readFile, writeFile, readdir, stat, mkdir, unlink, access } from "node:fs/promises";
+import { join, relative, extname, basename, resolve, dirname } from "node:path";
 import matter from "gray-matter";
 import type { VaultNote, VaultNoteSummary, ClipResult } from "@vulcan/shared/types";
 
@@ -112,6 +112,80 @@ export async function searchVaultNotes(query: string): Promise<VaultNoteSummary[
     }
   }
   return results;
+}
+
+export async function writeVaultNote(
+  relPath: string,
+  content: string,
+  frontmatter?: Record<string, unknown>,
+): Promise<VaultNote> {
+  const vaultPath = getVaultPath();
+  const abs = resolve(join(vaultPath, relPath));
+  assertInsideVault(abs, vaultPath);
+
+  // 기존 파일이 존재하는지 확인
+  await stat(abs); // ENOENT → 404
+
+  // frontmatter가 명시되지 않으면 기존 것 유지
+  let fm = frontmatter;
+  if (!fm) {
+    const raw = await readFile(abs, "utf-8");
+    fm = matter(raw).data;
+  }
+
+  const fileContent = matter.stringify(content, fm ?? {});
+  await writeFile(abs, fileContent, "utf-8");
+
+  const info = await stat(abs);
+  return {
+    path: relative(vaultPath, abs),
+    title: (fm?.title as string) ?? basename(relPath, ".md"),
+    frontmatter: fm ?? {},
+    content: content.trim(),
+    modified: info.mtime.toISOString(),
+  };
+}
+
+export async function createVaultNote(
+  relPath: string,
+  content: string,
+  frontmatter?: Record<string, unknown>,
+): Promise<VaultNote> {
+  const vaultPath = getVaultPath();
+  const abs = resolve(join(vaultPath, relPath));
+  assertInsideVault(abs, vaultPath);
+
+  // 이미 존재하면 에러
+  try {
+    await access(abs);
+    throw new Error("already exists");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+
+  // 중간 디렉토리 자동 생성
+  await mkdir(dirname(abs), { recursive: true });
+
+  const fm = frontmatter ?? {};
+  if (!fm.title) fm.title = basename(relPath, ".md");
+  const fileContent = matter.stringify(content, fm);
+  await writeFile(abs, fileContent, "utf-8");
+
+  const info = await stat(abs);
+  return {
+    path: relative(vaultPath, abs),
+    title: (fm.title as string) ?? basename(relPath, ".md"),
+    frontmatter: fm,
+    content: content.trim(),
+    modified: info.mtime.toISOString(),
+  };
+}
+
+export async function deleteVaultNote(relPath: string): Promise<void> {
+  const vaultPath = getVaultPath();
+  const abs = resolve(join(vaultPath, relPath));
+  assertInsideVault(abs, vaultPath);
+  await unlink(abs); // ENOENT → 404
 }
 
 export async function clipUrlToVault(url: string): Promise<ClipResult> {

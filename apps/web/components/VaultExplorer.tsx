@@ -3,12 +3,18 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle,
+  Edit3,
+  Eye,
   FileText,
+  FilePlus,
   FolderClosed,
   FolderOpen,
   Link,
   Loader2,
+  Save,
   Search,
+  Trash2,
+  X,
   XCircle,
 } from "lucide-react";
 import type { VaultNoteSummary, VaultNote } from "@vulcan/shared/types";
@@ -125,6 +131,101 @@ function ToastContainer({ toasts }: { toasts: ToastMessage[] }) {
   );
 }
 
+/* ── 새 노트 생성 모달 ────────────────────────────── */
+
+function NewNoteModal({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (path: string) => void;
+}) {
+  const [path, setPath] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = () => {
+    let p = path.trim();
+    if (!p) return;
+    if (!p.endsWith(".md")) p += ".md";
+    onCreate(p);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="vulcan-card w-full max-w-md p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">
+          새 노트 생성
+        </h3>
+        <input
+          ref={inputRef}
+          type="text"
+          value={path}
+          onChange={(e) => setPath(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+          placeholder="경로 (예: Oracle/새노트.md)"
+          className="vulcan-input mb-4 w-full"
+        />
+        <p className="mb-4 text-xs text-[var(--color-tertiary)]">
+          폴더를 포함한 경로를 입력하세요. 폴더가 없으면 자동 생성됩니다.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="vulcan-button-ghost">
+            취소
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!path.trim()}
+            className="vulcan-button disabled:opacity-50"
+          >
+            생성
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── 삭제 확인 모달 ───────────────────────────────── */
+
+function DeleteConfirmModal({
+  notePath,
+  onClose,
+  onConfirm,
+}: {
+  notePath: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="vulcan-card w-full max-w-md p-6">
+        <h3 className="mb-2 text-lg font-semibold text-[var(--color-foreground)]">
+          노트 삭제
+        </h3>
+        <p className="mb-4 text-sm text-[var(--color-muted-foreground)]">
+          <span className="font-mono text-[var(--color-primary)]">{notePath}</span>
+          을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="vulcan-button-ghost">
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            className="vulcan-button bg-[var(--color-destructive)] text-white hover:opacity-90"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── 트리 노드 컴포넌트 (React.memo) ─────────────── */
 
 const TreeItem = memo(function TreeItem({
@@ -218,7 +319,18 @@ export function VaultExplorer({
     () => new Set<string>(),
   );
 
+  /* 편집 상태 */
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
+  /* 모달 상태 */
+  const [showNewNoteModal, setShowNewNoteModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const { toasts, show: showToast } = useToast();
 
   /* 검색 */
@@ -248,6 +360,8 @@ export function VaultExplorer({
 
   /* 노트 선택 */
   const selectNote = useCallback(async (path: string) => {
+    setEditing(false);
+    setShowPreview(false);
     setSelectedPath(path);
     setLoading(true);
     try {
@@ -300,6 +414,105 @@ export function VaultExplorer({
     }
   }, [clipUrl, query, doSearch, showToast]);
 
+  /* 편집 모드 진입 */
+  const startEditing = useCallback(() => {
+    if (!noteContent) return;
+    setEditContent(noteContent.content);
+    setEditing(true);
+    setShowPreview(false);
+    // textarea에 포커스
+    setTimeout(() => editorRef.current?.focus(), 50);
+  }, [noteContent]);
+
+  /* 편집 취소 */
+  const cancelEditing = useCallback(() => {
+    setEditing(false);
+    setShowPreview(false);
+  }, []);
+
+  /* 노트 저장 */
+  const saveNote = useCallback(async () => {
+    if (!noteContent || !selectedPath) return;
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/vault/notes/${encodeURIComponent(selectedPath)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: editContent }),
+        },
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? `${res.status}`);
+      }
+      const data = await res.json();
+      setNoteContent(data.note);
+      setEditing(false);
+      setShowPreview(false);
+      showToast("success", "저장 완료");
+      doSearch(query);
+    } catch (err) {
+      showToast("error", `저장 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
+    } finally {
+      setSaving(false);
+    }
+  }, [noteContent, selectedPath, editContent, query, doSearch, showToast]);
+
+  /* 새 노트 생성 */
+  const handleCreateNote = useCallback(
+    async (path: string) => {
+      try {
+        const res = await fetch("/api/vault/notes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path, content: "" }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? `${res.status}`);
+        }
+        setShowNewNoteModal(false);
+        showToast("success", "노트 생성 완료");
+        await doSearch(query);
+        selectNote(path);
+      } catch (err) {
+        showToast(
+          "error",
+          `생성 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`,
+        );
+      }
+    },
+    [query, doSearch, selectNote, showToast],
+  );
+
+  /* 노트 삭제 */
+  const handleDeleteNote = useCallback(async () => {
+    if (!selectedPath) return;
+    try {
+      const res = await fetch(
+        `/api/vault/notes/${encodeURIComponent(selectedPath)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? `${res.status}`);
+      }
+      setShowDeleteModal(false);
+      setSelectedPath(null);
+      setNoteContent(null);
+      setEditing(false);
+      showToast("success", "노트 삭제 완료");
+      doSearch(query);
+    } catch (err) {
+      showToast(
+        "error",
+        `삭제 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`,
+      );
+    }
+  }, [selectedPath, query, doSearch, showToast]);
+
   /* 폴더 토글 */
   const toggleFolder = useCallback((path: string) => {
     setExpandedFolders((prev) => {
@@ -309,6 +522,21 @@ export function VaultExplorer({
       return next;
     });
   }, []);
+
+  /* Ctrl+S 단축키 */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (editing && (e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        saveNote();
+      }
+      if (editing && e.key === "Escape") {
+        cancelEditing();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [editing, saveNote, cancelEditing]);
 
   const tree = useMemo(() => buildTree(notes), [notes]);
 
@@ -326,6 +554,21 @@ export function VaultExplorer({
       {/* Toast */}
       <ToastContainer toasts={toasts} />
 
+      {/* 모달 */}
+      {showNewNoteModal && (
+        <NewNoteModal
+          onClose={() => setShowNewNoteModal(false)}
+          onCreate={handleCreateNote}
+        />
+      )}
+      {showDeleteModal && selectedPath && (
+        <DeleteConfirmModal
+          notePath={selectedPath}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteNote}
+        />
+      )}
+
       {/* 상단 바 */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
@@ -342,6 +585,13 @@ export function VaultExplorer({
           />
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowNewNoteModal(true)}
+            className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 text-sm"
+          >
+            <FilePlus size={14} />
+            새 노트
+          </button>
           <div className="relative flex-1 sm:w-64">
             <Link
               size={16}
@@ -392,8 +642,8 @@ export function VaultExplorer({
           </div>
         </div>
 
-        {/* 오른쪽 — 본문 뷰어 */}
-        <div className="vulcan-card flex flex-col overflow-hidden p-6">
+        {/* 오른쪽 — 본문 뷰어/에디터 */}
+        <div className="vulcan-card flex flex-col overflow-hidden">
           {loading ? (
             <div className="flex flex-1 items-center justify-center">
               <Loader2
@@ -402,30 +652,110 @@ export function VaultExplorer({
               />
             </div>
           ) : noteContent ? (
-            <div className="overflow-y-auto">
-              {/* 메타 */}
-              <div className="mb-6 border-b border-[var(--color-border)] pb-4">
-                <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
-                  {noteContent.title}
-                </h2>
-                <p className="mt-1 text-xs text-[var(--color-tertiary)]">
-                  수정: {relativeTime(noteContent.modified)} · {noteContent.path}
-                </p>
-                {tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {tags.map((tag) => (
-                      <span key={tag} className="vulcan-chip text-xs">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+            <div className="flex h-full flex-col overflow-hidden">
+              {/* 메타 헤더 + 액션 버튼 */}
+              <div className="flex items-start justify-between border-b border-[var(--color-border)] px-6 py-4">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
+                    {noteContent.title}
+                  </h2>
+                  <p className="mt-1 text-xs text-[var(--color-tertiary)]">
+                    수정: {relativeTime(noteContent.modified)} · {noteContent.path}
+                  </p>
+                  {tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {tags.map((tag) => (
+                        <span key={tag} className="vulcan-chip text-xs">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="ml-4 flex shrink-0 items-center gap-1.5">
+                  {editing ? (
+                    <>
+                      <button
+                        onClick={() => setShowPreview(!showPreview)}
+                        className={`vulcan-button-ghost p-2 ${showPreview ? "text-[var(--color-primary)]" : ""}`}
+                        title={showPreview ? "프리뷰 닫기" : "프리뷰 열기"}
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={saveNote}
+                        disabled={saving}
+                        className="vulcan-button flex items-center gap-1.5 text-sm"
+                        title="저장 (Ctrl+S)"
+                      >
+                        {saving ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Save size={14} />
+                        )}
+                        저장
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="vulcan-button-ghost p-2"
+                        title="취소 (Esc)"
+                      >
+                        <X size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={startEditing}
+                        className="vulcan-button-ghost flex items-center gap-1.5 p-2 text-sm"
+                        title="편집"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="vulcan-button-ghost p-2 text-[var(--color-destructive)] hover:text-[var(--color-destructive)]"
+                        title="삭제"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-              {/* 본문 */}
-              <MarkdownRenderer
-                content={noteContent.content}
-                onWikiLink={handleWikiLink}
-              />
+
+              {/* 본문 영역 */}
+              {editing ? (
+                <div className={`flex min-h-0 flex-1 ${showPreview ? "divide-x divide-[var(--color-border)]" : ""}`}>
+                  {/* 에디터 */}
+                  <div className={`flex flex-col ${showPreview ? "w-1/2" : "w-full"}`}>
+                    <textarea
+                      ref={editorRef}
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      className="min-h-0 flex-1 resize-none bg-transparent p-6 font-mono text-sm text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-tertiary)]"
+                      placeholder="마크다운을 입력하세요..."
+                      spellCheck={false}
+                    />
+                  </div>
+                  {/* 프리뷰 */}
+                  {showPreview && (
+                    <div className="w-1/2 overflow-y-auto p-6">
+                      <MarkdownRenderer
+                        content={editContent}
+                        onWikiLink={handleWikiLink}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-y-auto p-6">
+                  <MarkdownRenderer
+                    content={noteContent.content}
+                    onWikiLink={handleWikiLink}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-1 items-center justify-center text-[var(--color-tertiary)]">

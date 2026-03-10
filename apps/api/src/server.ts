@@ -141,6 +141,9 @@ import {
   readVaultNote,
   searchVaultNotes,
   clipUrlToVault,
+  writeVaultNote,
+  createVaultNote,
+  deleteVaultNote,
 } from "./vault";
 
 const app = new Hono();
@@ -2050,6 +2053,106 @@ app.post("/api/vault/clip", async (c) => {
       return c.json({ error: "vault not configured" }, 503);
     }
     return c.json({ error: getErrorMessage(error) }, 500);
+  }
+});
+
+app.put("/api/vault/notes/*", async (c) => {
+  try {
+    const prefix = "/api/vault/notes/";
+    const relPath = c.req.path.startsWith(prefix)
+      ? decodeURIComponent(c.req.path.slice(prefix.length))
+      : "";
+    if (!relPath) return c.json({ error: "path required" }, 400);
+    const body = await c.req.json();
+    const content = isRecord(body) && typeof body.content === "string" ? body.content : null;
+    if (content === null) return c.json({ error: "content is required" }, 400);
+    const frontmatter = isRecord(body) && isRecord(body.frontmatter)
+      ? (body.frontmatter as Record<string, unknown>)
+      : undefined;
+    const note = await writeVaultNote(relPath, content, frontmatter);
+    writeAudit({
+      action: "vault.update",
+      entityType: "vault_note",
+      entityId: relPath,
+      after: { path: note.path, title: note.title },
+    });
+    const event = appendEvent({
+      type: "vault.update",
+      source: "vulcan-api",
+      summary: `노트 수정: ${note.title}`,
+      payloadJson: JSON.stringify({ path: note.path, title: note.title }),
+    });
+    publishEvent(event);
+    return c.json({ note });
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
+    if (msg.includes("traversal")) return c.json({ error: "not found" }, 404);
+    if (msg.includes("ENOENT")) return c.json({ error: "not found" }, 404);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.post("/api/vault/notes", async (c) => {
+  try {
+    const body = await c.req.json();
+    const path = isRecord(body) && typeof body.path === "string" ? body.path : "";
+    if (!path) return c.json({ error: "path is required" }, 400);
+    const content = isRecord(body) && typeof body.content === "string" ? body.content : "";
+    const frontmatter = isRecord(body) && isRecord(body.frontmatter)
+      ? (body.frontmatter as Record<string, unknown>)
+      : undefined;
+    const note = await createVaultNote(path, content, frontmatter);
+    writeAudit({
+      action: "vault.create",
+      entityType: "vault_note",
+      entityId: path,
+      after: { path: note.path, title: note.title },
+    });
+    const event = appendEvent({
+      type: "vault.create",
+      source: "vulcan-api",
+      summary: `노트 생성: ${note.title}`,
+      payloadJson: JSON.stringify({ path: note.path, title: note.title }),
+    });
+    publishEvent(event);
+    return c.json({ note }, 201);
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
+    if (msg.includes("traversal")) return c.json({ error: "not found" }, 404);
+    if (msg.includes("already exists")) return c.json({ error: "already exists" }, 409);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.delete("/api/vault/notes/*", async (c) => {
+  try {
+    const prefix = "/api/vault/notes/";
+    const relPath = c.req.path.startsWith(prefix)
+      ? decodeURIComponent(c.req.path.slice(prefix.length))
+      : "";
+    if (!relPath) return c.json({ error: "path required" }, 400);
+    await deleteVaultNote(relPath);
+    writeAudit({
+      action: "vault.delete",
+      entityType: "vault_note",
+      entityId: relPath,
+    });
+    const event = appendEvent({
+      type: "vault.delete",
+      source: "vulcan-api",
+      summary: `노트 삭제: ${relPath}`,
+      payloadJson: JSON.stringify({ path: relPath }),
+    });
+    publishEvent(event);
+    return c.json({ ok: true });
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
+    if (msg.includes("traversal")) return c.json({ error: "not found" }, 404);
+    if (msg.includes("ENOENT")) return c.json({ error: "not found" }, 404);
+    return c.json({ error: msg }, 500);
   }
 });
 
