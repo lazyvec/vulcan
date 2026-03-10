@@ -201,7 +201,7 @@ export function MarkdownEditor({
     const currentValue = view.state.doc.toString();
     if (currentValue !== value) {
       view.dispatch({
-        changes: { from: 0, to: currentValue.length, insert: value },
+        changes: { from: 0, to: view.state.doc.length, insert: value },
       });
     }
   }, [value]);

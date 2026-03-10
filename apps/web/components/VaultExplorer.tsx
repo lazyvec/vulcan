@@ -356,7 +356,7 @@ const TreeItem = memo(function TreeItem({
       <FileText size={14} className="shrink-0" />
       <span className="truncate">{displayName}</span>
       {node.note && (
-        <span className="ml-auto shrink-0 text-[10px] text-[var(--color-tertiary)]">
+        <span className="ml-auto shrink-0 text-[10px] text-[var(--color-tertiary)]" suppressHydrationWarning>
           {relativeTime(node.note.modified)}
         </span>
       )}
@@ -659,7 +659,7 @@ export function VaultExplorer({
   }, [noteContent]);
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex flex-col gap-4" style={{ height: "calc(100vh - 8rem)" }}>
       {/* Toast */}
       <ToastContainer toasts={toasts} />
 
@@ -775,7 +775,7 @@ export function VaultExplorer({
                   <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
                     {noteContent.title}
                   </h2>
-                  <p className="mt-1 text-xs text-[var(--color-tertiary)]">
+                  <p className="mt-1 text-xs text-[var(--color-tertiary)]" suppressHydrationWarning>
                     수정: {relativeTime(noteContent.modified)} · {noteContent.path}
                   </p>
                   {tags.length > 0 && (
