@@ -186,7 +186,7 @@ export function SkillsMarketplace({ initialSkills, initialAgents, initialRegistr
   return (
     <section className="space-y-3">
       {errorMessage && (
-        <div className="rounded-[var(--radius-card)] border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-4 py-2 text-sm text-[var(--color-destructive-text)]">
           {errorMessage}
         </div>
       )}
@@ -406,7 +406,7 @@ function CatalogTab({
                 <span className="text-sm">{agent.name}</span>
                 <button
                   type="button"
-                  className="rounded-[var(--radius-control)] px-2 py-0.5 text-[11px] text-red-400 transition-colors hover:bg-red-400/10 disabled:opacity-50"
+                  className="rounded-[var(--radius-control)] px-2 py-0.5 text-[11px] text-[var(--color-destructive-text)] transition-colors hover:bg-[var(--color-destructive-bg)] disabled:opacity-50"
                   onClick={() => onRemove(agent.id, skill.name)}
                   disabled={actionInProgress}
                 >
@@ -507,7 +507,7 @@ function AgentTab({
                       </div>
                       <button
                         type="button"
-                        className="rounded-[var(--radius-control)] px-2 py-0.5 text-[11px] text-red-400 transition-colors hover:bg-red-400/10 disabled:opacity-50"
+                        className="rounded-[var(--radius-control)] px-2 py-0.5 text-[11px] text-[var(--color-destructive-text)] transition-colors hover:bg-[var(--color-destructive-bg)] disabled:opacity-50"
                         onClick={() => onRemove(selectedAgentId, skillName)}
                         disabled={actionInProgress}
                       >

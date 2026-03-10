@@ -4,37 +4,44 @@ import { MissionControlProvider } from "@/components/MissionControlProvider";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { ToastProvider } from "@/components/ui/Toast";
-import { useSyncExternalStore, useCallback, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "vulcan-sidebar-collapsed";
 
+function subscribeToStorage(cb: () => void) {
+  window.addEventListener("storage", cb);
+  return () => window.removeEventListener("storage", cb);
+}
+
 function getCollapsedSnapshot() {
-  if (typeof window === "undefined") return false;
   return localStorage.getItem(STORAGE_KEY) === "true";
 }
 
-function getServerSnapshot() {
+function getCollapsedServerSnapshot() {
   return false;
-}
-
-function subscribe(callback: () => void) {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
 }
 
 export default function MissionLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const isCollapsed = useSyncExternalStore(subscribe, getCollapsedSnapshot, getServerSnapshot);
-  const [, forceRender] = useState(0);
+  const isCollapsed = useSyncExternalStore(subscribeToStorage, getCollapsedSnapshot, getCollapsedServerSnapshot);
 
-  const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
+  const toggleSidebar = () => setSidebarOpen((v) => !v);
   const toggleCollapse = useCallback(() => {
     const next = !getCollapsedSnapshot();
     localStorage.setItem(STORAGE_KEY, String(next));
-    forceRender((c) => c + 1);
+    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
   }, []);
+
+  useEffect(() => {
+    if (!isSidebarOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isSidebarOpen]);
 
   return (
     <MissionControlProvider>
@@ -52,8 +59,12 @@ export default function MissionLayout({
           </div>
           {isSidebarOpen && (
             <div
+              role="button"
+              tabIndex={0}
+              aria-label="사이드바 닫기"
               className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
               onClick={toggleSidebar}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") toggleSidebar(); }}
             />
           )}
         </div>

@@ -188,7 +188,7 @@ export function TaskDetailModal({
             {!isCreate && onTaskDeleted && (
               <button
                 type="button"
-                className="rounded p-1 text-red-400 hover:bg-red-400/10"
+                className="rounded p-1 text-[var(--color-destructive-text)] hover:bg-[var(--color-destructive-bg)]"
                 onClick={handleDelete}
                 disabled={deleting}
                 title="Delete task"

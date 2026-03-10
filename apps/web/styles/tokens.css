@@ -49,6 +49,19 @@
   --color-researching: #c084fc;
   --color-executing: #22d3ee;
 
+  /* Chart palette — 순서 보장, 시각적 구분 최적화 */
+  --color-chart-1: var(--color-primary);
+  --color-chart-2: #3b82f6;
+  --color-chart-3: #10b981;
+  --color-chart-4: #8b5cf6;
+  --color-chart-5: #f59e0b;
+  --color-chart-6: #ef4444;
+  --color-chart-7: #06b6d4;
+  --color-chart-8: #ec4899;
+
+  /* Destructive hover */
+  --color-destructive-hover: rgba(248, 113, 113, 0.2);
+
   /* Focus ring */
   --color-focus-ring: rgba(224, 122, 64, 0.5);
 

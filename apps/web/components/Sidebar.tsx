@@ -77,12 +77,14 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
 
   return (
     <aside
+      aria-label="기본 내비게이션"
+      aria-hidden={!isOpen ? "true" : undefined}
       className={`fixed inset-y-0 left-0 z-40 transform border-r transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       } ${isCollapsed ? "w-16" : "w-[260px]"}`}
       style={{
         borderColor: "var(--color-border)",
-        background: "rgba(26,25,23,0.95)",
+        background: "color-mix(in oklab, var(--color-background) 95%, transparent 5%)",
         backdropFilter: "blur(12px)",
       }}
     >
@@ -98,10 +100,11 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           <button
             type="button"
             onClick={onToggleCollapse}
+            aria-label={isCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            aria-expanded={!isCollapsed}
             className="hidden rounded p-1 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] md:flex"
-            title={isCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
           >
-            {isCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
+            {isCollapsed ? <ChevronsRight size={18} aria-hidden="true" /> : <ChevronsLeft size={18} aria-hidden="true" />}
           </button>
         </div>
 
@@ -128,7 +131,10 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   <Icon size={18} className="shrink-0" />
                   {!isCollapsed && <span>{item.label}</span>}
                   {item.href === "/approvals" && pendingCount > 0 && (
-                    <span className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-xs font-semibold text-white ${isCollapsed ? "absolute -right-1 -top-1 h-4 min-w-[16px] text-[10px]" : "ml-auto"}`}>
+                    <span
+                      aria-label={`승인 대기 ${pendingCount}건`}
+                      className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-xs font-semibold text-[var(--color-foreground)] ${isCollapsed ? "absolute -right-1 -top-1 h-4 min-w-[16px] text-[10px]" : "ml-auto"}`}
+                    >
                       {pendingCount}
                     </span>
                   )}
@@ -142,10 +148,11 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
         <div className={`border-t border-[var(--color-border)] p-3 ${isCollapsed ? "flex justify-center" : ""}`}>
           <div className={`flex items-center gap-2 ${isCollapsed ? "" : "rounded-[var(--radius-control)] bg-[var(--color-muted)]/50 px-3 py-2"}`} title={gatewayConnected ? "게이트웨이 연결됨" : "게이트웨이 연결 끊김"}>
             {gatewayConnected ? (
-              <Wifi size={14} className="text-[var(--color-success)]" />
+              <Wifi size={14} className="text-[var(--color-success)]" aria-hidden="true" />
             ) : (
-              <WifiOff size={14} className="text-[var(--color-destructive)]" />
+              <WifiOff size={14} className="text-[var(--color-destructive)]" aria-hidden="true" />
             )}
+            <span className="sr-only">{gatewayConnected ? "게이트웨이 연결됨" : "게이트웨이 연결 끊김"}</span>
             {!isCollapsed && (
               <>
                 <span className="text-xs text-[var(--color-muted-foreground)]">

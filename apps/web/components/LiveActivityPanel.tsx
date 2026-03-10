@@ -81,7 +81,7 @@ const ICON_COLOR: Record<string, string> = {
   agent: "text-[var(--color-success-text)]",
   task: "text-[var(--color-info-text)]",
   command: "text-[var(--color-warning-text)]",
-  skill: "text-purple-400",
+  skill: "text-[var(--color-researching)]",
   system: "text-[var(--color-primary)]",
   gateway: "text-[var(--color-info)]",
   legacy: "text-[var(--color-tertiary)]",
@@ -260,7 +260,7 @@ export function LiveActivityPanel({
         <span className="text-xs text-[var(--color-tertiary)]">
           {summaryStats.total}건
           {summaryStats.errors > 0 && (
-            <span className="ml-1 text-red-400">
+            <span className="ml-1 text-[var(--color-destructive-text)]">
               · 에러 {summaryStats.errors}건
             </span>
           )}
@@ -306,7 +306,7 @@ export function LiveActivityPanel({
         ))}
         {categoryFilters.size > 0 && (
           <button
-            className="vulcan-chip text-[10px] text-red-400 hover:bg-red-400/10"
+            className="vulcan-chip text-[10px] text-[var(--color-destructive-text)] hover:bg-[var(--color-destructive-bg)]"
             onClick={() => setCategoryFilters(new Set())}
           >
             초기화

@@ -13,6 +13,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Agent, Task, TaskLane, TaskPriority } from "@/lib/types";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   AlertTriangle,
   ArrowDown,
@@ -30,12 +31,12 @@ import {
 import { TaskDetailModal } from "./TaskDetailModal";
 
 const LANES: Array<{ key: TaskLane; label: string; note: string }> = [
-  { key: "backlog", label: "Backlog", note: "정리 대기" },
-  { key: "queued", label: "Queued", note: "실행 대기" },
-  { key: "in_progress", label: "In Progress", note: "실행 중" },
-  { key: "review", label: "Review", note: "검토 대기" },
-  { key: "done", label: "Done", note: "완료" },
-  { key: "archived", label: "Archived", note: "보관" },
+  { key: "backlog", label: "백로그", note: "정리 대기" },
+  { key: "queued", label: "대기", note: "실행 대기" },
+  { key: "in_progress", label: "진행 중", note: "실행 중" },
+  { key: "review", label: "검토", note: "검토 대기" },
+  { key: "done", label: "완료", note: "완료" },
+  { key: "archived", label: "보관", note: "보관" },
 ];
 
 interface KanbanBoardProps {
@@ -83,8 +84,15 @@ function priorityIcon(priority: TaskPriority) {
   }
 }
 
+const priorityLabels: Record<TaskPriority, string> = {
+  critical: "긴급",
+  high: "높음",
+  medium: "보통",
+  low: "낮음",
+};
+
 function priorityLabel(priority: TaskPriority) {
-  return priority.charAt(0).toUpperCase() + priority.slice(1);
+  return priorityLabels[priority];
 }
 
 function formatUpdatedAt(ts: number) {
@@ -228,9 +236,7 @@ function DroppableLane({
             />
           ))}
           {tasks.length === 0 && (
-            <div className="flex h-full min-h-[88px] items-center justify-center rounded border border-dashed border-[var(--color-border)]">
-              <p className="text-sm text-[var(--color-tertiary)]">태스크 없음</p>
-            </div>
+            <EmptyState message="태스크 없음" />
           )}
         </div>
       </SortableContext>
@@ -358,7 +364,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <h2 className="mr-auto text-lg font-semibold text-[var(--color-foreground)]">
             <ListChecks size={18} className="mr-1 inline" />
-            Task Board
+            태스크 보드
           </h2>
           <span className="vulcan-chip text-xs">전체 {filtered.length}</span>
           <span className="vulcan-chip text-xs">에이전트 {agents.length}</span>

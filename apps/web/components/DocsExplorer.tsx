@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { DocItem } from "@/lib/types";
 import { Tag } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface DocsExplorerProps {
   docs: DocItem[];
@@ -73,9 +74,7 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
             </button>
           ))}
           {filtered.length === 0 && (
-            <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-[var(--color-border)]">
-              <p className="text-sm text-[var(--color-tertiary)]">문서를 찾을 수 없습니다.</p>
-            </div>
+            <EmptyState message="문서를 찾을 수 없습니다." />
           )}
         </section>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 
@@ -26,6 +26,7 @@ export function GatewayOpsPanel() {
   const [cronList, setCronList] = useState<unknown>(null);
   const [cronStatus, setCronStatus] = useState<unknown>(null);
   const [configText, setConfigText] = useState("{}");
+  const fieldId = useId();
 
   const statusRecord = useMemo(() => asRecord(gatewayStatus), [gatewayStatus]);
   const connected = statusRecord?.connected === true;
@@ -103,8 +104,9 @@ export function GatewayOpsPanel() {
       </div>
 
       <div>
-        <label className="mb-1 block caption-text">config.patch 페이로드</label>
+        <label htmlFor={`${fieldId}-config`} className="mb-1 block caption-text">config.patch 페이로드</label>
         <textarea
+          id={`${fieldId}-config`}
           value={configText}
           onChange={(e) => setConfigText(e.target.value)}
           className="vulcan-input min-h-[120px] w-full resize-y font-mono text-[11px]"

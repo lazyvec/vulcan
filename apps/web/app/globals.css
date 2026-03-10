@@ -36,6 +36,15 @@
   --color-researching: var(--color-researching);
   --color-executing: var(--color-executing);
   --color-focus-ring: var(--color-focus-ring);
+  --color-chart-1: var(--color-chart-1);
+  --color-chart-2: var(--color-chart-2);
+  --color-chart-3: var(--color-chart-3);
+  --color-chart-4: var(--color-chart-4);
+  --color-chart-5: var(--color-chart-5);
+  --color-chart-6: var(--color-chart-6);
+  --color-chart-7: var(--color-chart-7);
+  --color-chart-8: var(--color-chart-8);
+  --color-destructive-hover: var(--color-destructive-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

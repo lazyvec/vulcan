@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { OFFICE_ZONES, STATUS_LABELS } from "@/lib/statusMap";
 import { Badge } from "@/components/ui/Badge";
@@ -47,6 +47,7 @@ export function AgentCommandPanel({
   const [message, setMessage] = useState("Please report current status.");
   const [taskLabel, setTaskLabel] = useState("status-check");
   const [error, setError] = useState("");
+  const fieldId = useId();
 
   function validateInputs(options?: { requireTaskLabel?: boolean }) {
     const trimmedMessage = message.trim();
@@ -144,8 +145,8 @@ export function AgentCommandPanel({
       {/* Form */}
       <div className="space-y-3">
         <div>
-          <label className="mb-1 block caption-text">대상 에이전트</label>
-          <select value={selectedAgentId} onChange={(e) => onSelectAgent(e.target.value)} className="vulcan-input w-full">
+          <label htmlFor={`${fieldId}-agent`} className="mb-1 block caption-text">대상 에이전트</label>
+          <select id={`${fieldId}-agent`} value={selectedAgentId} onChange={(e) => onSelectAgent(e.target.value)} className="vulcan-input w-full">
             {agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} {a.isActive === false ? "(비활성)" : ""}
@@ -154,12 +155,13 @@ export function AgentCommandPanel({
           </select>
         </div>
         <div>
-          <label className="mb-1 block caption-text">메시지</label>
-          <textarea value={message} onChange={(e) => setMessage(e.target.value)} className="vulcan-input min-h-[96px] w-full resize-y" />
+          <label htmlFor={`${fieldId}-msg`} className="mb-1 block caption-text">메시지</label>
+          <textarea id={`${fieldId}-msg`} value={message} onChange={(e) => setMessage(e.target.value)} className="vulcan-input min-h-[96px] w-full resize-y" />
         </div>
         <div>
-          <label className="mb-1 block caption-text">태스크 레이블</label>
+          <label htmlFor={`${fieldId}-label`} className="mb-1 block caption-text">태스크 레이블</label>
           <input
+            id={`${fieldId}-label`}
             value={taskLabel}
             onChange={(e) => setTaskLabel(e.target.value)}
             onBlur={() => setTaskLabel((prev) => normalizeTaskLabel(prev))}

@@ -20,6 +20,19 @@ interface Props {
 
 const API_BASE = "/api";
 
+const statusLabelMap: Record<string, string> = {
+  pending: "대기",
+  approved: "승인됨",
+  rejected: "거절됨",
+  auto_approved: "자동 승인",
+  expired: "만료됨",
+};
+
+const modeLabelMap: Record<string, string> = {
+  delegate: "위임",
+  direct: "직접",
+};
+
 export function ApprovalsPanel({ initialApprovals, initialPolicies, deepLinkAction, deepLinkId }: Props) {
   const [tab, setTab] = useState<Tab>("pending");
   const [approvals, setApprovals] = useState(initialApprovals);
@@ -170,7 +183,7 @@ export function ApprovalsPanel({ initialApprovals, initialPolicies, deepLinkActi
                     {a.resolvedReason && <> · {a.resolvedReason}</>}
                   </p>
                 </div>
-                <Badge status={approvalStatusColorMap[a.status] ?? "neutral"}>{a.status}</Badge>
+                <Badge status={approvalStatusColorMap[a.status] ?? "neutral"}>{statusLabelMap[a.status] ?? a.status}</Badge>
               </div>
             </div>
           ))}
@@ -193,8 +206,8 @@ export function ApprovalsPanel({ initialApprovals, initialPolicies, deepLinkActi
                 <input className="vulcan-input" placeholder="에이전트 ID (선택)" value={policyForm.matchAgentId} onChange={(e) => setPolicyForm((p) => ({ ...p, matchAgentId: e.target.value }))} />
                 <select className="vulcan-input" value={policyForm.matchMode} onChange={(e) => setPolicyForm((p) => ({ ...p, matchMode: e.target.value }))}>
                   <option value="">모드 (전체)</option>
-                  <option value="delegate">delegate</option>
-                  <option value="direct">direct</option>
+                  <option value="delegate">위임</option>
+                  <option value="direct">직접</option>
                 </select>
                 <input className="vulcan-input" placeholder="커맨드 패턴 regex (선택)" value={policyForm.matchCommandPattern} onChange={(e) => setPolicyForm((p) => ({ ...p, matchCommandPattern: e.target.value }))} />
                 <input className="vulcan-input" placeholder="자동 승인 (분)" type="number" value={policyForm.autoApproveMinutes} onChange={(e) => setPolicyForm((p) => ({ ...p, autoApproveMinutes: e.target.value }))} />
@@ -221,7 +234,7 @@ export function ApprovalsPanel({ initialApprovals, initialPolicies, deepLinkActi
                   </p>
                   <p className="caption-text">
                     {p.matchAgentId && <>에이전트: {p.matchAgentId} · </>}
-                    {p.matchMode && <>모드: {p.matchMode} · </>}
+                    {p.matchMode && <>모드: {modeLabelMap[p.matchMode] ?? p.matchMode} · </>}
                     {p.matchCommandPattern && <>패턴: {p.matchCommandPattern} · </>}
                     {p.autoApproveMinutes && <>{p.autoApproveMinutes}분 자동승인</>}
                   </p>

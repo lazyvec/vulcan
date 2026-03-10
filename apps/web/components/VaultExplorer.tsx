@@ -109,8 +109,8 @@ function ToastContainer({ toasts }: { toasts: ToastMessage[] }) {
           key={t.id}
           className={`flex items-center gap-2 rounded-[var(--radius-card)] px-4 py-3 text-sm shadow-lg animate-in slide-in-from-right fade-in duration-200 ${
             t.type === "success"
-              ? "bg-emerald-900/90 text-emerald-100 border border-emerald-700/50"
-              : "bg-red-900/90 text-red-100 border border-red-700/50"
+              ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)] border border-[var(--color-success-border)]"
+              : "bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)] border border-[var(--color-destructive-border)]"
           }`}
         >
           {t.type === "success" ? (

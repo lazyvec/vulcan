@@ -22,8 +22,8 @@ interface Props {
 }
 
 const PIE_COLORS = [
-  "var(--color-primary)", "#3b82f6", "#10b981", "#8b5cf6",
-  "#f59e0b", "#ef4444", "#06b6d4", "#ec4899",
+  "var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)",
+  "var(--color-chart-5)", "var(--color-chart-6)", "var(--color-chart-7)", "var(--color-chart-8)",
 ];
 
 function formatTime(ts: number) {

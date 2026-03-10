@@ -103,7 +103,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[rgba(26,25,23,0.8)] px-4 py-3 backdrop-blur-lg sm:px-6">
+    <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-background)_80%,transparent)] px-4 py-3 backdrop-blur-lg sm:px-6">
       <div className="flex items-center gap-4">
         {/* Mobile menu */}
         <button
