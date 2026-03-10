@@ -2,6 +2,59 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-10 | 브랜치: `main`
 
+## 2026-03-10: Obsidian Vault 편집 기능 전면 구축
+
+### 요약
+Vault UI를 읽기 전용에서 **완전한 CRUD + 편집기**로 고도화. CodeMirror 6 기반 마크다운 에디터, 이미지 업로드, 노트 이름 변경까지 구현.
+
+### 신규 API 엔드포인트 (6개)
+| 메서드 | 경로 | 기능 |
+|--------|------|------|
+| PUT | `/api/vault/notes/:path` | 노트 내용 수정 (frontmatter 보존) |
+| POST | `/api/vault/notes` | 새 노트 생성 (중복 시 409, 폴더 자동 생성) |
+| DELETE | `/api/vault/notes/:path` | 노트 삭제 |
+| PATCH | `/api/vault/notes/:path` | 노트 이름/경로 변경 |
+| POST | `/api/vault/upload` | 이미지/첨부파일 업로드 (multipart) |
+
+### 신규 컴포넌트
+- `MarkdownEditor.tsx` — CodeMirror 6 기반 (마크다운 문법 하이라이팅, 라인 넘버, Vulcan 다크 테마, 이미지 붙여넣기)
+
+### UI 기능
+- **편집 모드**: CodeMirror 6 에디터 + 분할 프리뷰 (view/edit 토글)
+- **새 노트**: 경로 입력 모달 (폴더 자동 생성)
+- **삭제**: 확인 대화상자 포함
+- **이름 변경**: rename 모달
+- **이미지 붙여넣기**: 클립보드 → 자동 업로드 → `![](attachments/...)` 삽입
+- **단축키**: Ctrl+S 저장, Esc 취소
+
+### 백엔드 함수 (vault.ts)
+- `writeVaultNote()` — 기존 노트 수정 (frontmatter 자동 보존)
+- `createVaultNote()` — 새 노트 생성 (중복 방지 + 디렉토리 자동 생성)
+- `deleteVaultNote()` — 노트 삭제
+- `renameVaultNote()` — 이름/경로 변경
+- `uploadToVault()` — attachments/ 폴더에 파일 저장
+
+### 보안
+- 모든 경로 조작에 `assertInsideVault()` path traversal 방어 적용
+- 모든 mutation에 audit log + event publish
+
+### 변경 파일 (6개)
+| 파일 | 변경 |
+|------|------|
+| `apps/api/src/vault.ts` | write/create/delete/rename/upload 함수 추가 |
+| `apps/api/src/server.ts` | PUT/POST/DELETE/PATCH/upload 라우트 추가 |
+| `apps/web/components/MarkdownEditor.tsx` | **신규** — CodeMirror 6 에디터 |
+| `apps/web/components/VaultExplorer.tsx` | 편집 UI 전면 개편 |
+| `apps/web/package.json` | CodeMirror 6 의존성 추가 |
+| `pnpm-lock.yaml` | 락파일 |
+
+### 검증
+- `tsc --noEmit` — 통과
+- `pnpm build` — 통과 (13개 라우트)
+- `pnpm lint` — 통과
+
+---
+
 ## 2026-03-10: UI/UX 크로스체크 리뷰 후 접근성 + 디자인 토큰 보강
 
 ### 요약

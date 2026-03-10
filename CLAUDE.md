@@ -63,7 +63,7 @@
 - **에이전트 관리 UI**: Team 화면에 제어 패널 도입 (inactive 포함 조회 + pause/resume)
 - **Mission Control UI**: Tasks/Team/Office 정보 위계/밀도 개선 + confirm 기반 안전 액션 UX 반영
 - **Gateway Ops UI**: Team 화면에서 Gateway 설정/스케줄 운영 제어
-- **Vault UI**: Obsidian 볼트 웹 탐색기 (트리 뷰, 검색, URL 클리핑, 마크다운 렌더링)
+- **Vault UI**: Obsidian 볼트 웹 탐색기 + 편집기 (트리 뷰, 검색, URL 클리핑, CodeMirror 6 에디터, CRUD, 이미지 업로드, 노트 rename, 분할 프리뷰)
 - **태스크 시스템 고도화**: 6-lane 칸반(@dnd-kit), TaskDetailModal(CRUD/코멘트), task_dependencies/task_comments 테이블, 에이전트 할당 연동
 - **스킬 마켓플레이스**: skills/agent_skills/skill_registry 테이블, 8개 API 엔드포인트, 2패널 UI(Catalog/Per Agent), Gateway best-effort 동기화
 - **Activity/Audit 시스템**: GET /api/activity(필터+페이지네이션), GET /api/activity/stats(통계), GET /api/audit(확장), 메트릭스 대시보드(/activity), LiveActivityPanel 카테고리 필터+무한 스크롤
