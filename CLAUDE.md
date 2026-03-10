@@ -49,29 +49,16 @@
 
 ## 시스템 흐름
 
-### 현재 (Phase 4 완료)
-- **데이터 수집**: gateway-adapter → Hono `POST /api/adapter/ingest` → DB + SSE/WebSocket
-- **실시간**: Hono `GET /api/stream` (SSE) | `GET /api/events?since=` (폴링)
-- **UI**: Next.js는 API fetch 중심 UI 레이어로 동작
-- **태스크**: Kanban 3-lane → Hono `PATCH /api/tasks/:id` → 상태 변경
-- **생명주기**: 에이전트 생성/수정/비활성화 + Hermes 경유 위임 + 직접 커맨드 + 감사 로그 조회
-- **큐 처리**: delegate/command 비동기 큐 처리 + 헬스체크 워커로 Gateway 상태 주기 동기화
-- **운영 도구**: 실패 커맨드 재시도 API + 커맨드 이력 필터 조회
-- **운영 UI**: Office 화면에서 커맨드 운영 API 사용 가능
-- **Gateway 제어**: sessions.spawn/send 전용 엔드포인트 추가
-- **에이전트 관리 UI**: Team 화면에 제어 패널 도입 (inactive 포함 조회 + pause/resume)
-- **Mission Control UI**: Tasks/Team/Office 정보 위계/밀도 개선 + confirm 기반 안전 액션 UX 반영
-- **Gateway Ops UI**: Team 화면에서 Gateway 설정/스케줄 운영 제어
-- **Vault UI**: Obsidian 볼트 웹 탐색기 + 편집기 (트리 뷰, 검색, URL 클리핑, CodeMirror 6 에디터, CRUD, 이미지 업로드, 노트 rename, 분할 프리뷰)
-- **태스크 시스템 고도화**: 6-lane 칸반(@dnd-kit), TaskDetailModal(CRUD/코멘트), task_dependencies/task_comments 테이블, 에이전트 할당 연동
-- **스킬 마켓플레이스**: skills/agent_skills/skill_registry 테이블, 8개 API 엔드포인트, 2패널 UI(Catalog/Per Agent), Gateway best-effort 동기화
-- **Activity/Audit 시스템**: GET /api/activity(필터+페이지네이션), GET /api/activity/stats(통계), GET /api/audit(확장), 메트릭스 대시보드(/activity), LiveActivityPanel 카테고리 필터+무한 스크롤
-
-### 목표 (Phase 2~)
-- **양방향**: Hono API ↔ Gateway RPC ↔ OpenClaw 에이전트
-- **실시간**: WebSocket (Hono ↔ 프론트엔드) + Redis Pub/Sub
-- **제어**: BullMQ 커맨드 큐 → Gateway RPC → 에이전트
-- **추가 UI**: Analytics, Approvals
+- **데이터 수집**: gateway-adapter → Hono `POST /api/adapter/ingest` → DB → WebSocket broadcast
+- **실시간**: Hono WebSocket (`/api/ws`) + Redis Pub/Sub, SSE (`/api/stream`) 폴백
+- **UI**: Next.js는 Hono API fetch 중심 UI 레이어. rewrite `/api/*` → localhost:8787
+- **태스크**: 6-lane 칸반 → Hono `PATCH /api/tasks/:id` → 상태 변경 + 의존성/코멘트
+- **에이전트 제어**: Team UI에서 pause/resume/delegate/command + confirm 단계 + 감사 로깅
+- **큐 처리**: BullMQ command/healthcheck 큐 → Gateway RPC → 에이전트
+- **Gateway 제어**: config.patch, cron.list/status, sessions spawn/send/reset
+- **Vault**: Obsidian 볼트 파일시스템 직접 접근. NAS WebDAV ↔ rclone bisync (5분 cron)
+- **승인**: approval_policies → Telegram 인라인 키보드 → Herald Bot Long Polling → resolve
+- **외부 접근**: Cloudflare Tunnel (`vulcan.yomacong.com`) + Tailscale (`vulcan.tail9732fd.ts.net`)
 
 ## 도구
 
@@ -79,22 +66,26 @@
 - `pnpm api:dev` — Hono API 개발 서버 (localhost:8787)
 - `pnpm build` — 프로덕션 빌드
 - `pnpm lint` — ESLint
+- `pnpm test` — Vitest 단위/통합 테스트
+- `pnpm test:smoke` — Playwright 스모크 테스트 (16개)
 - `pnpm seed` — DB 시드 데이터 생성
-- `pnpm adapter` — OpenClaw 어댑터 실행
-- `pnpm test:smoke` — Playwright 스모크 테스트
+- `pnpm adapter` — OpenClaw Gateway 어댑터 실행
+- `pnpm infra:up` / `pnpm infra:down` — Docker Compose 인프라 시작/중지
 
-## 고도화 로드맵 (Phase 0~10)
+## 고도화 로드맵 (Phase 0~12)
 
-| Phase | 이름 | 의존성 | 상태 |
-|-------|------|--------|------|
-| 0 | Foundation (모노레포 + 공유 패키지) | — | 완료 |
-| 1 | PostgreSQL + Redis + Hono | 0 | 완료 |
-| 2 | WebSocket + Gateway RPC | 1 | 완료 |
-| 3 | 에이전트 생명주기 관리 | 2 | 완료 |
-| 4 | 태스크 시스템 고도화 | 3 | 완료 |
-| 5 | 스킬 마켓플레이스 | 3 | 완료 |
-| 6 | Activity/Audit + 메트릭스 | 3, 4 | 완료 |
-| 7 | Telegram 알림 | 3 | 대기 |
-| 8 | 승인/거버넌스 | 3, 7 | 대기 |
-| 9 | 테스트 + CI/CD | 1~ | 점진적 |
-| 10 | Docker 배포 | 전체 | 대기 |
+| Phase | 이름 | 상태 |
+|-------|------|------|
+| 0 | Foundation (모노레포 + 공유 패키지) | 완료 |
+| 1 | PostgreSQL + Redis + Hono | 완료 |
+| 2 | WebSocket + Gateway RPC | 완료 |
+| 3 | 에이전트 생명주기 관리 | 완료 |
+| 4 | 태스크 시스템 고도화 | 완료 |
+| 5 | 스킬 마켓플레이스 | 완료 |
+| 6 | Activity/Audit + 메트릭스 | 완료 |
+| 7 | Telegram 알림 (Herald Bot Long Polling) | 완료 |
+| 8 | 승인/거버넌스 (Telegram 인라인 키보드) | 완료 |
+| 9 | 테스트 + CI/CD (Vitest + Playwright + Husky) | 완료 |
+| 10 | Docker 배포 (인프라 Docker, App PM2 유지) | 완료 |
+| 11 | Observability + Governance 고도화 | 백로그 |
+| 12 | agency-agents 레퍼런스 트랙 | 백로그 |

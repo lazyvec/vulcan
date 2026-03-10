@@ -2,6 +2,23 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-10 | 브랜치: `main`
 
+## 2026-03-10: Vault UI 수정 — 입력창 겹침, 구문강조 CSS, 수동싱크, hydration 수정
+
+### 요약
+- 검색창/입력창 아이콘·placeholder 텍스트 겹침 수정 (`.has-icon` CSS 클래스)
+- `highlight.js` 코드 구문강조 CSS 글로벌 import 추가
+- 수동 볼트 싱크 버튼 추가 (노트 목록 + 열린 노트 새로고침)
+- React hydration #418 에러 해결 (VaultExplorer를 `next/dynamic` SSR 비활성화)
+
+### 변경 파일
+- `apps/web/app/globals.css` — highlight.js CSS import, `.has-icon` 클래스
+- `apps/web/components/VaultExplorer.tsx` — 싱크 버튼, `has-icon` 클래스, RefreshCw import
+- `apps/web/app/(layout)/vault/page.tsx` — Server Component 분리
+- `apps/web/app/(layout)/vault/client.tsx` — Client Component 래퍼 (dynamic import)
+- `apps/web/package.json` — highlight.js 추가
+
+---
+
 ## 2026-03-10: Obsidian Vault 기본 사용성 이식 (8개 기능)
 
 ### 요약

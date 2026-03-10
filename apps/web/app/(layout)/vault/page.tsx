@@ -1,7 +1,7 @@
-import { VaultExplorer } from "@/components/VaultExplorer";
 import { getVaultNotes } from "@/lib/api-server";
+import { VaultPageClient } from "./client";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function VaultPage({
   searchParams,
@@ -9,5 +9,5 @@ export default async function VaultPage({
   searchParams: Promise<{ note?: string }>;
 }) {
   const [notes, params] = await Promise.all([getVaultNotes(), searchParams]);
-  return <VaultExplorer initialNotes={notes} initialNotePath={params.note} />;
+  return <VaultPageClient initialNotes={notes} initialNotePath={params.note} />;
 }

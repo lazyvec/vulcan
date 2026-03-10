@@ -13,6 +13,7 @@ import {
   FolderOpen,
   Link,
   Loader2,
+  RefreshCw,
   Save,
   Search,
   Trash2,
@@ -461,9 +462,33 @@ export function VaultExplorer({
   /* rename 상태 */
   const [showRenameModal, setShowRenameModal] = useState(false);
 
+  /* 싱크 상태 */
+  const [syncing, setSyncing] = useState(false);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const { toasts, show: showToast } = useToast();
   const initialLoadDone = useRef(false);
+
+  /* 수동 싱크 — vault 노트 목록 새로고침 */
+  const handleSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/vault/notes");
+      const data = await res.json();
+      setNotes(data.notes ?? []);
+      // 현재 열린 노트도 새로고침
+      if (selectedPath) {
+        const noteRes = await fetch(`/api/vault/notes/${encodeURIComponent(selectedPath)}`);
+        const noteData = await noteRes.json();
+        if (noteData.note) setNoteContent(noteData.note);
+      }
+      showToast("success", "볼트 동기화 완료");
+    } catch {
+      showToast("error", "동기화 실패");
+    } finally {
+      setSyncing(false);
+    }
+  }, [selectedPath, showToast]);
 
   /* 검색 */
   const doSearch = useCallback(async (q: string) => {
@@ -781,10 +806,19 @@ export function VaultExplorer({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="노트 검색..."
-            className="vulcan-input pl-9"
+            className="vulcan-input has-icon"
           />
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 text-sm"
+            title="볼트 동기화"
+          >
+            <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+            싱크
+          </button>
           <button
             onClick={() => setShowNewNoteModal(true)}
             className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 text-sm"
@@ -802,7 +836,7 @@ export function VaultExplorer({
               value={clipUrl}
               onChange={(e) => setClipUrl(e.target.value)}
               placeholder="URL 클리핑..."
-              className="vulcan-input pl-9"
+              className="vulcan-input has-icon"
               onKeyDown={(e) => e.key === "Enter" && handleClip()}
             />
           </div>
