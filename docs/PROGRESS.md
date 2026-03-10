@@ -2,6 +2,94 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-10 | 브랜치: `main`
 
+## 2026-03-10: UI/UX 크로스체크 리뷰 후 접근성 + 디자인 토큰 보강
+
+### 요약
+Phase A~D UI/UX 전면 개편 결과에 대한 크로스체크 리뷰를 수행하고, 발견된 심각(S1~S6) + 개선필요(M1~M11) 총 17건의 이슈를 전부 수정했다.
+
+### 심각 이슈 (S1~S6)
+- ✅ S1: `focus-visible` 포커스 링 전역 정의 + `--color-focus-ring` 토큰
+- ✅ S2: `caption-text` 대비율 수정 (`#8d877f` → `#a39d95`, WCAG AA 4.5:1+)
+- ✅ S3: `StatusDot` role="img" + aria-label + 하드코딩 색상 토큰화
+- ✅ S4: `Modal` WAI-ARIA (role, aria-modal, aria-labelledby, focus trap, Escape, body scroll lock)
+- ✅ S5: `Sidebar` aria-label/aria-hidden + `Layout` 오버레이 접근성
+- ✅ S6: 하드코딩 색상 토큰화 (25개 인스턴스 → CSS 변수)
+
+### 개선필요 이슈 (M1~M11)
+- ✅ M1: `KanbanBoard` 영문 라벨 한국어화 (6-lane + 우선순위)
+- ✅ M2: `ApprovalsPanel` 상태/모드 한국어 매핑
+- ✅ M3: `AgentLifecyclePanel` window.confirm → Modal 컴포넌트
+- ✅ M4: `MemoryBoard` 인라인 모달→Modal + Toast 피드백 + EmptyState
+- ✅ M6: `Toast` aria-live, role="alert", 닫기 버튼
+- ✅ M7: `Tabs` WAI-ARIA (role="tablist"/"tab", 화살표 키, roving tabIndex)
+- ✅ M8: `Input`/`Select` useId(), aria-invalid, aria-describedby
+- ✅ M9: `AgentCommandPanel`/`GatewayOpsPanel` label-input htmlFor/id 연결
+- ✅ M10: `DocsExplorer`/`KanbanBoard` EmptyState 컴포넌트 통일
+- ✅ M11: 토큰 네이밍 정리 (color-primary-12 → color-primary-bg) + section/card-title 분리
+
+### 추가 토큰
+- `--color-chart-1~8`: 차트 팔레트 토큰
+- `--color-destructive-hover`: 파괴적 버튼 hover 토큰
+- `--color-focus-ring`: 포커스 링 토큰
+
+### Layout 개선
+- `useSyncExternalStore`로 localStorage 읽기 (lint 규칙 준수)
+
+### 검증
+- `pnpm lint` — 통과 (ESLint 에러 0)
+- `pnpm build` — 통과 (13개 라우트 정상 생성)
+
+### 변경 파일 (18개)
+| 구분 | 파일 |
+|------|------|
+| 토큰 | `styles/tokens.css`, `app/globals.css` |
+| 레이아웃 | `app/(layout)/layout.tsx` |
+| 공통 UI | `components/ui/{Button,Modal,Toast,Tabs,Input,Select,StatusDot,EmptyState}.tsx` |
+| 페이지 | `components/{Sidebar,Topbar,KanbanBoard,ActivityDashboard,ApprovalsPanel,LiveActivityPanel,MemoryBoard,DocsExplorer,SkillsMarketplace,TaskDetailModal,VaultExplorer}.tsx` |
+| Team | `components/team/{AgentCommandPanel,AgentLifecyclePanel,GatewayOpsPanel}.tsx` |
+
+---
+
+## 2026-03-10: Hermes 기억 시스템 강화 (P0 + P1)
+
+### 요약
+OpenClaw memorySearch 활성화(P0) + Vulcan 메모리 시스템 확장(P1). 설정 변경 + 코드 변경 모두 포함.
+
+### P0: 설정 활성화
+- ✅ `openclaw.json` — memorySearch(하이브리드 BM25+vector, temporal decay 30일, MMR, sessionMemory) + memoryFlush(60K 토큰 임계값) 설정 추가
+- ✅ `MEMORY.md` — 체계적 구조 재편 (프로필/프로젝트/패턴/교훈/자기개선 섹션화)
+- ✅ 메모리 서브 파일 생성: `projects.md`, `patterns.md`, `lessons.md`, `self-improvement.md`
+
+### P1: Vulcan 코드 변경
+- ✅ MemoryItem 스키마 확장: `profile|lesson` container, `updatedAt`, `importance`, `expiresAt`, `memoryType` 추가
+- ✅ DB 스키마: SQLite(schema.ts) + PostgreSQL(pg-schema.ts) 양쪽 컬럼 추가
+- ✅ DB 마이그레이션: `ensureLegacyBootstrap()`에 `ensureColumn()` 4개 추가 (기존 DB 호환)
+- ✅ API CRUD: `POST /api/memory`, `PATCH /api/memory/:id`, `DELETE /api/memory/:id`, `GET /api/memory/search`
+- ✅ MemoryBoard UI: 4탭(저널/장기기억/프로필/교훈), importance 별표, 만료 임박 하이라이트, 편집 모달, 삭제 기능
+- ✅ smoke test 수정: 메모리 페이지 테스트를 탭 UI에 맞게 업데이트
+
+### 검증
+- `pnpm lint` — 통과 (shared/api/web 모두)
+- `pnpm build` — 통과 (13개 라우트)
+- `pnpm test:smoke` — 메모리 테스트 통과 (나머지 실패는 기존 이슈)
+
+### 변경 파일
+| 구분 | 파일 |
+|------|------|
+| P0 설정 | `~/.openclaw/openclaw.json` |
+| P0 메모리 | `~/MEMORY.md`, `~/memory/{projects,patterns,lessons,self-improvement}.md` |
+| P1 타입 | `packages/shared/src/types.ts` |
+| P1 DB | `apps/api/src/{schema,pg-schema,db}.ts` |
+| P1 API | `apps/api/src/{server,store}.ts` |
+| P1 UI | `apps/web/components/MemoryBoard.tsx`, `apps/web/app/(layout)/memory/page.tsx`, `apps/web/lib/api-server.ts` |
+| P1 테스트 | `apps/web/tests/smoke/vulcan.smoke.spec.ts` |
+
+### 후속 작업
+- ⚠️ Gateway 재시작 후 Telegram에서 `memory_search` 동작 확인 필요
+- ⚠️ PM2 프로세스 재시작 필요 (사용자 확인 후)
+
+---
+
 ## 2026-03-10: UI/UX 전면 개편 (Phase A~D)
 
 ### 요약
