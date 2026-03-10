@@ -77,7 +77,7 @@ export async function getLatestEvents(limit = 80) {
   return events.events.slice(-limit);
 }
 
-export async function getMemoryItems(container?: "journal" | "longterm") {
+export async function getMemoryItems(container?: "journal" | "longterm" | "profile" | "lesson") {
   const query = container ? `?container=${container}` : "";
   const data = await requestJson<{ memory: MemoryItem[] }>(`/api/memory${query}`);
   return data.memory;

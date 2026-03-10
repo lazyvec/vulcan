@@ -158,8 +158,11 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
     await useDesktop(page);
     await page.goto("/memory");
 
-    await expect(page.getByText("Daily Journal")).toBeVisible();
-    await expect(page.getByText("Long-term Memory")).toBeVisible();
+    // 탭 기반 UI: 4개 탭(일일 저널, 장기 기억, 프로필, 교훈) 렌더링 확인
+    await expect(page.getByRole("button", { name: /일일 저널/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /장기 기억/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /프로필/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /교훈/ })).toBeVisible();
   });
 
   /* ── Navigation ── */

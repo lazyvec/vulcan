@@ -10,10 +10,20 @@ export default async function MemoryPage({
 }) {
   const params = await searchParams;
   const query = params.q ?? "";
-  const [journal, longterm] = await Promise.all([
+  const [journal, longterm, profile, lesson] = await Promise.all([
     getMemoryItems("journal"),
     getMemoryItems("longterm"),
+    getMemoryItems("profile"),
+    getMemoryItems("lesson"),
   ]);
 
-  return <MemoryBoard journal={journal} longterm={longterm} initialQuery={query} />;
+  return (
+    <MemoryBoard
+      journal={journal}
+      longterm={longterm}
+      profile={profile}
+      lesson={lesson}
+      initialQuery={query}
+    />
+  );
 }

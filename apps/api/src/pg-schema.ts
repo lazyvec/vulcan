@@ -1,4 +1,5 @@
 import {
+  doublePrecision,
   foreignKey,
   index,
   integer,
@@ -171,6 +172,10 @@ export const memoryItemsPgTable = pgTable("memory_items", {
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
   sourceRef: text("source_ref"),
   createdAt: timestamp("created_at", { withTimezone: false }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: false }),
+  importance: doublePrecision("importance"),
+  expiresAt: timestamp("expires_at", { withTimezone: false }),
+  memoryType: text("memory_type"),
 });
 
 export const docsPgTable = pgTable("docs", {

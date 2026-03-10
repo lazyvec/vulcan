@@ -62,6 +62,10 @@ import {
   getGateways,
   getLatestEvents,
   getMemoryItems,
+  createMemoryItem,
+  updateMemoryItem,
+  deleteMemoryItem,
+  searchMemoryItems,
   getProjects,
   getSchedules,
   getSkillById,
@@ -1752,8 +1756,55 @@ app.post("/api/adapter/ingest", async (c) => {
 });
 
 app.get("/api/memory", (c) => {
-  const container = c.req.query("container") as "journal" | "longterm" | undefined;
+  const container = c.req.query("container") as "journal" | "longterm" | "profile" | "lesson" | undefined;
   return c.json({ memory: getMemoryItems(container) });
+});
+
+app.get("/api/memory/search", (c) => {
+  const q = c.req.query("q") ?? "";
+  const container = c.req.query("container") as "journal" | "longterm" | "profile" | "lesson" | undefined;
+  return c.json({ memory: searchMemoryItems(q, container) });
+});
+
+app.post("/api/memory", async (c) => {
+  const body = await c.req.json<{
+    container: "journal" | "longterm" | "profile" | "lesson";
+    title: string;
+    content: string;
+    tags?: string[];
+    sourceRef?: string;
+    importance?: number;
+    expiresAt?: number;
+    memoryType?: "fact" | "preference" | "event" | "insight";
+  }>();
+  if (!body.container || !body.title || !body.content) {
+    return c.json({ error: "container, title, content are required" }, 400);
+  }
+  const item = createMemoryItem(body);
+  return c.json({ memory: item }, 201);
+});
+
+app.patch("/api/memory/:id", async (c) => {
+  const id = c.req.param("id");
+  const patch = await c.req.json<{
+    title?: string;
+    content?: string;
+    tags?: string[];
+    container?: "journal" | "longterm" | "profile" | "lesson";
+    importance?: number;
+    expiresAt?: number | null;
+    memoryType?: "fact" | "preference" | "event" | "insight";
+  }>();
+  const item = updateMemoryItem(id, patch);
+  if (!item) return c.json({ error: "not found" }, 404);
+  return c.json({ memory: item });
+});
+
+app.delete("/api/memory/:id", (c) => {
+  const id = c.req.param("id");
+  const deleted = deleteMemoryItem(id);
+  if (!deleted) return c.json({ error: "not found" }, 404);
+  return c.json({ ok: true });
 });
 
 app.get("/api/docs", (c) => {

@@ -86,12 +86,16 @@ export interface EventItem {
 
 export interface MemoryItem {
   id: string;
-  container: "journal" | "longterm";
+  container: "journal" | "longterm" | "profile" | "lesson";
   title: string;
   content: string;
   tags: string[];
   sourceRef: string | null;
   createdAt: number;
+  updatedAt?: number;
+  importance?: number;
+  expiresAt?: number;
+  memoryType?: "fact" | "preference" | "event" | "insight";
 }
 
 export interface DocItem {

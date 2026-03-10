@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const agentsTable = sqliteTable("agents", {
   id: text("id").primaryKey(),
@@ -109,6 +109,10 @@ export const memoryItemsTable = sqliteTable("memory_items", {
   tags: text("tags").notNull().default("[]"),
   sourceRef: text("source_ref"),
   createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at"),
+  importance: real("importance"),
+  expiresAt: integer("expires_at"),
+  memoryType: text("memory_type"),
 });
 
 export const docsTable = sqliteTable("docs", {

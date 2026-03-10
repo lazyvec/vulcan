@@ -169,12 +169,16 @@ function mapEvent(row: typeof eventsTable.$inferSelect): EventItem {
 function mapMemory(row: typeof memoryItemsTable.$inferSelect): MemoryItem {
   return {
     id: row.id,
-    container: row.container as "journal" | "longterm",
+    container: row.container as MemoryItem["container"],
     title: row.title,
     content: row.content,
     tags: parseStringArray(row.tags),
     sourceRef: row.sourceRef,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt ?? undefined,
+    importance: row.importance ?? undefined,
+    expiresAt: row.expiresAt ?? undefined,
+    memoryType: (row.memoryType as MemoryItem["memoryType"]) ?? undefined,
   };
 }
 
@@ -744,12 +748,124 @@ export function appendEvent(input: IngestEventInput): EventItem {
   return mapEvent(event as typeof eventsTable.$inferSelect);
 }
 
-export function getMemoryItems(container?: "journal" | "longterm"): MemoryItem[] {
+export function getMemoryItems(container?: MemoryItem["container"]): MemoryItem[] {
   ensureSchema();
   const rows = db
     .select()
     .from(memoryItemsTable)
     .where(container ? eq(memoryItemsTable.container, container) : undefined)
+    .orderBy(desc(memoryItemsTable.createdAt))
+    .all();
+  return rows.map(mapMemory);
+}
+
+export function createMemoryItem(input: {
+  container: MemoryItem["container"];
+  title: string;
+  content: string;
+  tags?: string[];
+  sourceRef?: string;
+  importance?: number;
+  expiresAt?: number;
+  memoryType?: MemoryItem["memoryType"];
+}): MemoryItem {
+  ensureSchema();
+  const id = randomUUID();
+  const now = Date.now();
+  db.insert(memoryItemsTable)
+    .values({
+      id,
+      container: input.container,
+      title: input.title,
+      content: input.content,
+      tags: JSON.stringify(input.tags ?? []),
+      sourceRef: input.sourceRef ?? null,
+      createdAt: now,
+      updatedAt: now,
+      importance: input.importance ?? null,
+      expiresAt: input.expiresAt ?? null,
+      memoryType: input.memoryType ?? null,
+    })
+    .run();
+  const row = db
+    .select()
+    .from(memoryItemsTable)
+    .where(eq(memoryItemsTable.id, id))
+    .get();
+  return mapMemory(row!);
+}
+
+export function updateMemoryItem(
+  id: string,
+  patch: {
+    title?: string;
+    content?: string;
+    tags?: string[];
+    container?: MemoryItem["container"];
+    importance?: number;
+    expiresAt?: number | null;
+    memoryType?: MemoryItem["memoryType"];
+  },
+): MemoryItem | null {
+  ensureSchema();
+  const existing = db
+    .select()
+    .from(memoryItemsTable)
+    .where(eq(memoryItemsTable.id, id))
+    .get();
+  if (!existing) return null;
+
+  const updates: Record<string, unknown> = { updatedAt: Date.now() };
+  if (patch.title !== undefined) updates.title = patch.title;
+  if (patch.content !== undefined) updates.content = patch.content;
+  if (patch.tags !== undefined) updates.tags = JSON.stringify(patch.tags);
+  if (patch.container !== undefined) updates.container = patch.container;
+  if (patch.importance !== undefined) updates.importance = patch.importance;
+  if (patch.expiresAt !== undefined) updates.expiresAt = patch.expiresAt;
+  if (patch.memoryType !== undefined) updates.memoryType = patch.memoryType;
+
+  db.update(memoryItemsTable)
+    .set(updates)
+    .where(eq(memoryItemsTable.id, id))
+    .run();
+
+  const row = db
+    .select()
+    .from(memoryItemsTable)
+    .where(eq(memoryItemsTable.id, id))
+    .get();
+  return mapMemory(row!);
+}
+
+export function deleteMemoryItem(id: string): boolean {
+  ensureSchema();
+  const result = db
+    .delete(memoryItemsTable)
+    .where(eq(memoryItemsTable.id, id))
+    .run();
+  return result.changes > 0;
+}
+
+export function searchMemoryItems(query: string, container?: MemoryItem["container"]): MemoryItem[] {
+  ensureSchema();
+  const q = query.trim();
+  if (!q) return getMemoryItems(container);
+
+  const conditions = [
+    or(
+      like(memoryItemsTable.title, `%${q}%`),
+      like(memoryItemsTable.content, `%${q}%`),
+      like(memoryItemsTable.tags, `%${q}%`),
+    ),
+  ];
+  if (container) {
+    conditions.push(eq(memoryItemsTable.container, container));
+  }
+
+  const rows = db
+    .select()
+    .from(memoryItemsTable)
+    .where(and(...conditions))
     .orderBy(desc(memoryItemsTable.createdAt))
     .all();
   return rows.map(mapMemory);

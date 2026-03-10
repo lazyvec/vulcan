@@ -333,6 +333,11 @@ function ensureLegacyBootstrap() {
   ensureColumn("agents", "gateway_id", "gateway_id TEXT");
   ensureColumn("agents", "capabilities", "capabilities TEXT NOT NULL DEFAULT '[]'");
 
+  ensureColumn("memory_items", "updated_at", "updated_at INTEGER");
+  ensureColumn("memory_items", "importance", "importance REAL");
+  ensureColumn("memory_items", "expires_at", "expires_at INTEGER");
+  ensureColumn("memory_items", "memory_type", "memory_type TEXT");
+
   // ensureColumn으로 추가된 컬럼에 의존하는 인덱스는 여기서 생성
   sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);
