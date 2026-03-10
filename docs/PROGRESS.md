@@ -2,6 +2,24 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-10 | 브랜치: `main`
 
+## 2026-03-10: 문서 전면 현행화 — Phase 10 완료 반영
+
+### 요약
+실제 코드 상태에 맞춰 모든 프로젝트 문서를 검토·업데이트. 소모된 문서 17개 삭제, 핵심 문서 6개 현행화.
+
+### 변경 파일
+- `CLAUDE.md` — Phase 10 완료 반영, 설계 나침반 통합, 시스템 흐름 현행화
+- `MISSION_CONTROL_CHECKLIST.md` — 전면 재작성 (Docker/PM2/Tunnel/Vault 동기화 포함)
+- `docs/Vulcan_PRODUCT_MASTER.md` — v3 전면 현행화 ("현재/목표" 이분법 제거, 19개 테이블/80개+ API/13개 화면 반영)
+- `docs/Vulcan_BRAND_MASTER.md` — v1.1 안티패턴 섹션 현행화 (에이전트 제어/승인/메트릭스 실제 구현 반영)
+- `docs/ROADMAP.md` — Phase 0~10 완료, Phase 11~12 백로그
+- `docs/BACKLOG.md` — 완료 항목 제거, Vault 아이디어 5개 추가
+
+### 삭제된 파일 (17개)
+README.orig.md, docs/ARCHITECTURE.md, docs/ACCEPTANCE.md, docs/SECURITY.md, docs/OPS_CHECKLIST.md, docs/BRAND.md, docs/E2E_PHASE3_LAST_RUN.md, docs/E2E_PHASE3_REPORT.md, docs/E2E_SESSION_SEND_RUNBOOK.md, docs/ACCOUNT_ROUTING_POLICY.md, docs/AGENT_ROUTING_MATRIX.md, docs/ACCOUNT_STATUS.md, docs/MEGA_PLAN_EXEC_TEMPLATE.md, docs/HERMES_UPGRADE_MINIMAL.md, .omx/plans/open-questions.md, .omx/plans/phase-0-kickoff-2026-03-06.md, .omx/plans/phase-2-batch1-websocket-gateway-rpc-2026-03-06.md
+
+---
+
 ## 2026-03-10: Vault UI 수정 — 입력창 겹침, 구문강조 CSS, 수동싱크, hydration 수정
 
 ### 요약

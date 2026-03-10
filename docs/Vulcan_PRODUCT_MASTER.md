@@ -3,7 +3,7 @@
 > **문서 목적**: Vulcan Mission Control 제품의 유일한 정의 문서(Single Source of Truth).
 > 이 문서 하나로 제품 철학, 시스템 구조, 규칙, 운영 원칙을 완전히 이해할 수 있어야 한다.
 >
-> **최종 갱신**: 2026-03-06 (v2 — 양방향 제어 패러다임 전환)
+> **최종 갱신**: 2026-03-10 (v3 — Phase 0~10 완료 반영)
 
 ---
 
@@ -43,6 +43,7 @@ OpenClaw라는 자율 AI 에이전트 시스템에 투명한 가시성과 양방
 - **Telegram 알림** (중요 이벤트를 기존 Hermes 채널로 통보)
 - **메트릭스/분석** (에이전트 처리량, 태스크 사이클 타임 등)
 - OpenClaw Gateway RPC를 통한 양방향 통신
+- **Vault**: Obsidian 볼트 웹 탐색기 + 에디터 (트리 뷰, 검색, URL 클리핑/딥링크, CodeMirror 6 에디터+툴바, CRUD, 이미지 업로드/D&D, ==highlight==, callout, 코드 구문강조, 첨부파일 서빙, wikilink 네비게이션)
 
 **Vulcan이 하지 않는 것:**
 - RBAC, 멀티테넌시, 팀 기능 (단일 사용자)
@@ -162,175 +163,121 @@ OpenClaw라는 자율 AI 에이전트 시스템에 투명한 가시성과 양방
 
 ### 4.1 기술 스택
 
-**현재 (M0)**:
+**현재 스택 (Phase 10 완료)**:
 
-| 레이어 | 기술 | 선택 이유 |
-|--------|------|----------|
-| 프레임워크 | Next.js 16 (App Router) | 풀스택 단일 서버 |
-| 런타임 | React 19 | 서버 컴포넌트 |
-| 언어 | TypeScript 5.9 (strict) | 타입 안전성 |
-| DB | SQLite (better-sqlite3) + Drizzle ORM | 초기 단순성 |
-| 스타일 | Tailwind CSS v4 + CSS 변수 | 디자인 토큰 기반 |
-| 실시간 | SSE (Server-Sent Events) | 초기 단순성 |
-| 프로세스 | PM2 | 자동 재시작 |
-
-**목표 (Phase 1~):**
-
-| 레이어 | 기술 | 전환 Phase |
-|--------|------|-----------|
-| 프론트엔드 | Next.js 16 (UI 전용) | Phase 1 |
-| 백엔드 | **Hono** (TypeScript) | Phase 1 |
-| DB | **PostgreSQL** + Drizzle ORM (pg dialect) | Phase 1 |
-| 캐시/큐 | **Redis** + ioredis + **BullMQ** | Phase 1 |
-| 실시간 | **WebSocket** (Hono ↔ 프론트엔드) | Phase 2 |
-| OpenClaw 통신 | **Gateway WebSocket RPC** | Phase 2 |
-| 테스트 | Vitest + Playwright | Phase 9 |
-| 배포 | **Docker Compose** | Phase 10 |
+| 레이어 | 기술 | 비고 |
+|--------|------|------|
+| 프론트엔드 | Next.js 16 (App Router, React 19) | UI 전용, 포트 3001 |
+| 백엔드 | Hono 4 (TypeScript) | REST + WebSocket + BullMQ Worker, 포트 8787 |
+| DB | PostgreSQL 17 + Drizzle ORM (pg dialect) | Docker Compose |
+| 캐시/큐 | Redis 7 + ioredis + BullMQ | Docker Compose |
+| 실시간 | WebSocket (Hono ↔ 프론트엔드) + Redis Pub/Sub | SSE 폴백 |
+| OpenClaw 통신 | Gateway WebSocket RPC (ws://127.0.0.1:18789) | 양방향 |
+| 스타일 | Tailwind CSS v4 + CSS 변수 디자인 토큰 | |
+| 에디터 | CodeMirror 6 (Vault 마크다운 에디터) | |
+| 테스트 | Vitest 63개+ · Playwright 16개+ | Husky + lint-staged |
+| 인프라 | Docker Compose (PostgreSQL+Redis), PM2 (web+api+adapter) | |
+| 외부 접근 | Cloudflare Tunnel + Tailscale | |
 
 ### 4.2 데이터 플로우
 
-**현재 (M0) — 단방향 관찰:**
+**수집 경로**:
 ```
-OpenClaw (Hermes 실행)
-  ↓ 로그 파일 (/tmp/openclaw/*.log)
-  ↓
-adapter-openclaw (2초 폴링)
-  ↓
-POST /api/adapter/ingest → SQLite → SSE → UI
+OpenClaw Gateway → Hono POST /api/adapter/ingest → PostgreSQL → WebSocket broadcast
 ```
 
-**목표 (Phase 2~) — 양방향 제어:**
+**실시간**:
 ```
-사용자
-  ↓ Vulcan GUI (Next.js)
-  ↓ WebSocket
-  ↓
-Hono API (백엔드)
-  ├── PostgreSQL (영속 저장)
-  ├── Redis Pub/Sub (실시간 팬아웃)
-  ├── BullMQ (비동기 커맨드 큐)
-  └── Gateway RPC Client ←WebSocket→ OpenClaw Gateway
-                                         │
-                                    ┌────┼────┐
-                                    ▼    ▼    ▼
-                                 Hermes Vesta Atlas ...
+Hono WebSocket (/api/ws) + Redis Pub/Sub, SSE (/api/stream) 폴백
 ```
 
-### 4.3 데이터 모델
+**제어 경로**:
+```
+사용자 → Next.js UI → Hono API → BullMQ 큐 → Gateway RPC → 에이전트
+```
 
-**현재 (M0) — 7개 테이블:**
+**Vault**:
+```
+Obsidian 볼트 ↔ NAS WebDAV ↔ rclone bisync (5분 cron) ↔ 서버 로컬 → Hono API
+```
 
-| 테이블 | 핵심 필드 | 역할 |
-|--------|----------|------|
-| **agents** | id, name, roleTags[], status, statusSince, lastSeenAt | 에이전트 프로필 + 실시간 상태 |
-| **projects** | id, name, status, progress, priority, ownerAgentId | 프로젝트 추적 |
-| **tasks** | id, projectId, title, assigneeAgentId, lane | 칸반 태스크 |
-| **events** | id, ts, source, agentId, type, summary, payloadJson | 이벤트 로그 |
-| **memory_items** | id, container, title, content, tags[] | 기억 저장소 |
-| **docs** | id, title, tags[], format, content | 문서 저장소 |
-| **schedules** | id, name, cronOrInterval, status, ownerAgentId | 스케줄 |
+### 4.3 데이터 모델 (19개 테이블)
 
-**목표 — 추가 테이블 (Phase 3~):**
+| 테이블 | 핵심 필드 | 역할 | Phase |
+|--------|----------|------|-------|
+| **agents** | id, name, roleTags[], status, statusSince, lastSeenAt | 에이전트 프로필 + 실시간 상태 | M0 |
+| **projects** | id, name, status, progress, priority, ownerAgentId | 프로젝트 추적 | M0 |
+| **tasks** | id, projectId, title, assigneeAgentId, lane, priority, due_at, tags | 칸반 태스크 | M0→P4 |
+| **task_dependencies** | id, taskId, dependsOnTaskId | 태스크 간 의존성 | P4 |
+| **task_comments** | id, taskId, authorType, authorId, content | 태스크 코멘트 | P4 |
+| **events** | id, ts, source, agentId, type, summary, payloadJson | 이벤트 로그 (28종+) | M0→P6 |
+| **memory_items** | id, container, title, content, tags[], importance, expiresAt | 기억 저장소 | M0→P6 |
+| **docs** | id, title, tags[], format, content | 문서 저장소 | M0 |
+| **schedules** | id, name, cronOrInterval, status, ownerAgentId | 스케줄 | M0 |
+| **gateways** | id, url, status | OpenClaw Gateway 연결 정보 | P3 |
+| **agent_commands** | id, agentId, type, status, result | 에이전트 커맨드 이력 | P3 |
+| **skills** | id, name, description, category | 스킬 메타데이터 | P5 |
+| **agent_skills** | agentId, skillId | 에이전트-스킬 매핑 | P5 |
+| **skill_registry** | id, name, source, metadata | 스킬 레지스트리 | P5 |
+| **notification_preferences** | id, eventType, channel, enabled | 알림 설정 | P7 |
+| **notification_logs** | id, eventType, channel, status, sentAt | 알림 발송 이력 | P7 |
+| **approval_policies** | id, eventPattern, requiredApprovers, timeout | 승인 정책 | P8 |
+| **approvals** | id, policyId, status, requestedAt, resolvedAt | 승인 요청 | P8 |
+| **audit_log** | id, action, entityType, entityId, userId, ts | 모든 mutation 감사 로그 | P3 |
 
-| 테이블 | Phase | 역할 |
-|--------|-------|------|
-| **gateways** | 3 | OpenClaw Gateway 연결 정보 |
-| **agent_commands** | 3 | 에이전트 커맨드 이력 (큐잉, 결과) |
-| **audit_log** | 3 | 모든 mutation 감사 로그 |
-| **task_dependencies** | 4 | 태스크 간 의존성 |
-| **task_comments** | 4 | 태스크 코멘트 |
-| **boards** | 4 | 태스크 그룹핑 |
-| **skills** | 5 | 스킬 메타데이터 |
-| **agent_skills** | 5 | 에이전트-스킬 매핑 |
-| **notification_preferences** | 7 | 알림 설정 |
-| **approvals** | 8 | 승인 요청 |
-| **approval_policies** | 8 | 승인 정책 |
+### 4.4 API 엔드포인트 (80개+)
 
-### 4.4 API 엔드포인트
-
-**현재 (M0):**
-
-| Method | Path | 역할 |
-|--------|------|------|
-| GET | `/api/agents` | 에이전트 목록 |
-| GET | `/api/projects` | 프로젝트 목록 |
-| GET | `/api/tasks` | 태스크 목록 (lane/q 필터) |
-| PATCH | `/api/tasks/:id` | 태스크 lane 변경 |
-| GET | `/api/events` | 이벤트 목록 (since 필터) |
-| POST | `/api/events` | 이벤트 추가 |
-| GET | `/api/stream` | SSE 실시간 스트림 |
-| POST | `/api/adapter/ingest` | 어댑터 이벤트 수집 |
-| GET | `/api/memory` | 메모리 항목 |
-| GET | `/api/docs` | 문서 검색 |
-| GET | `/api/schedule` | 스케줄 목록 |
-| GET | `/api/health` | 시스템 상태 |
-
-**목표 — 추가 엔드포인트 (Phase 3~):**
-
-| Method | Path | Phase | 역할 |
-|--------|------|-------|------|
-| POST | `/api/agents` | 3 | 에이전트 생성 |
-| PUT | `/api/agents/:id` | 3 | 설정 수정 |
-| DELETE | `/api/agents/:id` | 3 | 비활성화 |
-| POST | `/api/agents/:id/delegate` | 3 | Hermes 경유 위임 |
-| POST | `/api/agents/:id/command` | 3 | 직접 제어 |
-| POST | `/api/agents/:id/pause` | 3 | 일시정지 |
-| POST | `/api/agents/:id/resume` | 3 | 재개 |
-| POST | `/api/tasks/:id/assign` | 4 | 에이전트 할당 |
-| POST | `/api/tasks/:id/comment` | 4 | 코멘트 |
-| POST | `/api/tasks/:id/deps` | 4 | 의존성 |
-| GET | `/api/skills` | 5 | 스킬 목록 |
-| POST | `/api/agents/:id/skills` | 5 | 스킬 설치 |
-| GET | `/api/activity` | 6 | Activity 피드 |
-| GET | `/api/approvals` | 8 | 승인 목록 |
-| POST | `/api/approvals/:id/approve` | 8 | 승인 |
+| 카테고리 | 주요 엔드포인트 | 설명 |
+|----------|----------------|------|
+| **에이전트** | GET/POST/PUT/DELETE /api/agents, POST /:id/pause,resume,command,delegate | CRUD + 생명주기 제어 |
+| **태스크** | GET/POST/PATCH /api/tasks, /:id/comment, /:id/deps | 6-lane 칸반 + 의존성 + 코멘트 |
+| **이벤트** | GET /api/events, POST /api/adapter/ingest | 28종+ 이벤트 수집·조회 |
+| **Activity** | GET /api/activity, /api/activity/stats | 필터링 + 페이지네이션 + 통계 |
+| **프로젝트** | GET/POST/PATCH /api/projects | 프로젝트 CRUD |
+| **메모리** | GET/POST/PATCH/DELETE /api/memory | journal/longterm/profile/lesson |
+| **문서** | GET/POST /api/docs | 문서 CRUD + 검색 |
+| **스킬** | GET /api/skills, POST /api/agents/:id/skills | 마켓플레이스 + 설치/제거 |
+| **승인** | GET/POST /api/approvals, /api/approval-policies | 승인 요청 + 정책 관리 |
+| **알림** | GET/PATCH /api/notification-preferences | 이벤트별 채널 구독 |
+| **Vault** | GET/POST/PUT/DELETE /api/vault/notes, /search, /clip, /upload | Obsidian 볼트 CRUD + 검색 + 클리핑 |
+| **Gateway** | GET/POST /api/gateway/*, /api/cron/* | Gateway RPC 프록시 (config/sessions/cron) |
+| **실시간** | WebSocket /api/ws, SSE /api/stream | 실시간 업데이트 |
+| **시스템** | GET /api/health | DB/Redis/Gateway/uptime |
 
 ---
 
 ## 5. 기능 목록
 
-### 5.1 M0 (완료)
+### 5.1 완료된 기능 (Phase 0~10)
 
-| 기능 | 상태 | 설명 |
-|------|------|------|
-| **Live Activity Panel** | ✅ | SSE 기반 실시간 이벤트 피드 |
-| **Office View** | ✅ | 에이전트 상태 카드 + 오피스 존 매핑 |
-| **Kanban Board** | ✅ | 3-lane 태스크 관리 |
-| **Memory Board** | ✅ | Journal + Long-term 메모리 열람 |
-| **Docs Explorer** | ✅ | 문서 목록 + 뷰어 |
-| **Sidebar Navigation** | ✅ | 7개 화면 |
-| **OpenClaw Adapter** | ✅ | 로그 폴링, 이벤트 분류, 중복 제거 |
-| **PWA** | ✅ | manifest, Service Worker, 오프라인 캐시 |
-| **보안 헤더** | ✅ | CORS, X-Frame-Options 등 |
-| **Health Endpoint** | ✅ | DB, SSE, uptime, git SHA |
+| 기능 | Phase | 설명 |
+|------|-------|------|
+| **Live Activity Panel** | M0→P6 | WebSocket 실시간 이벤트 피드, 카테고리 필터, 무한 스크롤, 소스 링크 |
+| **Office View** | M0 | 에이전트 상태 카드 + 오피스 존 매핑 |
+| **Kanban Board** | M0→P4 | 6-lane 태스크 관리 (@dnd-kit), 의존성, 우선순위, 코멘트 |
+| **TaskDetailModal** | P4 | 태스크 상세 뷰 (코멘트, 의존성, 태그, 할당) |
+| **Memory Board** | M0→P6 | journal/longterm/profile/lesson, importance, expiresAt |
+| **Docs Explorer** | M0 | 문서 목록 + 뷰어 + 검색 |
+| **Vault** | P10 | Obsidian 볼트 웹 탐색기 + CodeMirror 6 에디터 + 검색 + 클리핑/딥링크 + 이미지 업로드 + wikilink + highlight/callout/코드 구문강조 |
+| **에이전트 생명주기** | P3 | CRUD, pause/resume, delegate, command + 확인 단계 + 감사 로깅 |
+| **스킬 마켓플레이스** | P5 | 스킬 카탈로그 + 에이전트별 설치/제거 + Gateway 동기화 |
+| **Activity/Audit** | P6 | 28종+ 이벤트, recharts 메트릭스 대시보드 |
+| **Telegram 알림** | P7 | Herald Bot Long Polling, notification_preferences |
+| **승인/거버넌스** | P8 | approval_policies, Telegram 인라인 키보드 승인, 자동 타임아웃 |
+| **테스트/CI** | P9 | Vitest 63개+ · Playwright 16개+ · Husky + lint-staged |
+| **인프라** | P10 | Docker Compose (PostgreSQL+Redis), PM2 (web+api+adapter) |
+| **Sidebar Navigation** | M0 | 13개 화면 |
+| **PWA** | M0 | manifest, Service Worker |
+| **보안** | M0 | Cloudflare Access, CORS, X-Frame-Options |
 
-### 5.2 Phase 0~3: 인프라 + 양방향 제어 (계획)
-
-| Phase | 기능 | 설명 |
-|-------|------|------|
-| 0 | 모노레포 + 공유 패키지 | pnpm 워크스페이스, 타입 공유, Drizzle 마이그레이션 |
-| 1 | PostgreSQL + Redis + Hono | DB 전환, 백엔드 분리, Redis Pub/Sub |
-| 2 | WebSocket + Gateway RPC | SSE → WebSocket, OpenClaw 직접 연결 |
-| 3 | 에이전트 생명주기 관리 | CRUD, 이중 제어, 커맨드 큐, 감사 로깅 |
-
-### 5.3 Phase 4~8: 기능 고도화 (계획)
+### 5.2 백로그 (Phase 11~12)
 
 | Phase | 기능 | 설명 |
 |-------|------|------|
-| 4 | 태스크 고도화 | 의존성, 우선순위, 6-lane, DnD, 코멘트 |
-| 5 | 스킬 마켓플레이스 | 스킬 조회/설치/제거, Gateway 동기화 |
-| 6 | Activity/Audit + 메트릭스 | 이벤트 15종+, 대시보드, 차트 |
-| 7 | Telegram 알림 | 기존 채널로 중요 이벤트 알림 |
-| 8 | 승인/거버넌스 | human-in-the-loop, 자동 승인 타임아웃 |
+| 11 | Observability 고도화 | LLM 트래픽 계측, PII 플래그, 감사 추적, 운영 가드레일 |
+| 12 | agency-agents 레퍼런스 | 자율 학습/피드백 루프, 협업 프로토콜, 멀티모달 |
 
-### 5.4 Phase 9~10: 품질 + 배포 (계획)
-
-| Phase | 기능 | 설명 |
-|-------|------|------|
-| 9 | 테스트 + CI/CD | Vitest, Playwright, GitHub Actions |
-| 10 | Docker 배포 | Docker Compose, PM2 대체 |
-
-### 5.5 Out of Scope (유지)
+### 5.3 Out of Scope (유지)
 
 - RBAC, 멀티테넌시, 팀 기능 (단일 사용자 시스템)
 - 외부 사용자 인증 (Cloudflare Access로 충분)
@@ -383,16 +330,18 @@ Hono API (백엔드)
 
 | 화면 | 경로 | 핵심 컴포넌트 | Phase |
 |------|------|--------------|-------|
-| Tasks | `/tasks` | KanbanBoard + LiveActivityPanel | M0 |
-| Calendar | `/calendar` | 스케줄 뷰 | M0 |
-| Projects | `/projects` | 프로젝트 목록 | M0 |
-| Memory | `/memory` | MemoryBoard | M0 |
-| Docs | `/docs` | DocsExplorer | M0 |
-| Team | `/team` | 에이전트 프로필 + **제어 패널** | M0 → Phase 3 확장 |
 | Office | `/office` | OfficeView + Live Feed | M0 |
-| **Skills** | `/skills` | 스킬 마켓플레이스 | Phase 5 |
-| **Analytics** | `/analytics` | 메트릭스 대시보드 | Phase 6 |
-| **Approvals** | `/approvals` | 승인 대기 목록 | Phase 8 |
+| Tasks | `/tasks` | KanbanBoard (6-lane @dnd-kit) + TaskDetailModal | M0→P4 |
+| Team | `/team` | 에이전트 프로필 + 제어 패널 (pause/resume/command) | M0→P3 |
+| Projects | `/projects` | 프로젝트 목록 + 진행률 | M0 |
+| Calendar | `/calendar` | 스케줄 뷰 | M0 |
+| Memory | `/memory` | MemoryBoard (journal/longterm/profile/lesson) | M0 |
+| Docs | `/docs` | DocsExplorer | M0 |
+| Vault | `/vault` | VaultExplorer + MarkdownEditor (CodeMirror 6) | P10 |
+| Activity | `/activity` | Activity 피드 + 메트릭스 대시보드 (recharts) | P6 |
+| Skills | `/skills` | 스킬 마켓플레이스 (Catalog + Per Agent) | P5 |
+| Approvals | `/approvals` | 승인 대기 목록 + 정책 관리 | P8 |
+| Notifications | `/notifications` | 알림 설정 (이벤트별 채널 구독) | P7 |
 
 ### 7.2 레이아웃
 
@@ -418,28 +367,28 @@ Hono API (백엔드)
 
 ## 9. 운영
 
-### 9.1 프로세스 (현재)
+### 9.1 프로세스
 
-| 프로세스 | PM2 이름 | 역할 |
-|----------|----------|------|
-| Next.js 서버 | `vulcan-mc` | 웹 UI + API (포트 3001) |
-| 어댑터 | `vulcan-adapter` | OpenClaw 로그 폴링 |
+| 프로세스 | PM2 이름 | 역할 | 포트 |
+|----------|----------|------|------|
+| Next.js (web) | `vulcan-mc` | UI 전용 | 3001 |
+| Hono (api) | `vulcan-api` | REST + WebSocket + BullMQ Worker | 8787 |
+| 어댑터 | `vulcan-adapter` | OpenClaw Gateway 어댑터 | - |
+| PostgreSQL | (Docker) | 데이터 저장 | 5432 |
+| Redis | (Docker) | Pub/Sub + 큐 | 6379 |
 
-### 9.2 프로세스 (목표, Phase 1+)
+### 9.2 도메인
 
-| 프로세스 | 역할 |
-|----------|------|
-| Next.js (web) | UI 전용 |
-| Hono (api) | REST + WebSocket + Gateway RPC |
-| BullMQ Worker | 커맨드 큐, 알림, 헬스체크 |
-| PostgreSQL | 데이터 저장 |
-| Redis | Pub/Sub, 큐 |
+- 프로덕션: `https://vulcan.yomacong.com` (Cloudflare Tunnel)
+- Tailscale: `https://vulcan.tail9732fd.ts.net`
+- 로컬: `http://127.0.0.1:3001` (web) / `http://127.0.0.1:8787` (api)
 
-### 9.3 도메인
+### 9.3 Vault 동기화
 
-- 프로덕션: `https://vulcan.yomacong.com`
-- 로컬: `http://127.0.0.1:3001`
-- Cloudflared 터널 경유
+- NAS: Synology (Tailscale `lazyvec-nas`), WebDAV `http://lazyvec-nas:5005/Obsidian/`
+- 로컬 경로: `~/ObsidianVault/lazyvec/`
+- 동기화: rclone bisync (5분 cron)
+- 흐름: iPhone(Obsidian) → NAS(Remotely Sync) → 서버(rclone bisync) → Vulcan API
 
 ---
 
@@ -447,20 +396,21 @@ Hono API (백엔드)
 
 > 상세: `docs/ROADMAP.md` | 실행 체크리스트: `docs/WORK_PLAN.md`
 
-| Phase | 핵심 | 복잡도 | 상태 |
-|-------|------|--------|------|
-| **M0** | 관찰 대시보드, SSE, 칸반, 메모리, 문서, PWA | - | ✅ 완료 |
-| **0** | Foundation (모노레포 + 공유 패키지) | M | 대기 |
-| **1** | PostgreSQL + Redis + Hono 백엔드 | L | 대기 |
-| **2** | WebSocket + Gateway RPC | M | 대기 |
-| **3** | 에이전트 생명주기 관리 | XL | 대기 |
-| **4** | 태스크 시스템 고도화 | L | 대기 |
-| **5** | 스킬 마켓플레이스 | L | 대기 |
-| **6** | Activity/Audit + 메트릭스 | M | 대기 |
-| **7** | Telegram 알림 | S | 대기 |
-| **8** | 승인/거버넌스 | M | 대기 |
-| **9** | 테스트 + CI/CD | M | 대기 |
-| **10** | Docker 배포 | M | 대기 |
+| Phase | 핵심 | 상태 |
+|-------|------|------|
+| **0** | Foundation (모노레포 + 공유 패키지) | ✅ 완료 |
+| **1** | PostgreSQL + Redis + Hono 백엔드 | ✅ 완료 |
+| **2** | WebSocket + Gateway RPC | ✅ 완료 |
+| **3** | 에이전트 생명주기 관리 | ✅ 완료 |
+| **4** | 태스크 시스템 고도화 | ✅ 완료 |
+| **5** | 스킬 마켓플레이스 | ✅ 완료 |
+| **6** | Activity/Audit + 메트릭스 | ✅ 완료 |
+| **7** | Telegram 알림 (Herald Bot Long Polling) | ✅ 완료 |
+| **8** | 승인/거버넌스 (Telegram 인라인 키보드) | ✅ 완료 |
+| **9** | 테스트 + CI/CD | ✅ 완료 |
+| **10** | Docker 배포 (인프라 Docker, App PM2) | ✅ 완료 |
+| **11** | Observability + Governance 고도화 | 백로그 |
+| **12** | agency-agents 레퍼런스 트랙 | 백로그 |
 
 ---
 
@@ -470,16 +420,18 @@ Hono API (백엔드)
 
 | 항목 | 결정 | 근거 |
 |------|------|------|
-| DB | PostgreSQL (Phase 1 전환) | 프로덕션급, 외래키, JSONB, 확장성 |
-| 백엔드 | Hono (TypeScript, 분리) | WebSocket, 큐, Gateway 연결에 필수 |
+| DB | PostgreSQL 17 (Drizzle ORM pg dialect) | 프로덕션급, 외래키, JSONB, 확장성 |
+| 백엔드 | Hono 4 (REST + WebSocket + BullMQ) | WebSocket, 큐, Gateway 연결에 필수 |
 | OpenClaw 통신 | Gateway WebSocket RPC | CLI 호출 대비 안정성, 양방향, 실시간 |
 | 에이전트 모델 | 단일 Gateway 내 멀티 에이전트 | OpenClaw 아키텍처 |
 | 제어 모드 | 이중 (Hermes 위임 + 직접) | 유연성 |
 | Telegram | 별도 봇 불필요, 기존 채널 활용 | Hermes 봇이 이미 존재 |
-| 실시간 | WebSocket (Phase 2 전환) | 양방향 통신 필수 |
+| 실시간 | WebSocket + Redis Pub/Sub (SSE 폴백) | 양방향 통신 필수 |
 | 인증 | 없음 (단일 사용자) | Cloudflare Access로 충분 |
 | CSS | Tailwind v4 + 디자인 토큰 | 유지 |
-| 프로세스 관리 | PM2 → Docker Compose (Phase 10) | 점진적 전환 |
+| 프로세스 관리 | Docker Compose (PostgreSQL+Redis) + PM2 (App) | 점진적 전환 |
+| Vault 동기화 | rclone bisync (NAS WebDAV ↔ 로컬, 5분 cron) | Obsidian 볼트 동기화 |
+| 에디터 | CodeMirror 6 (마크다운 에디터 + 툴바 + 단축키) | Vault 편집기 |
 
 ### 11.2 미정/결정 필요
 
@@ -488,8 +440,6 @@ Hono API (백엔드)
 | Proactive Memory 기술 | 조사 중 | mem0 / supermemory / memU |
 | Calendar 구현 방식 | 미정 | 자체 구현 vs 외부 연동 |
 | 에이전트 아바타 | placeholder | 픽셀 아트 vs SVG vs AI 생성 |
-| 승인 정책 세부 | Phase 8 | 어떤 작업에 승인 필요한지 |
-| 스킬 레지스트리 소스 | Phase 5 | Git URL vs OpenClaw 공식 |
 
 ---
 
@@ -517,7 +467,7 @@ Hono API (백엔드)
 
 ### Q6. 별도 Telegram 봇이 필요한가요?
 
-**A:** 아니요. 기존 Hermes의 Telegram 채널을 활용합니다. Vulcan은 중요 이벤트를 해당 채널로 알림만 전송합니다.
+**A:** 아니요. 기존 Hermes의 Telegram 채널을 활용합니다. Herald Bot(Long Polling)이 중요 이벤트를 Telegram 채널로 알림 전송 + 인라인 키보드 승인을 처리합니다.
 
 ---
 
@@ -525,6 +475,7 @@ Hono API (백엔드)
 
 | 날짜 | 버전 | 내용 |
 |------|------|------|
+| 2026-03-10 | 3.0 | Phase 0~10 완료 반영. 기술 스택·데이터 모델·API·기능·운영 전면 현행화. Vault 추가. |
 | 2026-03-06 | 2.0 | 양방향 제어 패러다임 전환. Hono 백엔드, PostgreSQL, Gateway RPC, 스킬, 승인 체계 추가 |
 | 2026-03-06 | 1.0 | 최초 Product Master 문서 작성 (관찰 전용) |
 
