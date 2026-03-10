@@ -95,43 +95,6 @@ export async function readVaultNote(relPath: string): Promise<VaultNote> {
   };
 }
 
-export async function searchVaultNotes(query: string): Promise<VaultNoteSummary[]> {
-  const vaultPath = getVaultPath();
-  const files: string[] = [];
-  await walk(vaultPath, files);
-
-  const q = query.toLowerCase();
-  const results: VaultNoteSummary[] = [];
-
-  for (const f of files) {
-    try {
-      const raw = await readFile(f, "utf-8");
-      const { data: frontmatter, content } = matter(raw);
-      const rel = relative(vaultPath, f);
-      const titleStr = (frontmatter.title as string) ?? basename(rel, ".md");
-
-      const haystack = [
-        rel,
-        titleStr,
-        content,
-        JSON.stringify(frontmatter),
-      ].join(" ").toLowerCase();
-
-      if (haystack.includes(q)) {
-        const info = await stat(f);
-        results.push({
-          path: rel,
-          title: titleStr,
-          frontmatter,
-          modified: info.mtime.toISOString(),
-        });
-      }
-    } catch {
-      // 읽기 실패한 파일은 건너뜀
-    }
-  }
-  return results;
-}
 
 export async function writeVaultNote(
   relPath: string,
