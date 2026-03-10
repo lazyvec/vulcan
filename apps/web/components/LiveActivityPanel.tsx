@@ -78,12 +78,12 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: 
 };
 
 const ICON_COLOR: Record<string, string> = {
-  agent: "text-emerald-400",
-  task: "text-blue-400",
-  command: "text-amber-400",
-  skill: "text-violet-400",
-  system: "text-orange-400",
-  gateway: "text-cyan-400",
+  agent: "text-[var(--color-success-text)]",
+  task: "text-[var(--color-info-text)]",
+  command: "text-[var(--color-warning-text)]",
+  skill: "text-purple-400",
+  system: "text-[var(--color-primary)]",
+  gateway: "text-[var(--color-info)]",
   legacy: "text-[var(--color-tertiary)]",
 };
 
@@ -120,7 +120,7 @@ function rangeStart(range: ActivityRange) {
 
 export function LiveActivityPanel({
   initialEvents,
-  title = "Live Activity",
+  title = "라이브 활동",
   onEvent,
 }: LiveActivityPanelProps) {
   const { paused } = useMissionControl();
@@ -258,34 +258,34 @@ export function LiveActivityPanel({
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-base font-semibold text-[var(--color-foreground)]">{title}</h2>
         <span className="text-xs text-[var(--color-tertiary)]">
-          {summaryStats.total} events
+          {summaryStats.total}건
           {summaryStats.errors > 0 && (
             <span className="ml-1 text-red-400">
-              · {summaryStats.errors} errors
+              · 에러 {summaryStats.errors}건
             </span>
           )}
-          {" (1h)"}
+          {" (1시간)"}
         </span>
         <span
           className={`vulcan-chip text-xs font-bold ${
             paused
-              ? "bg-amber-600/20 text-amber-300"
+              ? "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]"
               : wsConnected
-                ? "bg-green-600/20 text-green-300"
-                : "bg-blue-600/20 text-blue-300"
+                ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]"
+                : "bg-[var(--color-info-bg)] text-[var(--color-info-text)]"
           }`}
         >
-          {paused ? "PAUSED" : wsConnected ? "LIVE · WS" : "LIVE · POLL"}
+          {paused ? "일시정지" : wsConnected ? "라이브 · WS" : "라이브 · 폴링"}
         </span>
         <select
           className="vulcan-input w-auto"
-          aria-label="Select time range"
+          aria-label="시간 범위 선택"
           value={range}
           onChange={(event) => setRange(event.target.value as ActivityRange)}
         >
-          <option value="1h">Last hour</option>
-          <option value="today">Today</option>
-          <option value="all">All</option>
+          <option value="1h">지난 1시간</option>
+          <option value="today">오늘</option>
+          <option value="all">전체</option>
         </select>
       </div>
 
@@ -318,7 +318,7 @@ export function LiveActivityPanel({
       <div className="space-y-3 overflow-auto pr-1">
         {grouped.length === 0 ? (
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-[var(--color-tertiary)]">No recent activity.</p>
+            <p className="text-sm text-[var(--color-tertiary)]">최근 활동이 없습니다.</p>
           </div>
         ) : (
           <AnimatePresence initial={false}>
@@ -345,7 +345,7 @@ export function LiveActivityPanel({
                       {group}
                     </Link>
                     <span className="text-xs font-normal text-[var(--color-tertiary)]">
-                      {items.length} events
+                      {items.length}건
                     </span>
                   </p>
                   <div className="space-y-1.5">
@@ -388,7 +388,7 @@ export function LiveActivityPanel({
                                   href="/tasks"
                                   className="text-[var(--color-primary)] hover:underline"
                                 >
-                                  task
+                                  태스크
                                 </Link>
                               )}
                             </p>
@@ -407,7 +407,7 @@ export function LiveActivityPanel({
         <div ref={sentinelRef} className="h-1" />
         {loadingMore && (
           <p className="py-2 text-center text-xs text-[var(--color-tertiary)]">
-            Loading...
+            로딩 중...
           </p>
         )}
       </div>

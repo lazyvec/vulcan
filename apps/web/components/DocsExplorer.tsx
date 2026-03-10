@@ -43,7 +43,7 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
           className="vulcan-input max-w-sm"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search docs..."
+          placeholder="문서 검색..."
         />
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
@@ -55,13 +55,13 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
               onClick={() => setSelectedId(doc.id)}
               className={`rounded-lg border p-4 text-left transition-colors ${
                 doc.id === selected?.id
-                  ? "border-primary/80 bg-primary/10"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border)]"
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]"
               }`}
             >
               <h3
                 className={`font-semibold ${
-                  doc.id === selected?.id ? "text-primary" : "text-[var(--color-foreground)]"
+                  doc.id === selected?.id ? "text-[var(--color-primary)]" : "text-[var(--color-foreground)]"
                 }`}
               >
                 {doc.title}
@@ -74,7 +74,7 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
           ))}
           {filtered.length === 0 && (
             <div className="flex h-24 items-center justify-center rounded-lg border-2 border-dashed border-[var(--color-border)]">
-              <p className="text-sm text-[var(--color-tertiary)]">No documents found.</p>
+              <p className="text-sm text-[var(--color-tertiary)]">문서를 찾을 수 없습니다.</p>
             </div>
           )}
         </section>
@@ -101,7 +101,7 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
             </>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-[var(--color-tertiary)]">Select a document to view its content.</p>
+              <p className="text-[var(--color-tertiary)]">문서를 선택하면 내용이 표시됩니다.</p>
             </div>
           )}
         </section>

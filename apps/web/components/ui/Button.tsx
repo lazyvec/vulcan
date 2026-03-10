@@ -1,0 +1,48 @@
+import { forwardRef } from "react";
+import { Loader2 } from "lucide-react";
+
+type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
+type ButtonSize = "sm" | "md" | "lg";
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  loading?: boolean;
+  icon?: React.ReactNode;
+}
+
+const variantStyles: Record<ButtonVariant, string> = {
+  primary:
+    "border-[color-mix(in_oklab,var(--color-primary)_50%,var(--color-border)_50%)] bg-[var(--color-primary-12)] text-[var(--color-primary)] hover:bg-[color-mix(in_oklab,var(--color-primary)_20%,transparent_80%)] hover:text-[var(--color-primary-hover)] hover:border-[var(--color-primary)]",
+  secondary:
+    "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+  ghost:
+    "border-transparent bg-transparent text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]",
+  destructive:
+    "border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)] hover:bg-[rgba(248,113,113,0.2)]",
+};
+
+const sizeStyles: Record<ButtonSize, string> = {
+  sm: "px-2 py-1 text-xs gap-1",
+  md: "px-3 py-2 text-xs gap-1.5",
+  lg: "px-4 py-2.5 text-sm gap-2",
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    { variant = "secondary", size = "md", loading, icon, children, className = "", disabled, ...rest },
+    ref,
+  ) {
+    return (
+      <button
+        ref={ref}
+        className={`inline-flex items-center justify-center rounded-[var(--radius-control)] border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+        disabled={disabled || loading}
+        {...rest}
+      >
+        {loading ? <Loader2 size={size === "sm" ? 12 : 14} className="animate-spin" /> : icon}
+        {children}
+      </button>
+    );
+  },
+);

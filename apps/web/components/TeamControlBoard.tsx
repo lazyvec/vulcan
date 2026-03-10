@@ -1,735 +1,112 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { OFFICE_ZONES, STATUS_COLORS, STATUS_LABELS } from "@/lib/statusMap";
 import type { Agent, AgentStatus } from "@/lib/types";
+import { useToast } from "@/components/ui/Toast";
+import { Button } from "@/components/ui/Button";
+import { AgentCommandPanel } from "@/components/team/AgentCommandPanel";
+import { AgentLifecyclePanel } from "@/components/team/AgentLifecyclePanel";
+import { AgentRoster } from "@/components/team/AgentRoster";
+import { GatewayOpsPanel } from "@/components/team/GatewayOpsPanel";
 
 interface TeamControlBoardProps {
   initialAgents: Agent[];
 }
 
-const STATUS_ORDER: AgentStatus[] = [
-  "executing",
-  "writing",
-  "researching",
-  "syncing",
-  "idle",
-  "error",
-];
-
-function toErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function normalizeTaskLabel(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, "-");
-}
-
-function isTaskLabelValid(value: string) {
-  return /^[a-z0-9][a-z0-9-_]{1,63}$/.test(value);
-}
-
-function confirmAction(message: string) {
-  if (typeof window === "undefined") {
-    return true;
-  }
-  return window.confirm(message);
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-  return value as Record<string, unknown>;
-}
-
-function toPrettyJson(value: unknown) {
-  try {
-    return JSON.stringify(value ?? {}, null, 2);
-  } catch {
-    return "{}";
-  }
-}
+const STATUS_ORDER: AgentStatus[] = ["executing", "writing", "researching", "syncing", "idle", "error"];
 
 function isPaused(agent: Agent | null) {
-  const config = asRecord(agent?.config);
+  const config = agent?.config as Record<string, unknown> | null;
   return config?.paused === true;
-}
-
-async function fetchErrorMessage(response: Response) {
-  try {
-    const data = (await response.json()) as { error?: string };
-    if (data?.error) {
-      return `${response.status}: ${data.error}`;
-    }
-  } catch {
-    // Ignore parse errors.
-  }
-  return `${response.status}: request failed`;
-}
-
-function actionButtonClassName() {
-  return "rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-60";
 }
 
 export function TeamControlBoard({ initialAgents }: TeamControlBoardProps) {
   const [agents, setAgents] = useState<Agent[]>(initialAgents);
   const [selectedAgentId, setSelectedAgentId] = useState<string>(initialAgents[0]?.id ?? "");
-  const [message, setMessage] = useState("Please report current status.");
-  const [taskLabel, setTaskLabel] = useState("status-check");
   const [busyAction, setBusyAction] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string>("");
-  const [error, setError] = useState<string>("");
-
-  const [gatewayBusy, setGatewayBusy] = useState(false);
-  const [gatewayNotice, setGatewayNotice] = useState("");
-  const [gatewayError, setGatewayError] = useState("");
-  const [gatewayStatus, setGatewayStatus] = useState<unknown>(null);
-  const [cronList, setCronList] = useState<unknown>(null);
-  const [cronStatus, setCronStatus] = useState<unknown>(null);
-  const [gatewayConfigText, setGatewayConfigText] = useState("{}");
+  const { toast } = useToast();
 
   const selectedAgent = useMemo(
-    () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
+    () => agents.find((a) => a.id === selectedAgentId) ?? null,
     [agents, selectedAgentId],
   );
 
   const selectedAgentInactive = selectedAgent?.isActive === false;
   const selectedAgentPaused = isPaused(selectedAgent);
 
-  const gatewayStatusRecord = useMemo(() => asRecord(gatewayStatus), [gatewayStatus]);
-  const gatewayConnected = gatewayStatusRecord?.connected === true;
-  const gatewayConnecting = gatewayStatusRecord?.connecting === true;
-  const gatewayUrl =
-    typeof gatewayStatusRecord?.url === "string" ? gatewayStatusRecord.url : "unknown";
-
   useEffect(() => {
-    if (!agents.length) {
-      setSelectedAgentId("");
-      return;
-    }
-    if (!agents.some((agent) => agent.id === selectedAgentId)) {
+    if (!agents.length) { setSelectedAgentId(""); return; }
+    if (!agents.some((a) => a.id === selectedAgentId)) {
       setSelectedAgentId(agents[0].id);
     }
   }, [agents, selectedAgentId]);
 
-  const activeAgents = useMemo(
-    () => agents.filter((agent) => agent.isActive !== false),
-    [agents],
-  );
-  const inactiveAgents = useMemo(
-    () => agents.filter((agent) => agent.isActive === false),
-    [agents],
-  );
-
-  const groupedActiveByStatus = useMemo(
-    () =>
-      STATUS_ORDER.map((status) => ({
-        status,
-        agents: activeAgents.filter((agent) => agent.status === status),
-      })).filter((section) => section.agents.length > 0),
-    [activeAgents],
-  );
-
   async function refreshAgents() {
-    const response = await fetch("/api/agents?includeInactive=1");
-    if (!response.ok) {
-      throw new Error(await fetchErrorMessage(response));
-    }
-    const data = (await response.json()) as { agents?: Agent[] };
-    const nextAgents = Array.isArray(data.agents) ? data.agents : [];
-    setAgents(nextAgents);
-  }
-
-  async function refreshGatewayOps() {
-    setGatewayBusy(true);
-    setGatewayError("");
-    setGatewayNotice("");
-    try {
-      const [statusRes, configRes, cronRes, cronStatusRes] = await Promise.all([
-        fetch("/api/gateway/status"),
-        fetch("/api/gateway/config"),
-        fetch("/api/gateway/cron"),
-        fetch("/api/gateway/cron/status"),
-      ]);
-
-      if (!statusRes.ok) {
-        throw new Error(await fetchErrorMessage(statusRes));
-      }
-      if (!configRes.ok) {
-        throw new Error(await fetchErrorMessage(configRes));
-      }
-      if (!cronRes.ok) {
-        throw new Error(await fetchErrorMessage(cronRes));
-      }
-      if (!cronStatusRes.ok) {
-        throw new Error(await fetchErrorMessage(cronStatusRes));
-      }
-
-      const statusPayload = (await statusRes.json()) as { gateway?: unknown };
-      const configPayload = (await configRes.json()) as { config?: unknown };
-      const cronPayload = (await cronRes.json()) as { cron?: unknown };
-      const cronStatusPayload = (await cronStatusRes.json()) as { status?: unknown };
-
-      setGatewayStatus(statusPayload.gateway ?? null);
-      setCronList(cronPayload.cron ?? null);
-      setCronStatus(cronStatusPayload.status ?? null);
-      setGatewayConfigText(toPrettyJson(configPayload.config ?? {}));
-      setGatewayNotice("Gateway 정보를 갱신했어요.");
-    } catch (gatewayLoadError) {
-      setGatewayError(`Gateway 조회 실패: ${toErrorMessage(gatewayLoadError)}`);
-    } finally {
-      setGatewayBusy(false);
-    }
-  }
-
-  useEffect(() => {
-    void refreshGatewayOps();
-  }, []);
-
-  function validateInputs(options?: { requireTaskLabel?: boolean }) {
-    const trimmedMessage = message.trim();
-    const normalizedTaskLabel = normalizeTaskLabel(taskLabel);
-
-    if (!trimmedMessage) {
-      setError("Message is required.");
-      return null;
-    }
-
-    if (options?.requireTaskLabel && !isTaskLabelValid(normalizedTaskLabel)) {
-      setError("Task Label must start with a-z0-9 and use only a-z, 0-9, -, _. (2~64 chars)");
-      return null;
-    }
-
-    return {
-      trimmedMessage,
-      normalizedTaskLabel,
-    };
-  }
-
-  async function patchGatewayConfig() {
-    let parsedConfig: unknown;
-    try {
-      parsedConfig = JSON.parse(gatewayConfigText);
-    } catch {
-      setGatewayError("Gateway Config JSON 형식이 올바르지 않아요.");
-      return;
-    }
-
-    if (!asRecord(parsedConfig)) {
-      setGatewayError("Gateway Config는 JSON object 형태여야 해요.");
-      return;
-    }
-
-    setGatewayBusy(true);
-    setGatewayError("");
-    setGatewayNotice("");
-
-    try {
-      const response = await fetch("/api/gateway/config", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsedConfig),
-      });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-      await refreshGatewayOps();
-      setGatewayNotice("Gateway config.patch 요청을 보냈어요.");
-    } catch (gatewayPatchError) {
-      setGatewayError(`Gateway config.patch 실패: ${toErrorMessage(gatewayPatchError)}`);
-    } finally {
-      setGatewayBusy(false);
-    }
+    const res = await fetch("/api/agents?includeInactive=1");
+    if (!res.ok) throw new Error(`${res.status}`);
+    const data = (await res.json()) as { agents?: Agent[] };
+    setAgents(Array.isArray(data.agents) ? data.agents : []);
   }
 
   async function performAction(label: string, action: () => Promise<void>) {
     setBusyAction(label);
-    setError("");
-    setNotice("");
     try {
       await action();
       await refreshAgents();
-      setNotice(`${label} 완료`);
-    } catch (actionError) {
-      setError(`${label} 실패: ${toErrorMessage(actionError)}`);
+      toast("success", `${label} 완료`);
+    } catch (e) {
+      toast("error", `${label} 실패: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusyAction(null);
     }
   }
 
-  async function pauseAgent() {
-    if (!selectedAgent) return;
-    if (!confirmAction(`${selectedAgent.name}를 일시정지할까요?`)) {
-      return;
-    }
-
-    await performAction("Pause", async () => {
-      const response = await fetch(`/api/agents/${selectedAgent.id}/pause`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reason: message.trim().slice(0, 120) || undefined,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-    });
-  }
-
-  async function resumeAgent() {
-    if (!selectedAgent) return;
-    if (!confirmAction(`${selectedAgent.name}를 재개할까요?`)) {
-      return;
-    }
-
-    await performAction("Resume", async () => {
-      const response = await fetch(`/api/agents/${selectedAgent.id}/resume`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-    });
-  }
-
-  async function deactivateAgent() {
-    if (!selectedAgent) return;
-    if (!confirmAction(`${selectedAgent.name}를 비활성화할까요?`)) {
-      return;
-    }
-
-    await performAction("Deactivate", async () => {
-      const response = await fetch(`/api/agents/${selectedAgent.id}`, { method: "DELETE" });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-    });
-  }
-
-  async function reactivateAgent() {
-    if (!selectedAgent) return;
-    if (!confirmAction(`${selectedAgent.name}를 재활성화할까요?`)) {
-      return;
-    }
-
-    await performAction("Reactivate", async () => {
-      const response = await fetch(`/api/agents/${selectedAgent.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: true, status: "idle" }),
-      });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-    });
-  }
-
-  async function sendDirectCommand() {
-    if (!selectedAgent) return;
-
-    const validated = validateInputs();
-    if (!validated) return;
-
-    await performAction("Direct Command", async () => {
-      const response = await fetch(`/api/agents/${selectedAgent.id}/command`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: validated.trimmedMessage }),
-      });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-    });
-  }
-
-  async function sendDelegateCommand() {
-    if (!selectedAgent) return;
-
-    const validated = validateInputs({ requireTaskLabel: true });
-    if (!validated) return;
-
-    await performAction("Delegate", async () => {
-      const response = await fetch(`/api/agents/${selectedAgent.id}/delegate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: validated.trimmedMessage,
-          taskLabel: validated.normalizedTaskLabel,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-    });
-  }
-
-  async function sendSessionMessage() {
-    if (!selectedAgent) return;
-
-    const validated = validateInputs();
-    if (!validated) return;
-
-    await performAction("Session Send", async () => {
-      const response = await fetch("/api/gateway/sessions/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "hermes",
-          to: selectedAgent.id,
-          message: validated.trimmedMessage,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-    });
-  }
-
-  async function spawnSessionTask() {
-    if (!selectedAgent) return;
-
-    const validated = validateInputs({ requireTaskLabel: true });
-    if (!validated) return;
-
-    await performAction("Session Spawn", async () => {
-      const response = await fetch("/api/gateway/sessions/spawn", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "hermes",
-          to: selectedAgent.id,
-          task: validated.normalizedTaskLabel,
-          message: validated.trimmedMessage,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error(await fetchErrorMessage(response));
-      }
-    });
-  }
-
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.4fr)]">
-      <article className="vulcan-card p-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-base font-semibold">Agent Control Panel</h2>
-            <p className="mt-1 text-xs text-[var(--color-tertiary)]">
-              실행 제어는 여기서, 에이전트 상태 모니터링은 오른쪽 roster에서 확인
-            </p>
-          </div>
-          <button
-            type="button"
-            className="rounded border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)]"
+      <div className="space-y-4">
+        <AgentCommandPanel
+          agents={agents}
+          selectedAgent={selectedAgent}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={setSelectedAgentId}
+          onAction={performAction}
+          busyAction={busyAction}
+          isInactive={selectedAgentInactive}
+          isPaused={selectedAgentPaused}
+        />
+
+        <div className="vulcan-card p-4">
+          <AgentLifecyclePanel
+            selectedAgent={selectedAgent}
+            isInactive={selectedAgentInactive}
+            isPaused={selectedAgentPaused}
+            busyAction={busyAction}
+            onAction={performAction}
+          />
+        </div>
+
+        <div className="flex justify-end">
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => void performAction("Refresh", refreshAgents)}
             disabled={Boolean(busyAction)}
+            loading={busyAction === "Refresh"}
           >
-            {busyAction === "Refresh" ? "Refreshing..." : "Refresh"}
-          </button>
+            에이전트 갱신
+          </Button>
         </div>
+      </div>
 
-        {selectedAgent ? (
-          <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-3">
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-[var(--color-foreground)]">{selectedAgent.name}</p>
-              <span className="vulcan-chip text-xs" style={{ color: STATUS_COLORS[selectedAgent.status] }}>
-                {STATUS_LABELS[selectedAgent.status]}
-              </span>
-            </div>
-            <p className="text-xs text-[var(--color-muted-foreground)]">{selectedAgent.mission}</p>
-            <p className="mt-1 text-xs text-[var(--color-tertiary)]">
-              Zone: {OFFICE_ZONES[selectedAgent.status]} · Active: {selectedAgentInactive ? "No" : "Yes"}
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-tertiary)]">
-              Paused: {selectedAgentPaused ? "Yes" : "No"}
-            </p>
-          </div>
-        ) : null}
-
-        <div className="space-y-3">
-          <label className="block">
-            <span className="mb-1 block text-xs text-[var(--color-tertiary)]">Target Agent</span>
-            <select
-              value={selectedAgentId}
-              onChange={(event) => setSelectedAgentId(event.target.value)}
-              className="vulcan-input w-full"
-            >
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name} {agent.isActive === false ? "(inactive)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs text-[var(--color-tertiary)]">Message</span>
-            <textarea
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              className="vulcan-input min-h-[96px] w-full resize-y"
-            />
-          </label>
-
-          <label className="block">
-            <span className="mb-1 block text-xs text-[var(--color-tertiary)]">Task Label</span>
-            <input
-              value={taskLabel}
-              onChange={(event) => setTaskLabel(event.target.value)}
-              onBlur={() => setTaskLabel((prev) => normalizeTaskLabel(prev))}
-              className="vulcan-input w-full"
-            />
-            <p className="mt-1 text-[11px] text-[var(--color-tertiary)]">
-              예: `status-check` (a-z, 0-9, -, _)
-            </p>
-          </label>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-tertiary)]">
-            Command Actions
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              className={actionButtonClassName()}
-              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive || selectedAgentPaused}
-              onClick={() => void sendDirectCommand()}
-            >
-              Direct Command
-            </button>
-            <button
-              type="button"
-              className={actionButtonClassName()}
-              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive || selectedAgentPaused}
-              onClick={() => void sendDelegateCommand()}
-            >
-              Delegate via Hermes
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-tertiary)]">
-            Session Actions
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              className={actionButtonClassName()}
-              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive || selectedAgentPaused}
-              onClick={() => void sendSessionMessage()}
-            >
-              Session Send
-            </button>
-            <button
-              type="button"
-              className={actionButtonClassName()}
-              disabled={!selectedAgent || Boolean(busyAction) || selectedAgentInactive || selectedAgentPaused}
-              onClick={() => void spawnSessionTask()}
-            >
-              Session Spawn
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-tertiary)]">
-            Lifecycle Actions
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              className={actionButtonClassName()}
-              disabled={!selectedAgent || selectedAgentInactive || selectedAgentPaused || Boolean(busyAction)}
-              onClick={() => void pauseAgent()}
-            >
-              Pause
-            </button>
-            <button
-              type="button"
-              className={actionButtonClassName()}
-              disabled={!selectedAgent || selectedAgentInactive || !selectedAgentPaused || Boolean(busyAction)}
-              onClick={() => void resumeAgent()}
-            >
-              Resume
-            </button>
-            <button
-              type="button"
-              className={actionButtonClassName()}
-              disabled={!selectedAgent || selectedAgentInactive || Boolean(busyAction)}
-              onClick={() => void deactivateAgent()}
-            >
-              Deactivate
-            </button>
-            <button
-              type="button"
-              className={actionButtonClassName()}
-              disabled={!selectedAgent || !selectedAgentInactive || Boolean(busyAction)}
-              onClick={() => void reactivateAgent()}
-            >
-              Reactivate
-            </button>
-          </div>
-        </div>
-
-        {notice ? <p className="mt-3 text-xs text-green-300">{notice}</p> : null}
-        {error ? <p className="mt-3 text-xs text-red-300">{error}</p> : null}
-      </article>
-
-      <section className="space-y-3">
-        <article className="vulcan-card p-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="vulcan-chip">Total {agents.length}</span>
-            <span className="vulcan-chip">Active {activeAgents.length}</span>
-            <span className="vulcan-chip">Inactive {inactiveAgents.length}</span>
-          </div>
-        </article>
-
-        <article className="vulcan-card p-3">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Gateway Ops</h3>
-            <button
-              type="button"
-              className="rounded border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)]"
-              onClick={() => void refreshGatewayOps()}
-              disabled={gatewayBusy}
-            >
-              {gatewayBusy ? "Loading..." : "Refresh"}
-            </button>
-          </div>
-
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className="vulcan-chip">
-              {gatewayConnected ? "Connected" : gatewayConnecting ? "Connecting" : "Disconnected"}
-            </span>
-            <span className="vulcan-chip">{gatewayUrl}</span>
-          </div>
-
-          <label className="block">
-            <span className="mb-1 block text-xs text-[var(--color-tertiary)]">config.patch payload</span>
-            <textarea
-              value={gatewayConfigText}
-              onChange={(event) => setGatewayConfigText(event.target.value)}
-              className="vulcan-input min-h-[120px] w-full resize-y font-mono text-[11px]"
-            />
-          </label>
-
-          <button
-            type="button"
-            className="mt-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] disabled:cursor-not-allowed disabled:opacity-60"
-            onClick={() => void patchGatewayConfig()}
-            disabled={gatewayBusy}
-          >
-            Apply config.patch
-          </button>
-
-          <div className="mt-3 grid gap-2 lg:grid-cols-2">
-            <div>
-              <p className="mb-1 text-xs text-[var(--color-tertiary)]">cron.list</p>
-              <pre className="max-h-36 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-background)] p-2 text-[10px] text-[var(--color-muted-foreground)]">
-                {toPrettyJson(cronList)}
-              </pre>
-            </div>
-            <div>
-              <p className="mb-1 text-xs text-[var(--color-tertiary)]">cron.status</p>
-              <pre className="max-h-36 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-background)] p-2 text-[10px] text-[var(--color-muted-foreground)]">
-                {toPrettyJson(cronStatus)}
-              </pre>
-            </div>
-          </div>
-
-          {gatewayNotice ? <p className="mt-2 text-xs text-green-300">{gatewayNotice}</p> : null}
-          {gatewayError ? <p className="mt-2 text-xs text-red-300">{gatewayError}</p> : null}
-        </article>
-
-        {groupedActiveByStatus.map((section) => (
-          <article key={section.status} className="vulcan-card p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{STATUS_LABELS[section.status]}</h3>
-              <span className="text-xs text-[var(--color-tertiary)]">
-                {OFFICE_ZONES[section.status]} · {section.agents.length}
-              </span>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {section.agents.map((agent) => {
-                const selected = agent.id === selectedAgentId;
-                const paused = isPaused(agent);
-                return (
-                  <button
-                    key={agent.id}
-                    type="button"
-                    onClick={() => setSelectedAgentId(agent.id)}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
-                      selected
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-muted)]"
-                    }`}
-                  >
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-[var(--color-foreground)]">{agent.name}</p>
-                      <span className="text-[11px]" style={{ color: STATUS_COLORS[agent.status] }}>
-                        {STATUS_LABELS[agent.status]}
-                      </span>
-                    </div>
-                    <p className="line-clamp-2 text-xs text-[var(--color-muted-foreground)]">{agent.mission}</p>
-                    <p className="mt-1 text-[11px] text-[var(--color-tertiary)]">
-                      Zone: {OFFICE_ZONES[agent.status]}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {paused ? <span className="vulcan-chip text-[10px]">Paused</span> : null}
-                      {agent.roleTags.map((tag) => (
-                        <span key={tag} className="vulcan-chip text-[11px]">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </article>
-        ))}
-
-        {inactiveAgents.length > 0 ? (
-          <article className="vulcan-card p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">Inactive Agents</h3>
-              <span className="text-xs text-[var(--color-tertiary)]">{inactiveAgents.length}</span>
-            </div>
-            <div className="grid gap-2 md:grid-cols-2">
-              {inactiveAgents.map((agent) => {
-                const selected = agent.id === selectedAgentId;
-                return (
-                  <button
-                    key={agent.id}
-                    type="button"
-                    onClick={() => setSelectedAgentId(agent.id)}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
-                      selected
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-muted)]"
-                    }`}
-                  >
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-[var(--color-foreground)]">{agent.name}</p>
-                      <span className="rounded border border-[var(--color-border)] px-2 py-0.5 text-[10px] text-amber-300">
-                        Inactive
-                      </span>
-                    </div>
-                    <p className="line-clamp-2 text-xs text-[var(--color-muted-foreground)]">{agent.mission}</p>
-                    <p className="mt-1 text-[11px] text-[var(--color-tertiary)]">
-                      Last Status: {STATUS_LABELS[agent.status]}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </article>
-        ) : null}
-      </section>
+      <div className="space-y-4">
+        <GatewayOpsPanel />
+        <AgentRoster
+          agents={agents}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={setSelectedAgentId}
+          statusOrder={STATUS_ORDER}
+        />
+      </div>
     </section>
   );
 }

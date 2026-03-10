@@ -3,34 +3,67 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import {
+  CheckSquare,
+  Users,
+  Building2,
+  BarChart3,
+  ShieldCheck,
+  Sparkles,
+  BookOpen,
+  Brain,
+  FileText,
+  FolderKanban,
+  Bell,
+  Calendar,
+  ChevronsLeft,
+  ChevronsRight,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/tasks", label: "Tasks" },
-  { href: "/calendar", label: "Calendar" },
-  { href: "/projects", label: "Projects" },
-  { href: "/memory", label: "Memory" },
-  { href: "/docs", label: "Docs" },
-  { href: "/vault", label: "Vault" },
-  { href: "/team", label: "Team" },
-  { href: "/office", label: "Office" },
-  { href: "/skills", label: "Skills" },
-  { href: "/activity", label: "Activity" },
-  { href: "/approvals", label: "Approvals" },
-  { href: "/notifications", label: "Notifications" },
+  { href: "/tasks", label: "태스크", icon: CheckSquare },
+  { href: "/calendar", label: "캘린더", icon: Calendar },
+  { href: "/projects", label: "프로젝트", icon: FolderKanban },
+  { href: "/memory", label: "메모리", icon: Brain },
+  { href: "/docs", label: "문서", icon: FileText },
+  { href: "/vault", label: "볼트", icon: BookOpen },
+  { href: "/team", label: "팀", icon: Users },
+  { href: "/office", label: "오피스", icon: Building2 },
+  { href: "/skills", label: "스킬", icon: Sparkles },
+  { href: "/activity", label: "활동", icon: BarChart3 },
+  { href: "/approvals", label: "승인", icon: ShieldCheck },
+  { href: "/notifications", label: "알림", icon: Bell },
 ];
 
-export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+}
+
+export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const [pendingCount, setPendingCount] = useState(0);
+  const [gatewayConnected, setGatewayConnected] = useState(false);
 
   useEffect(() => {
     let active = true;
     async function poll() {
       try {
-        const res = await fetch("/api/approvals/pending-count");
-        const data = await res.json();
-        if (active && typeof data.count === "number") {
-          setPendingCount(data.count);
+        const [approvalRes, gatewayRes] = await Promise.all([
+          fetch("/api/approvals/pending-count"),
+          fetch("/api/gateway/status"),
+        ]);
+        const approvalData = await approvalRes.json();
+        if (active && typeof approvalData.count === "number") {
+          setPendingCount(approvalData.count);
+        }
+        const gatewayData = await gatewayRes.json();
+        if (active) {
+          setGatewayConnected(gatewayData?.gateway?.connected === true);
         }
       } catch { /* ignore */ }
     }
@@ -44,53 +77,85 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 w-[260px] transform border-r bg-[var(--color-background)] p-4 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 transform border-r transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
-      }`}
+      } ${isCollapsed ? "w-16" : "w-[260px]"}`}
       style={{
         borderColor: "var(--color-border)",
         background: "rgba(26,25,23,0.95)",
+        backdropFilter: "blur(12px)",
       }}
     >
-      <div className="mb-8 px-2">
-        <h1 className="text-2xl font-semibold text-[var(--color-foreground)]">
-          Vulcan
-        </h1>
-        <p className="mt-2 text-sm text-[var(--color-tertiary)]">
-          Mission Control for Hermes
-        </p>
-      </div>
+      <div className="flex h-full flex-col">
+        {/* Header */}
+        <div className={`flex items-center border-b border-[var(--color-border)] ${isCollapsed ? "justify-center px-2 py-4" : "justify-between px-4 py-4"}`}>
+          {!isCollapsed && (
+            <div>
+              <h1 className="text-xl font-semibold text-[var(--color-foreground)]">Vulcan</h1>
+              <p className="mt-0.5 text-xs text-[var(--color-tertiary)]">Mission Control</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="hidden rounded p-1 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] md:flex"
+            title={isCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+          >
+            {isCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
+          </button>
+        </div>
 
-      <nav className="flex flex-col gap-1">
-        {NAV_ITEMS.map((item, index) => {
-          const active = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className={`sidebar-nav-item fade-in-up relative rounded-[var(--radius-control)] px-3 py-2 text-sm font-medium transition-colors ${
-                active ? "sidebar-nav-active" : ""
-              }`}
-              style={{ animationDelay: `${index * 45}ms` }}
-            >
-              {active && (
-                <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]" />
-              )}
-              {item.label}
-              {item.href === "/approvals" && pendingCount > 0 && (
-                <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-xs font-semibold text-white">
-                  {pendingCount}
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-2">
+          <div className="flex flex-col gap-0.5">
+            {NAV_ITEMS.map((item, index) => {
+              const active = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  title={isCollapsed ? item.label : undefined}
+                  className={`sidebar-nav-item fade-in-up relative flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-sm font-medium transition-colors ${
+                    active ? "sidebar-nav-active" : ""
+                  } ${isCollapsed ? "justify-center px-2" : ""}`}
+                  style={{ animationDelay: `${index * 35}ms` }}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]" />
+                  )}
+                  <Icon size={18} className="shrink-0" />
+                  {!isCollapsed && <span>{item.label}</span>}
+                  {item.href === "/approvals" && pendingCount > 0 && (
+                    <span className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-xs font-semibold text-white ${isCollapsed ? "absolute -right-1 -top-1 h-4 min-w-[16px] text-[10px]" : "ml-auto"}`}>
+                      {pendingCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* Footer: Gateway status */}
+        <div className={`border-t border-[var(--color-border)] p-3 ${isCollapsed ? "flex justify-center" : ""}`}>
+          <div className={`flex items-center gap-2 ${isCollapsed ? "" : "rounded-[var(--radius-control)] bg-[var(--color-muted)]/50 px-3 py-2"}`} title={gatewayConnected ? "게이트웨이 연결됨" : "게이트웨이 연결 끊김"}>
+            {gatewayConnected ? (
+              <Wifi size={14} className="text-[var(--color-success)]" />
+            ) : (
+              <WifiOff size={14} className="text-[var(--color-destructive)]" />
+            )}
+            {!isCollapsed && (
+              <>
+                <span className="text-xs text-[var(--color-muted-foreground)]">
+                  게이트웨이
                 </span>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="mt-8 rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-muted-foreground)]">
-        <p className="mb-1 font-semibold text-[var(--color-foreground)]">M0 Scope</p>
-        <p>가시성 + 최소 개입 + 실시간 관제</p>
+                <span className={`ml-auto h-2 w-2 rounded-full ${gatewayConnected ? "bg-[var(--color-success)]" : "bg-[var(--color-destructive)]"}`} />
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </aside>
   );

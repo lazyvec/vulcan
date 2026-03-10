@@ -1,6 +1,58 @@
 # PROGRESS
 
-<!-- last-session --> **마지막 세션**: 2026-03-09 | 브랜치: `main`
+<!-- last-session --> **마지막 세션**: 2026-03-10 | 브랜치: `main`
+
+## 2026-03-10: UI/UX 전면 개편 (Phase A~D)
+
+### 요약
+Brand Master 문서를 코드에 100% 반영하는 UI/UX 전면 개편 완료. 기능 변경 없이 디자인 시스템 정비, 컴포넌트 분리, 한국어 UI 우선 적용.
+
+### 완료 항목
+
+**Phase A: 디자인 시스템 기반 정비**
+- ✅ `styles/tokens.css` — semantic 상태 토큰 쌍 (success/warning/destructive/info bg/text/border), surface-hover/active, spacing 토큰
+- ✅ `app/globals.css` — @theme inline 토큰 등록, 타이포그래피 클래스, page-enter 애니메이션, skeleton, prefers-reduced-motion
+- ✅ `components/ui/` — Button, Badge, Card, Modal, Toast, Input, Select, Tabs, StatusDot, EmptyState 10개 공통 컴포넌트
+- ✅ `lib/ui-utils.ts` — statusBadgeMap, eventCategoryColorMap, laneColorMap, approvalStatusColorMap, commandStatusColorMap
+- ✅ `lib/ui-types.ts` — BadgeStatus 타입
+
+**Phase B: Sidebar + Topbar + 레이아웃 개편**
+- ✅ Sidebar — 12개 lucide-react 아이콘, M0 Scope 제거, 접힌 상태(토글), Gateway 연결 dot
+- ✅ Topbar — breadcrumb, 검색바, Button 컴포넌트 적용
+- ✅ Layout — ToastProvider, sidebar collapse persist (useSyncExternalStore), max-w-[1600px], page-enter
+
+**Phase C: 페이지별 컴포넌트 리팩토링**
+- ✅ TeamControlBoard 735줄 → 4개 하위 컴포넌트 + 80줄 컨테이너
+  - team/AgentRoster, AgentCommandPanel, AgentLifecyclePanel, GatewayOpsPanel
+- ✅ OfficeView 421줄 → 3개 하위 컴포넌트 + 100줄 컨테이너, Demo Controls 제거
+  - office/ZoneBoard, AgentDetailCard, CommandHistory
+- ✅ ActivityDashboard — 차트 토큰 색상, Button/Tabs/EmptyState 적용
+- ✅ ApprovalsPanel — Tabs/Button/Badge/EmptyState, approvalStatusColorMap
+- ✅ LiveActivityPanel — 토큰 색상
+- ✅ KanbanBoard — 토큰 색상, snap-x 모바일 스크롤
+- ✅ MemoryBoard, DocsExplorer — 토큰/공통 컴포넌트 적용
+
+**Phase D: 비주얼 폴리싱 + 한국어화**
+- ✅ page-enter 애니메이션, prefers-reduced-motion, skeleton CSS
+- ✅ 타이포그래피 위계 클래스 정의 (page-title, section-title, card-title, body-text, caption-text)
+- ✅ **한국어 UI 전면 적용** — Sidebar 12개 메뉴, Topbar 페이지 제목/검색/버튼, KanbanBoard 필터/라벨, TeamControlBoard 하위 패널, OfficeView/CommandHistory, LiveActivityPanel, ActivityDashboard, MemoryBoard, DocsExplorer
+
+### 검증
+- `pnpm lint` — 통과 (ESLint 에러 0)
+- `pnpm build` — 통과 (13개 라우트 정상 생성)
+
+### 변경 파일 (30+개)
+| 구분 | 파일 |
+|------|------|
+| 신규 | `components/ui/{Button,Badge,Card,Modal,Toast,Input,Select,Tabs,StatusDot,EmptyState,index}.tsx` |
+| 신규 | `components/team/{AgentRoster,AgentCommandPanel,AgentLifecyclePanel,GatewayOpsPanel}.tsx` |
+| 신규 | `components/office/{ZoneBoard,AgentDetailCard,CommandHistory}.tsx` |
+| 신규 | `lib/ui-utils.ts`, `lib/ui-types.ts` |
+| 수정 | `styles/tokens.css`, `app/globals.css`, `app/(layout)/layout.tsx` |
+| 수정 | `components/{Sidebar,Topbar,TeamControlBoard,OfficeView,KanbanBoard}.tsx` |
+| 수정 | `components/{ActivityDashboard,ApprovalsPanel,LiveActivityPanel,MemoryBoard,DocsExplorer}.tsx` |
+
+---
 
 ## 2026-03-09: Phase 9 — Playwright 테스트 확장 (6 → 16)
 

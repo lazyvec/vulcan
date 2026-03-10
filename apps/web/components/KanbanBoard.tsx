@@ -62,9 +62,9 @@ function laneIcon(lane: TaskLane) {
     case "in_progress":
       return <Clock3 size={14} className="text-[var(--color-primary)]" />;
     case "review":
-      return <Eye size={14} className="text-blue-300" />;
+      return <Eye size={14} className="text-[var(--color-info)]" />;
     case "done":
-      return <CheckCircle2 size={14} className="text-green-400" />;
+      return <CheckCircle2 size={14} className="text-[var(--color-success)]" />;
     case "archived":
       return <Archive size={14} className="text-[var(--color-tertiary)]" />;
   }
@@ -73,11 +73,11 @@ function laneIcon(lane: TaskLane) {
 function priorityIcon(priority: TaskPriority) {
   switch (priority) {
     case "critical":
-      return <Flame size={12} className="text-red-400" />;
+      return <Flame size={12} className="text-[var(--color-destructive)]" />;
     case "high":
-      return <AlertTriangle size={12} className="text-orange-400" />;
+      return <AlertTriangle size={12} className="text-[var(--color-primary)]" />;
     case "medium":
-      return <ArrowUp size={12} className="text-yellow-400" />;
+      return <ArrowUp size={12} className="text-[var(--color-warning)]" />;
     case "low":
       return <ArrowDown size={12} className="text-[var(--color-tertiary)]" />;
   }
@@ -163,7 +163,7 @@ function SortableTaskCard({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onOpenDetail(task)}
         >
-          Detail
+          상세
         </button>
       </div>
     </article>
@@ -205,7 +205,7 @@ function DroppableLane({
   const taskIds = tasks.map((t) => t.id);
 
   return (
-    <div className="flex min-w-[240px] flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/75 p-2 md:min-w-0">
+    <div className="flex min-w-[240px] snap-center flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/75 p-2 md:min-w-0 md:snap-align-none">
       <div className="mb-3 flex items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2">
         <div className="flex items-center gap-1.5">
           {laneIcon(lane.key)}
@@ -229,7 +229,7 @@ function DroppableLane({
           ))}
           {tasks.length === 0 && (
             <div className="flex h-full min-h-[88px] items-center justify-center rounded border border-dashed border-[var(--color-border)]">
-              <p className="text-sm text-[var(--color-tertiary)]">No tasks</p>
+              <p className="text-sm text-[var(--color-tertiary)]">태스크 없음</p>
             </div>
           )}
         </div>
@@ -360,31 +360,31 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
             <ListChecks size={18} className="mr-1 inline" />
             Task Board
           </h2>
-          <span className="vulcan-chip text-xs">Total {filtered.length}</span>
-          <span className="vulcan-chip text-xs">Agents {agents.length}</span>
+          <span className="vulcan-chip text-xs">전체 {filtered.length}</span>
+          <span className="vulcan-chip text-xs">에이전트 {agents.length}</span>
           <button
             type="button"
             className="flex items-center gap-1 rounded border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-1 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20"
             onClick={() => setShowCreateModal(true)}
           >
             <Plus size={12} />
-            New Task
+            새 태스크
           </button>
         </div>
         <div className="flex flex-col gap-2 lg:flex-row">
           <input
             className="vulcan-input w-full lg:max-w-sm"
-            placeholder="Search tasks by title, description, or id..."
+            placeholder="제목, 설명 또는 ID로 검색..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           <select
             className="vulcan-input w-full lg:w-44"
-            aria-label="Filter by agent"
+            aria-label="에이전트별 필터"
             value={assigneeFilter}
             onChange={(event) => setAssigneeFilter(event.target.value)}
           >
-            <option value="all">All Agents</option>
+            <option value="all">전체 에이전트</option>
             {agents.map((agent) => (
               <option key={agent.id} value={agent.id}>
                 {agent.name}
@@ -393,21 +393,21 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
           </select>
           <select
             className="vulcan-input w-full lg:w-36"
-            aria-label="Filter by priority"
+            aria-label="우선순위별 필터"
             value={priorityFilter}
             onChange={(event) => setPriorityFilter(event.target.value)}
           >
-            <option value="all">All Priority</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
+            <option value="all">전체 우선순위</option>
+            <option value="critical">긴급</option>
+            <option value="high">높음</option>
+            <option value="medium">보통</option>
+            <option value="low">낮음</option>
           </select>
         </div>
       </div>
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="grid min-h-0 flex-1 gap-3 overflow-x-auto pb-2 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid-cols-3 xl:grid-cols-6">
           {LANES.map((lane) => {
             const laneTasks = filtered.filter((task) => task.lane === lane.key);
             return (

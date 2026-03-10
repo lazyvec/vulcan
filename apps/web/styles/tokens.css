@@ -2,6 +2,8 @@
   /* Atrium Neutral Palette + Vulcan Primary */
   --color-background: #1a1917; /* Atrium Base */
   --color-surface: #252422; /* Atrium Elevated */
+  --color-surface-hover: #2f2d2a; /* Atrium Surface Hover */
+  --color-surface-active: #38352f; /* Atrium Surface Active */
   --color-muted: #2d2b29; /* Atrium Subtle */
   --color-border: hsl(34 6% 24%); /* Atrium Border */
 
@@ -13,15 +15,42 @@
   --color-muted-foreground: #bfbab4; /* Atrium Text Secondary */
   --color-tertiary: #8d877f; /* Atrium Text Tertiary */
 
+  /* Semantic Status Colors — base */
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-destructive: #f87171;
   --color-info: #60a5fa;
 
+  /* Semantic Status Tokens — bg / text / border 쌍 */
+  --color-success-bg: rgba(34, 197, 94, 0.12);
+  --color-success-text: #4ade80;
+  --color-success-border: rgba(34, 197, 94, 0.3);
+
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-warning-text: #fbbf24;
+  --color-warning-border: rgba(245, 158, 11, 0.3);
+
+  --color-destructive-bg: rgba(248, 113, 113, 0.12);
+  --color-destructive-text: #fca5a5;
+  --color-destructive-border: rgba(248, 113, 113, 0.3);
+
+  --color-info-bg: rgba(96, 165, 250, 0.12);
+  --color-info-text: #93bbfd;
+  --color-info-border: rgba(96, 165, 250, 0.3);
+
+  /* Radius */
   --radius-control: 8px;
   --radius-card: 12px;
   --radius-modal: 16px;
 
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Shadow & Gradient */
   --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.32);
   --gradient-bg: radial-gradient(circle at 10% 0%, rgba(224, 122, 64, 0.12), transparent 30%),
     radial-gradient(circle at 90% 100%, rgba(96, 165, 250, 0.1), transparent 28%),

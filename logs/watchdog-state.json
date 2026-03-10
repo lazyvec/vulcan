@@ -1,19 +1,24 @@
 {
   "counters": {
     "health_failures": 0,
-    "warning_failures": 4
+    "warning_failures": 0
   },
   "alerts": {
     "critical": {
       "active": false
     },
     "warning": {
-      "active": true
+      "active": false
     }
   },
   "warning_log_signal": {
-    "hash": "7025e08a28df7233cf3e2547bfb6cecd7187314909cf74be00dbd98566d94b01",
-    "time": "2026-03-10 01:07:01 KST",
-    "epoch": 1773072421
+    "hash": "46299bf717db6d034d46bf0e2a8c4d950cede8b8fa6e4935d309d79378b256d0",
+    "time": "2026-03-10 01:08:01 KST",
+    "epoch": 1773072481
+  },
+  "warning_log_signal_resolved": {
+    "hash": "f768673115ea5cc1b8a8703fcf14e1475597e186f58c069284a379e557a4f911",
+    "time": "2026-03-10 01:09:01 KST",
+    "epoch": 1773072541
   }
 }
