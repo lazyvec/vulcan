@@ -55,7 +55,7 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
               onClick={() => setSelectedId(doc.id)}
               className={`rounded-lg border p-4 text-left transition-colors ${
                 doc.id === selected?.id
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
+                  ? "border-[var(--color-primary)] bg-[var(--color-primary-bg)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]"
               }`}
             >

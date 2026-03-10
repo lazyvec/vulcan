@@ -1,4 +1,6 @@
 :root {
+  color-scheme: dark;
+
   /* Atrium Neutral Palette + Vulcan Primary */
   --color-background: #1a1917; /* Atrium Base */
   --color-surface: #252422; /* Atrium Elevated */
@@ -9,11 +11,11 @@
 
   --color-primary: #e07a40; /* Vulcan Hearth (Keep) */
   --color-primary-hover: #e8955e;
-  --color-primary-12: rgba(224, 122, 64, 0.12);
+  --color-primary-bg: rgba(224, 122, 64, 0.12);
 
   --color-foreground: #f5f4f2; /* Atrium Text Primary */
   --color-muted-foreground: #bfbab4; /* Atrium Text Secondary */
-  --color-tertiary: #8d877f; /* Atrium Text Tertiary */
+  --color-tertiary: #a39d95; /* Atrium Text Tertiary — WCAG AA 4.5:1+ 대비 확보 */
 
   /* Semantic Status Colors — base */
   --color-success: #22c55e;
@@ -37,6 +39,18 @@
   --color-info-bg: rgba(96, 165, 250, 0.12);
   --color-info-text: #93bbfd;
   --color-info-border: rgba(96, 165, 250, 0.3);
+
+  /* Neutral status — Badge/Chip 용 */
+  --color-neutral-bg: rgba(163, 157, 149, 0.12);
+  --color-neutral-text: #a39d95;
+  --color-neutral-border: rgba(163, 157, 149, 0.3);
+
+  /* Extended agent status colors */
+  --color-researching: #c084fc;
+  --color-executing: #22d3ee;
+
+  /* Focus ring */
+  --color-focus-ring: rgba(224, 122, 64, 0.5);
 
   /* Radius */
   --radius-control: 8px;

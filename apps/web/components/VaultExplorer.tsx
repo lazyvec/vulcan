@@ -184,7 +184,7 @@ const TreeItem = memo(function TreeItem({
       onClick={() => onSelect(node.note!.path)}
       className={`flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left text-sm transition-colors ${
         isSelected
-          ? "border border-[var(--color-primary)] bg-[var(--color-primary-12)] text-[var(--color-primary)]"
+          ? "border border-[var(--color-primary)] bg-[var(--color-primary-bg)] text-[var(--color-primary)]"
           : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
       }`}
       style={{ paddingLeft: `${depth * 12 + 8}px` }}

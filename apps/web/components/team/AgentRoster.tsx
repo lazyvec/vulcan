@@ -59,7 +59,7 @@ export function AgentRoster({ agents, selectedAgentId, onSelectAgent, statusOrde
                   onClick={() => onSelectAgent(agent.id)}
                   className={`rounded-lg border p-3 text-left transition-colors ${
                     selected
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary-bg)]"
                       : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]"
                   }`}
                 >
@@ -101,7 +101,7 @@ export function AgentRoster({ agents, selectedAgentId, onSelectAgent, statusOrde
                   onClick={() => onSelectAgent(agent.id)}
                   className={`rounded-lg border p-3 text-left transition-colors ${
                     selected
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary-bg)]"
                       : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]"
                   }`}
                 >

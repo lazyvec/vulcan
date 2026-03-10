@@ -13,7 +13,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "border-[color-mix(in_oklab,var(--color-primary)_50%,var(--color-border)_50%)] bg-[var(--color-primary-12)] text-[var(--color-primary)] hover:bg-[color-mix(in_oklab,var(--color-primary)_20%,transparent_80%)] hover:text-[var(--color-primary-hover)] hover:border-[var(--color-primary)]",
+    "border-[color-mix(in_oklab,var(--color-primary)_50%,var(--color-border)_50%)] bg-[var(--color-primary-bg)] text-[var(--color-primary)] hover:bg-[color-mix(in_oklab,var(--color-primary)_20%,transparent_80%)] hover:text-[var(--color-primary-hover)] hover:border-[var(--color-primary)]",
   secondary:
     "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]",
   ghost:

@@ -360,7 +360,7 @@ export function LiveActivityPanel({
                         style={
                           highlighted.includes(event.id)
                             ? {
-                                background: "var(--color-primary-12)",
+                                background: "var(--color-primary-bg)",
                                 borderColor: "var(--color-primary)",
                               }
                             : { background: "var(--color-surface)" }

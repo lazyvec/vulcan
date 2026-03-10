@@ -73,7 +73,7 @@ export function OfficeView({ agents, initialEvents }: OfficeViewProps) {
                     onClick={() => setSelectedAgentId(agent.id)}
                     className={`rounded border p-2.5 text-left transition-colors ${
                       selectedAgentId === agent.id
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary-12)]"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary-bg)]"
                         : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]"
                     }`}
                   >

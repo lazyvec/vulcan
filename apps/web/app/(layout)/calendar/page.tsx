@@ -42,7 +42,7 @@ export default async function CalendarPage() {
             <article
               key={item.id}
               className="rounded-[var(--radius-control)] border p-3"
-              style={{ borderColor: "var(--color-primary)", background: "var(--color-primary-12)" }}
+              style={{ borderColor: "var(--color-primary)", background: "var(--color-primary-bg)" }}
             >
               <p className="text-sm font-medium text-[var(--color-primary)]">{item.name}</p>
               <p className="text-xs text-[var(--color-muted-foreground)]">{item.cronOrInterval}</p>
