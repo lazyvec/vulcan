@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle,
   Edit3,
@@ -83,6 +84,16 @@ function buildTree(notes: VaultNoteSummary[]): TreeNode[] {
   };
   sortNodes(root);
   return root;
+}
+
+/** 매칭 키워드를 <mark>로 감싸는 유틸 */
+function highlightSnippet(snippet: string, query: string): string {
+  if (!query) return snippet;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return snippet.replace(
+    new RegExp(`(${escaped})`, "gi"),
+    "<mark>$1</mark>",
+  );
 }
 
 /* ── Toast ─────────────────────────────────────────── */
@@ -364,18 +375,73 @@ const TreeItem = memo(function TreeItem({
   );
 });
 
+/* ── 검색 결과 목록 컴포넌트 ─────────────────────────── */
+
+function SearchResultList({
+  results,
+  query,
+  selectedPath,
+  onSelect,
+}: {
+  results: (VaultNoteSummary & { snippet?: string })[];
+  query: string;
+  selectedPath: string | null;
+  onSelect: (path: string) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="px-2 py-1 text-xs text-[var(--color-tertiary)]">
+        {results.length}건 검색됨
+      </p>
+      {results.map((r) => (
+        <button
+          key={r.path}
+          onClick={() => onSelect(r.path)}
+          className={`flex w-full flex-col gap-1 rounded-[var(--radius-control)] px-3 py-2 text-left transition-colors ${
+            r.path === selectedPath
+              ? "border border-[var(--color-primary)] bg-[var(--color-primary-bg)]"
+              : "hover:bg-[var(--color-muted)]"
+          }`}
+        >
+          <span className="text-sm font-medium text-[var(--color-foreground)] truncate">
+            {r.title}
+          </span>
+          <span className="text-[10px] text-[var(--color-tertiary)] truncate">
+            {r.path}
+          </span>
+          {r.snippet && (
+            <span
+              className="text-xs text-[var(--color-muted-foreground)] line-clamp-2 [&_mark]:bg-yellow-500/30 [&_mark]:rounded [&_mark]:px-0.5"
+              dangerouslySetInnerHTML={{
+                __html: highlightSnippet(
+                  r.snippet.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                  query,
+                ),
+              }}
+            />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* ── 메인 컴포넌트 ─────────────────────────────────── */
 
 export function VaultExplorer({
   initialNotes,
+  initialNotePath,
 }: {
   initialNotes: VaultNoteSummary[];
+  initialNotePath?: string;
 }) {
+  const router = useRouter();
   const [notes, setNotes] = useState(initialNotes);
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useState<string | null>(initialNotePath ?? null);
   const [noteContent, setNoteContent] = useState<VaultNote | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<(VaultNoteSummary & { snippet?: string })[] | null>(null);
   const [clipUrl, setClipUrl] = useState("");
   const [clipping, setClipping] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
@@ -397,6 +463,7 @@ export function VaultExplorer({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const { toasts, show: showToast } = useToast();
+  const initialLoadDone = useRef(false);
 
   /* 검색 */
   const doSearch = useCallback(async (q: string) => {
@@ -404,6 +471,7 @@ export function VaultExplorer({
       const res = await fetch("/api/vault/notes");
       const data = await res.json();
       setNotes(data.notes ?? []);
+      setSearchResults(null);
       return;
     }
     const res = await fetch("/api/vault/search", {
@@ -412,7 +480,9 @@ export function VaultExplorer({
       body: JSON.stringify({ q }),
     });
     const data = await res.json();
-    setNotes(data.results ?? []);
+    const results = data.results ?? [];
+    setNotes(results);
+    setSearchResults(results);
   }, []);
 
   useEffect(() => {
@@ -423,12 +493,16 @@ export function VaultExplorer({
     };
   }, [query, doSearch]);
 
-  /* 노트 선택 */
+  /* 노트 선택 + URL 업데이트 */
   const selectNote = useCallback(async (path: string) => {
     setEditing(false);
     setShowPreview(false);
     setSelectedPath(path);
     setLoading(true);
+
+    // URL 딥링크 업데이트 (push → 뒤로가기 지원)
+    router.push(`/vault?note=${encodeURIComponent(path)}`, { scroll: false });
+
     try {
       const res = await fetch(`/api/vault/notes/${encodeURIComponent(path)}`);
       const data = await res.json();
@@ -438,7 +512,15 @@ export function VaultExplorer({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
+
+  /* 초기 딥링크 로드 */
+  useEffect(() => {
+    if (initialNotePath && !initialLoadDone.current) {
+      initialLoadDone.current = true;
+      selectNote(initialNotePath);
+    }
+  }, [initialNotePath, selectNote]);
 
   /* 위키링크 클릭 → 노트 이동 */
   const handleWikiLink = useCallback(
@@ -566,6 +648,7 @@ export function VaultExplorer({
       setSelectedPath(null);
       setNoteContent(null);
       setEditing(false);
+      router.push("/vault", { scroll: false });
       showToast("success", "노트 삭제 완료");
       doSearch(query);
     } catch (err) {
@@ -574,7 +657,7 @@ export function VaultExplorer({
         `삭제 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`,
       );
     }
-  }, [selectedPath, query, doSearch, showToast]);
+  }, [selectedPath, query, doSearch, showToast, router]);
 
   /* 노트 이름 변경 */
   const handleRenameNote = useCallback(
@@ -597,6 +680,7 @@ export function VaultExplorer({
         setShowRenameModal(false);
         setSelectedPath(data.note.path);
         setNoteContent(data.note);
+        router.push(`/vault?note=${encodeURIComponent(data.note.path)}`, { scroll: false });
         showToast("success", "이름 변경 완료");
         doSearch(query);
       } catch (err) {
@@ -606,7 +690,7 @@ export function VaultExplorer({
         );
       }
     },
-    [selectedPath, query, doSearch, showToast],
+    [selectedPath, query, doSearch, showToast, router],
   );
 
   /* 이미지 붙여넣기/업로드 */
@@ -735,10 +819,17 @@ export function VaultExplorer({
 
       {/* 메인 그리드 */}
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[280px_1fr]">
-        {/* 왼쪽 — 파일 트리 */}
+        {/* 왼쪽 — 파일 트리 or 검색 결과 */}
         <div className="vulcan-card flex flex-col overflow-hidden p-2">
           <div className="overflow-y-auto">
-            {tree.length === 0 ? (
+            {searchResults && query.trim() ? (
+              <SearchResultList
+                results={searchResults}
+                query={query}
+                selectedPath={selectedPath}
+                onSelect={selectNote}
+              />
+            ) : tree.length === 0 ? (
               <p className="p-4 text-center text-sm text-[var(--color-tertiary)]">
                 노트가 없습니다
               </p>

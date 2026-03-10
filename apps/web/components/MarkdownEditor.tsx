@@ -7,6 +7,17 @@ import { markdown } from "@codemirror/lang-markdown";
 import { defaultHighlightStyle, syntaxHighlighting, bracketMatching, indentOnInput } from "@codemirror/language";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import {
+  Bold,
+  Italic,
+  Heading1,
+  Link,
+  Image,
+  List,
+  CheckSquare,
+  Code,
+  Quote,
+} from "lucide-react";
 
 /* ── Vulcan 다크 테마 ─────────────────────────────── */
 
@@ -67,6 +78,67 @@ const vulcanTheme = EditorView.theme({
   },
 }, { dark: true });
 
+/* ── 에디터 서식 유틸 ────────────────────────────────── */
+
+function wrapSelection(view: EditorView, before: string, after: string) {
+  const { from, to } = view.state.selection.main;
+  const selected = view.state.sliceDoc(from, to);
+  view.dispatch({
+    changes: { from, to, insert: `${before}${selected}${after}` },
+    selection: { anchor: from + before.length, head: to + before.length },
+  });
+  view.focus();
+}
+
+function insertAtLineStart(view: EditorView, prefix: string) {
+  const { from } = view.state.selection.main;
+  const line = view.state.doc.lineAt(from);
+  view.dispatch({
+    changes: { from: line.from, insert: prefix },
+    selection: { anchor: from + prefix.length },
+  });
+  view.focus();
+}
+
+function insertLinkTemplate(view: EditorView) {
+  const { from, to } = view.state.selection.main;
+  const selected = view.state.sliceDoc(from, to);
+  if (selected) {
+    const text = `[${selected}](url)`;
+    view.dispatch({
+      changes: { from, to, insert: text },
+      selection: { anchor: from + selected.length + 3, head: from + selected.length + 6 },
+    });
+  } else {
+    const text = "[링크텍스트](url)";
+    view.dispatch({
+      changes: { from, insert: text },
+      selection: { anchor: from + 1, head: from + 6 },
+    });
+  }
+  view.focus();
+}
+
+/* ── 툴바 버튼 정의 ──────────────────────────────────── */
+
+interface ToolbarAction {
+  icon: typeof Bold;
+  title: string;
+  action: (view: EditorView) => void;
+}
+
+const toolbarActions: ToolbarAction[] = [
+  { icon: Bold, title: "굵게 (Ctrl+B)", action: (v) => wrapSelection(v, "**", "**") },
+  { icon: Italic, title: "기울임 (Ctrl+I)", action: (v) => wrapSelection(v, "*", "*") },
+  { icon: Heading1, title: "제목", action: (v) => insertAtLineStart(v, "## ") },
+  { icon: Link, title: "링크 (Ctrl+K)", action: (v) => insertLinkTemplate(v) },
+  { icon: Image, title: "이미지", action: (v) => wrapSelection(v, "![alt](", ")") },
+  { icon: List, title: "목록", action: (v) => insertAtLineStart(v, "- ") },
+  { icon: CheckSquare, title: "체크박스", action: (v) => insertAtLineStart(v, "- [ ] ") },
+  { icon: Code, title: "코드", action: (v) => wrapSelection(v, "`", "`") },
+  { icon: Quote, title: "인용", action: (v) => insertAtLineStart(v, "> ") },
+];
+
 /* ── 에디터 컴포넌트 ──────────────────────────────── */
 
 interface MarkdownEditorProps {
@@ -113,7 +185,7 @@ export function MarkdownEditor({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const saveKeymap = keymap.of([
+    const formatKeymap = keymap.of([
       {
         key: "Mod-s",
         run: () => {
@@ -128,6 +200,27 @@ export function MarkdownEditor({
           return true;
         },
       },
+      {
+        key: "Mod-b",
+        run: (view) => {
+          wrapSelection(view, "**", "**");
+          return true;
+        },
+      },
+      {
+        key: "Mod-i",
+        run: (view) => {
+          wrapSelection(view, "*", "*");
+          return true;
+        },
+      },
+      {
+        key: "Mod-k",
+        run: (view) => {
+          insertLinkTemplate(view);
+          return true;
+        },
+      },
     ]);
 
     const updateListener = EditorView.updateListener.of((update) => {
@@ -136,8 +229,8 @@ export function MarkdownEditor({
       }
     });
 
-    /* 이미지 붙여넣기 핸들러 */
-    const pasteHandler = EditorView.domEventHandlers({
+    /* 이미지 붙여넣기 + 드래그앤드롭 핸들러 */
+    const fileHandler = EditorView.domEventHandlers({
       paste: (event) => {
         const items = event.clipboardData?.items;
         if (!items) return false;
@@ -153,12 +246,32 @@ export function MarkdownEditor({
         }
         return false;
       },
+      drop: (event) => {
+        const files = event.dataTransfer?.files;
+        if (!files?.length) return false;
+        for (const file of files) {
+          if (file.type.startsWith("image/")) {
+            event.preventDefault();
+            onImagePasteRef.current?.(file);
+            return true;
+          }
+        }
+        return false;
+      },
+      dragover: (event) => {
+        const types = event.dataTransfer?.types;
+        if (types?.includes("Files")) {
+          event.preventDefault();
+          return true;
+        }
+        return false;
+      },
     });
 
     const state = EditorState.create({
       doc: value,
       extensions: [
-        saveKeymap,
+        formatKeymap,
         keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
         history(),
         lineNumbers(),
@@ -171,7 +284,7 @@ export function MarkdownEditor({
         markdown(),
         vulcanTheme,
         updateListener,
-        pasteHandler,
+        fileHandler,
         cmPlaceholder("마크다운을 입력하세요..."),
         EditorState.readOnly.of(readOnly),
         EditorView.lineWrapping,
@@ -207,10 +320,28 @@ export function MarkdownEditor({
   }, [value]);
 
   return (
-    <div
-      ref={containerRef}
-      className="h-full min-h-0 overflow-hidden"
-      data-insert-at-cursor={insertAtCursor}
-    />
+    <div className="flex h-full flex-col">
+      {/* 툴바 */}
+      {!readOnly && (
+        <div className="flex items-center gap-0.5 border-b border-[var(--color-border)] px-2 py-1.5">
+          {toolbarActions.map(({ icon: Icon, title, action }) => (
+            <button
+              key={title}
+              type="button"
+              title={title}
+              onClick={() => viewRef.current && action(viewRef.current)}
+              className="rounded p-1.5 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+            >
+              <Icon size={15} />
+            </button>
+          ))}
+        </div>
+      )}
+      <div
+        ref={containerRef}
+        className="min-h-0 flex-1 overflow-hidden"
+        data-insert-at-cursor={insertAtCursor}
+      />
+    </div>
   );
 }

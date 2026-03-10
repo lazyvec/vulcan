@@ -2,6 +2,48 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-10 | 브랜치: `main`
 
+## 2026-03-10: Obsidian Vault 기본 사용성 이식 (8개 기능)
+
+### 요약
+Vault UI를 Obsidian 네이티브에 가깝게 고도화. 첨부파일 서빙, 마크다운 확장(highlight/callout/구문강조), 에디터 툴바, URL 딥링크, 검색 snippet 등 8개 기능 일괄 구현.
+
+### 신규/변경 API
+| 메서드 | 경로 | 기능 |
+|--------|------|------|
+| GET | `/api/vault/files/*` | 첨부파일 바이너리 서빙 (MIME 화이트리스트 + Cache-Control) |
+| POST | `/api/vault/search` | 검색 결과에 snippet(문맥 미리보기 ±60자) 포함 |
+
+### MarkdownRenderer 강화
+- **==highlight==** 지원: 커스텀 remark 플러그인 → `<mark>` 렌더링
+- **Callout/Admonition**: `> [!NOTE]` 등 Obsidian callout 문법 → 아이콘+컬러 카드 (14종 지원)
+- **코드 구문 강조**: `rehype-highlight` 적용
+- **이미지 상대경로 자동 처리**: `attachments/...` → `/api/vault/files/...` prefix 자동 추가
+
+### MarkdownEditor 강화
+- **서식 툴바**: Bold, Italic, Heading, Link, Image, List, Checkbox, Code, Quote (9개 버튼)
+- **단축키**: Ctrl+B (굵게), Ctrl+I (기울임), Ctrl+K (링크)
+- **이미지 드래그앤드롭**: drop 이벤트 핸들러 추가 (기존 paste와 동일 로직)
+
+### URL 딥링크 + 브라우저 히스토리
+- `?note=Oracle/Daily/2026-03-01.md` 쿼리파라미터로 직접 링크
+- `router.push`로 URL 업데이트 → 뒤로가기 자동 지원
+- 페이지 로드 시 `searchParams`에서 노트 경로 읽어 자동 선택
+
+### 검색 결과 본문 미리보기
+- API: 매칭 위치 전후 ~60자 snippet 추출
+- UI: 검색 모드에서 결과 목록 표시 + 매칭 키워드 `<mark>` 강조
+
+### 변경 파일
+- `apps/api/src/vault.ts` — readVaultFile(), searchVaultNotesWithSnippet(), ALLOWED_MIME
+- `apps/api/src/server.ts` — GET /api/vault/files/* 라우트 추가
+- `apps/web/components/MarkdownRenderer.tsx` — highlight, callout, rehype-highlight, img 경로
+- `apps/web/components/MarkdownEditor.tsx` — 툴바, 단축키(Ctrl+B/I/K), D&D
+- `apps/web/components/VaultExplorer.tsx` — 딥링크, SearchResultList, initialNotePath
+- `apps/web/app/(layout)/vault/page.tsx` — searchParams 처리
+- `apps/web/package.json` — rehype-highlight, @types/mdast 추가
+
+---
+
 ## 2026-03-10: Obsidian Vault 편집 기능 전면 구축
 
 ### 요약

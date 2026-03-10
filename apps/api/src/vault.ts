@@ -5,6 +5,25 @@
 
 import { readFile, writeFile, readdir, stat, mkdir, unlink, access, rename } from "node:fs/promises";
 import { join, relative, extname, basename, resolve, dirname } from "node:path";
+/* MIME 타입 매핑 (보안: 허용된 확장자만 서빙) */
+const ALLOWED_MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".bmp": "image/bmp",
+  ".ico": "image/x-icon",
+  ".pdf": "application/pdf",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
+  ".txt": "text/plain",
+  ".csv": "text/csv",
+  ".json": "application/json",
+};
 import matter from "gray-matter";
 import type { VaultNote, VaultNoteSummary, ClipResult } from "@vulcan/shared/types";
 
@@ -240,6 +259,72 @@ export async function uploadToVault(
     fileName: finalName,
     relativePath: `attachments/${finalName}`,
   };
+}
+
+/** vault 파일을 바이너리로 읽어서 반환 (첨부파일 서빙용) */
+export async function readVaultFile(relPath: string): Promise<{ data: Buffer; mimeType: string }> {
+  const vaultPath = getVaultPath();
+  const abs = resolve(join(vaultPath, relPath));
+  assertInsideVault(abs, vaultPath);
+
+  const ext = extname(abs).toLowerCase();
+  const mimeType = ALLOWED_MIME[ext];
+  if (!mimeType) throw new Error("unsupported file type");
+
+  const data = await readFile(abs);
+  return { data, mimeType };
+}
+
+/** 검색 결과에 snippet(문맥 미리보기) 포함 */
+export async function searchVaultNotesWithSnippet(
+  query: string,
+): Promise<(VaultNoteSummary & { snippet?: string })[]> {
+  const vaultPath = getVaultPath();
+  const files: string[] = [];
+  await walk(vaultPath, files);
+
+  const q = query.toLowerCase();
+  const results: (VaultNoteSummary & { snippet?: string })[] = [];
+
+  for (const f of files) {
+    try {
+      const raw = await readFile(f, "utf-8");
+      const { data: frontmatter, content } = matter(raw);
+      const rel = relative(vaultPath, f);
+      const titleStr = (frontmatter.title as string) ?? basename(rel, ".md");
+
+      const haystack = [rel, titleStr, content, JSON.stringify(frontmatter)]
+        .join(" ")
+        .toLowerCase();
+
+      if (haystack.includes(q)) {
+        const info = await stat(f);
+        // snippet: 매칭 위치 전후 ~60자
+        let snippet: string | undefined;
+        const contentLower = content.toLowerCase();
+        const idx = contentLower.indexOf(q);
+        if (idx !== -1) {
+          const start = Math.max(0, idx - 60);
+          const end = Math.min(content.length, idx + q.length + 60);
+          snippet =
+            (start > 0 ? "..." : "") +
+            content.slice(start, end).replace(/\n/g, " ") +
+            (end < content.length ? "..." : "");
+        }
+
+        results.push({
+          path: rel,
+          title: titleStr,
+          frontmatter,
+          modified: info.mtime.toISOString(),
+          snippet,
+        });
+      }
+    } catch {
+      // 읽기 실패한 파일은 건너뜀
+    }
+  }
+  return results;
 }
 
 export async function clipUrlToVault(url: string): Promise<ClipResult> {

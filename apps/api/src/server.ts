@@ -139,7 +139,8 @@ import { getGatewayRpcClient } from "./gateway-rpc";
 import {
   listVaultNotes,
   readVaultNote,
-  searchVaultNotes,
+  readVaultFile,
+  searchVaultNotesWithSnippet,
   clipUrlToVault,
   writeVaultNote,
   createVaultNote,
@@ -1985,6 +1986,31 @@ app.get("/api/skill-registry", (c) => {
 
 // ── Obsidian Vault ──────────────────────────────────────────────────────────
 
+/* 첨부파일 바이너리 서빙 */
+app.get("/api/vault/files/*", async (c) => {
+  try {
+    const prefix = "/api/vault/files/";
+    const relPath = c.req.path.startsWith(prefix)
+      ? decodeURIComponent(c.req.path.slice(prefix.length))
+      : "";
+    if (!relPath) return c.json({ error: "path required" }, 400);
+    const { data, mimeType } = await readVaultFile(relPath);
+    c.header("Content-Type", mimeType);
+    c.header("Cache-Control", "public, max-age=86400");
+    if (mimeType === "image/svg+xml") {
+      c.header("Content-Security-Policy", "sandbox");
+    }
+    return c.body(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer);
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
+    if (msg.includes("traversal")) return c.json({ error: "not found" }, 404);
+    if (msg.includes("unsupported")) return c.json({ error: "unsupported file type" }, 415);
+    if (msg.includes("ENOENT")) return c.json({ error: "not found" }, 404);
+    return c.json({ error: msg }, 500);
+  }
+});
+
 app.get("/api/vault/notes", async (c) => {
   try {
     const notes = await listVaultNotes();
@@ -2020,7 +2046,7 @@ app.post("/api/vault/search", async (c) => {
     const body = await c.req.json();
     const q = isRecord(body) && typeof body.q === "string" ? body.q : "";
     if (!q) return c.json({ error: "q is required" }, 400);
-    const results = await searchVaultNotes(q);
+    const results = await searchVaultNotesWithSnippet(q);
     return c.json({ results });
   } catch (error) {
     if (getErrorMessage(error).includes("not configured")) {
