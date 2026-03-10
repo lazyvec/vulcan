@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: M0 완료 + Phase 0~6 완료 → Phase 9 CI/CD 진행
+> **현재 Phase**: Phase 0~10 완료 → Phase 11~12 백로그
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -22,26 +22,25 @@
 
 ## 설계 나침반
 
-### 현재 (Phase 6 완료)
-- **분리 진행**: Next.js(UI) + Hono(API) + SQLite + SSE/WebSocket
-- **API 연결**: Web `/api/*` rewrite → Hono API
-- **어댑터 패턴**: OpenClaw Gateway 이벤트 → Hono `/api/adapter/ingest` → DB → SSE/WebSocket
-- **생명주기 API 기본형**: `/api/agents` CRUD(soft deactivate), `/delegate`, `/command`, `/api/gateways`, `/api/audit`
-- **감사 로깅**: 주요 mutation 경로 자동 기록
+### 현재 (Phase 10 완료)
+- **아키텍처**: Next.js 16 (UI, 포트 3001) + Hono (API, 포트 8787) + PostgreSQL + Redis + WebSocket
+- **어댑터 패턴**: OpenClaw Gateway → Hono `/api/adapter/ingest` → DB → WebSocket
+- **에이전트 생명주기**: CRUD, pause/resume, delegate, command + 감사 로깅
 - **비동기 실행**: BullMQ command/healthcheck 큐 + 워커
-- **커맨드 운영 API**: `agent_commands` 조회/단건/재시도 지원
-- **UI 연결**: OfficeView에서 에이전트별 커맨드 이력 조회 + 실패 재시도
-- **세션 API**: `/api/gateway/sessions/spawn`, `/api/gateway/sessions/send` 명시 노출
-- **Team 제어 패널**: direct/delegate/session/pause/resume/deactivate/reactivate 실행 가능
-- **Gateway 운영 패널**: Team 화면에서 `config.patch`, `cron.list`, `cron.status` 조회/적용 가능
-- **UX 리파인**: Tasks Kanban / Team Agent Control / Office Zone Board 레이아웃 고도화 + lifecycle confirm 단계 추가
-- **Activity/Audit**: 이벤트 타입 체계화(28종+7카테고리), Activity API(필터+페이지네이션+통계), recharts 메트릭스 대시보드, LiveActivityPanel 강화
+- **태스크 시스템**: 6-lane 칸반(@dnd-kit), TaskDetailModal, comments, dependencies
+- **스킬 마켓플레이스**: skills/agent_skills/skill_registry, Gateway 동기화
+- **Activity/Audit**: 28종+ 이벤트, recharts 메트릭스 대시보드
+- **Vault**: Obsidian 볼트 웹 탐색기 + 편집기 (트리 뷰, 검색, URL 클리핑/딥링크, CodeMirror 6 에디터+툴바, CRUD, 이미지 업로드/D&D, ==highlight==, callout, 코드 구문강조, 첨부파일 서빙, wikilink 네비게이션)
+- **승인/거버넌스**: approval_policies, Telegram 인라인 키보드 승인
+- **알림**: notification_preferences, Herald Bot Long Polling
+- **Memory**: journal/longterm/profile/lesson, importance, expiresAt
+- **실시간**: Hono WebSocket + Redis Pub/Sub + SSE 폴백
+- **CI/CD**: Vitest 63개+ Playwright 16개+ Husky + lint-staged
+- **인프라**: Docker Compose (PostgreSQL+Redis), PM2 (web+api+adapter)
 
-### 목표 (Phase 1~)
-- **분리 아키텍처**: Next.js (UI) + Hono (API + WebSocket + Worker) + PostgreSQL + Redis
-- **양방향 제어**: OpenClaw Gateway WebSocket RPC (`ws://127.0.0.1:18789`)
-- **이중 제어 모드**: Hermes 경유 위임 + 직접 제어
-- **커맨드 큐**: BullMQ (비동기 실행, 재시도, 감사 로깅)
+### 목표 (Phase 11~12)
+- **Phase 11**: 고급 분석 대시보드 (에이전트 성과, 태스크 통계, 트렌드)
+- **Phase 12**: 외부 연동 확장 (GitHub, Linear 등 서드파티 통합)
 
 ### 일관된 원칙
 - **오피스 메타포**: 에이전트 상태를 사무실 위치(Desk, Library, Workbench 등)로 시각화
