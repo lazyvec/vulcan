@@ -11,6 +11,7 @@
     "api:db:migrate:pg": "pnpm --filter @vulcan/api db:migrate:pg",
     "api:migrate:sqlite-to-pg": "pnpm --filter @vulcan/api migrate:sqlite-to-pg",
     "build": "pnpm --filter @vulcan/shared build && pnpm --filter @vulcan/api build && pnpm --filter @vulcan/web build",
+    "postbuild": "pm2 restart vulcan-api vulcan-mc --update-env 2>/dev/null || true",
     "start": "pnpm --filter @vulcan/web start --port 3001 --hostname 127.0.0.1",
     "lint": "pnpm --filter @vulcan/shared lint && pnpm --filter @vulcan/api lint && pnpm --filter @vulcan/web lint",
     "seed": "pnpm --filter @vulcan/web seed",
