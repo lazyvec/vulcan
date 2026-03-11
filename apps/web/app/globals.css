@@ -163,6 +163,21 @@ a {
   border-color: var(--color-primary);
 }
 
+.vulcan-button-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.vulcan-button-ghost:hover {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+}
+
 .vulcan-input {
   width: 100%;
   border-radius: var(--radius-control);
@@ -806,5 +821,16 @@ a {
 
   .vault-note-header {
     padding: 12px 16px;
+  }
+
+  /* vault-prose 모바일 보강 */
+  .vault-prose {
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .vault-prose pre {
+    max-width: 100%;
   }
 }

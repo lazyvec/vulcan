@@ -828,42 +828,40 @@ export function VaultExplorer({
       )}
 
       {/* 상단 바 */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="relative min-w-0 flex-1">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]"
           />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="노트 검색..."
+            placeholder="검색..."
             className="vulcan-input has-icon"
           />
         </div>
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 p-2 text-sm"
+          className="vulcan-button-ghost flex shrink-0 items-center justify-center p-2"
           title="볼트 동기화"
         >
-          <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
-          <span className="hidden sm:inline">싱크</span>
+          <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
         </button>
         <button
           onClick={() => setShowNewNoteModal(true)}
-          className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 p-2 text-sm"
+          className="vulcan-button-ghost flex shrink-0 items-center justify-center p-2"
           title="새 노트"
         >
-          <FilePlus size={14} />
-          <span className="hidden sm:inline">새 노트</span>
+          <FilePlus size={16} />
         </button>
         <div className="vault-clip-area hidden items-center gap-2 lg:flex">
           <div className="relative w-64">
             <Link
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]"
             />
             <input
               type="text"
