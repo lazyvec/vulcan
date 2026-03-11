@@ -1,0 +1,65 @@
+[SEVERITY: Critical] [FILE: apps/web/components/KanbanBoard.tsx] [LINE: approx 216, 229, 416]  
+ISSUE: 모바일에서 각 lane이 `min-w-[240px]`이고 전체 보드가 `overflow-x-auto`인 6열 구조라서 375px 화면에서는 핵심 태스크 화면이 사실상 가로 팬에 의존합니다. 게다가 각 lane 내부도 `overflow-y-auto`라서 가로 스크롤 + 세로 중첩 스크롤이 동시에 생겨 조작성이 크게 떨어집니다.  
+FIX: `lg` 미만에서는 1열 또는 2열 stacked lane으로 전환하고, lane 내부 스크롤을 제거하거나 보드 전체 단일 스크롤로 합치세요.
+
+[SEVERITY: Critical] [FILE: apps/web/components/VaultExplorer.tsx] [LINE: approx 804, 887, 893, 928, 1059]  
+ISSUE: `height: calc(100dvh - 8rem)` 고정 높이 위에 좌측 목록/우측 본문 각각 독립 스크롤이 있고, 모바일에서 목록/본문을 번갈아 전체화면처럼 숨기는 구조입니다. 375px에서는 상단 sticky topbar와 합쳐져 콘텐츠가 잘리거나, iOS에서 사용 가능한 높이 변화 시 본문이 답답하게 끊기는 위험이 큽니다.  
+FIX: 고정 높이 계산 대신 레이아웃 부모에서 `min-h-0 flex-1`로 맡기고, 모바일에서는 목록 또는 본문 중 하나만 단일 스크롤 컨테이너로 운영하세요. safe-area padding도 함께 추가하세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/ui/Button.tsx] [LINE: approx 25-29]  
+ISSUE: 공용 `Button`의 `sm`, `md` 크기가 `px-2 py-1`, `px-3 py-2`라서 높이가 44px에 못 미칩니다. 현재 Topbar, Approvals, Activity 등 모바일 주요 액션에 그대로 쓰여 터치 타깃 기준을 광범위하게 위반합니다.  
+FIX: 최소 `min-h-[44px] min-w-[44px]`를 공통으로 넣고, `sm`도 모바일에서는 44px 이상이 되도록 size scale을 재정의하세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/Topbar.tsx] [LINE: approx 106-154]  
+ISSUE: 내비게이션/검색 가시성 breakpoint가 일관되지 않습니다. 메뉴 버튼은 `md:hidden`, 검색은 `sm:block`, 사이드바 셸은 `lg` 기준이라서 768~1023px 구간에서 상단바와 사이드바 동작이 서로 다른 규칙으로 바뀝니다. 모바일 정보 구조가 흔들리고 사용자가 어디서 검색/탐색해야 하는지 혼란스러워집니다.  
+FIX: 모바일/태블릿 전환 기준을 `lg` 하나로 통일하고, `lg` 미만에서는 메뉴/검색/액션을 동일한 compact topbar 규칙으로 유지하세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/Topbar.tsx] [LINE: approx 109-130]  
+ISSUE: 모바일 메뉴 버튼은 `p-1.5` + 22px 아이콘이라 실제 터치 영역이 44px보다 작고, 검색 input은 `vulcan-input` 위에 `text-sm`를 덮어써 14px로 내려갑니다. iOS Safari에서 포커스 시 자동 확대가 발생할 수 있습니다.  
+FIX: 메뉴 버튼에 `min-h/min-w-[44px]`를 주고, 검색 input에서는 `text-sm`를 제거해 16px 이상을 유지하세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/ui/Tabs.tsx] [LINE: approx 33-57]  
+ISSUE: 탭 리스트가 단일 `flex` 행이고 wrap/scroll 처리가 없습니다. 메모리 4탭, 승인 3탭 같은 화면에서 375px 폭에서는 라벨이 눌리거나 수평 오버플로우를 유발할 가능성이 큽니다.  
+FIX: `overflow-x-auto whitespace-nowrap` 또는 `flex-wrap`을 추가하고, 각 탭도 44px 이상 높이를 확보하세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/ApprovalsPanel.tsx] [LINE: approx 152-165, 205-214]  
+ISSUE: 승인 카드 상단 액션 영역이 nowrap `flex`라 좁은 폭에서 본문과 버튼이 서로 밀고, 정책 폼은 모바일에서도 `grid-cols-2`라 입력 폭이 지나치게 좁아집니다.  
+FIX: 카드 액션은 `flex-wrap` 또는 모바일 세로 스택으로 바꾸고, 정책 폼 그리드는 `lg:grid-cols-2`로 늦추세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/NotificationSettings.tsx] [LINE: approx 155-198, 203-219]  
+ISSUE: 조용한 시간 설정행과 하단 CTA 행이 둘 다 nowrap `flex`입니다. 375px에서 두 개의 select, 구분자, 설명 텍스트, 버튼 2개가 한 줄에 유지되어 잘리거나 과도하게 압축될 수 있습니다.  
+FIX: 모바일에서는 `flex-col` 또는 `flex-wrap`으로 전환하고, select와 버튼을 `w-full` 또는 2행 배치로 바꾸세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/MemoryBoard.tsx] [LINE: approx 83-99]  
+ISSUE: 편집/삭제 아이콘 버튼이 `p-1` + 14px 아이콘이라 모바일 터치 타깃이 매우 작습니다. 메모리 카드의 핵심 조작이 오탭되기 쉽습니다.  
+FIX: 아이콘 버튼을 최소 44x44로 키우고, 필요하면 카드 하단 액션 행으로 분리하세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/SkillsMarketplace.tsx] [LINE: approx 193, 234, 281-303, 404-543]  
+ISSUE: 스킬 화면은 내부 리스트에 `max-h-[calc(100vh-320px)] overflow-y-auto`를 두어 페이지 내부 스크롤 트랩을 만들고, 탭/Install/Remove/Add 버튼이 대부분 44px 미만입니다. 또한 좌우 패널형 정보 구조가 모바일에서 길게 이어져 탐색 피로가 큽니다.  
+FIX: 모바일에서는 내부 리스트 고정 높이를 제거해 페이지 단일 스크롤로 바꾸고, 액션 버튼은 44px 이상으로 키우며, 탭과 상세 패널은 세로 흐름 우선으로 재배치하세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/LiveActivityPanel.tsx] [LINE: approx 256-318]  
+ISSUE: 패널 자체가 `min-h-[420px]`에 내부 `overflow-auto`를 사용해 페이지 안의 또 다른 스크롤 영역이 됩니다. 모바일에서 이벤트 읽기 중 스크롤 포커스가 자주 내부 패널에 갇힙니다.  
+FIX: 모바일에서는 내부 overflow를 제거하고 바깥 페이지 스크롤 하나로 합치거나, 높이 제한을 `lg` 이상에서만 적용하세요.
+
+[SEVERITY: Major] [FILE: apps/web/components/ui/Modal.tsx] [LINE: approx 67-93]  
+ISSUE: 공용 모달은 footer가 nowrap `flex`이고 safe-area 하단 여백이 없습니다. 모바일에서 버튼이 2개 이상이면 가로로 빡빡해지고, 하단 홈 인디케이터와 겹칠 수 있습니다. 닫기 버튼도 `p-1`이라 44px 미만입니다.  
+FIX: footer에 `flex-wrap` 또는 모바일 세로 배치를 적용하고 `padding-bottom: max(12px, env(safe-area-inset-bottom))`를 추가하세요. 닫기 버튼도 44x44로 키우세요.
+
+[SEVERITY: Minor] [FILE: apps/web/app/globals.css] [LINE: approx 353-357]  
+ISSUE: 전역 `caption-text`는 12px로 기준선에는 걸치지만, 앱 전반에서 10px/11px 보조 텍스트를 많이 덮어쓰고 있어 모바일 가독성이 쉽게 무너집니다. 특히 로그/태그/메타 정보가 많은 화면에서 문제가 큽니다.  
+FIX: 캡션 토큰을 사실상 최소치가 아니라 권장치로 보고, 개별 컴포넌트의 `text-[10px]`, `text-[11px]` 사용을 줄여 최소 12px 이상으로 정리하세요.
+
+[SEVERITY: Minor] [FILE: apps/web/components/VaultExplorer.tsx] [LINE: approx 370, 409, 969-974]  
+ISSUE: Vault 검색 결과 경로, 상대시간, 태그 등 보조 정보가 10px 수준이라 모바일에서 읽기 어렵습니다. 본문은 괜찮지만 탐색 메타가 지나치게 작습니다.  
+FIX: 검색 결과/메타/태그 텍스트를 최소 12px로 올리고, 중요한 경로 정보는 2줄 허용이나 줄바꿈 전략을 적용하세요.
+
+[SEVERITY: Minor] [FILE: apps/web/app/globals.css] [LINE: approx 796-899]  
+ISSUE: Vault 모바일 CSS는 `@media (max-width: 1024px)`를 쓰고, 셸 레이아웃은 `max-width: 1023px`, 여러 컴포넌트는 `sm/md/xl`을 섞어 써서 breakpoint 경계가 정확히 맞지 않습니다. 1024px 부근에서 레이아웃 전환이 어색할 수 있습니다.  
+FIX: 모바일 전환 기준을 `lg` 하나로 통일하고, CSS media query도 Tailwind의 `lg`와 동일한 경계(`1023.98px` 또는 `lg` 토큰화)로 맞추세요.
+
+[SEVERITY: Minor] [FILE: apps/web/app/(layout)/layout.tsx] [LINE: approx 56-65]  
+ISSUE: 메인 레이아웃, sticky topbar, 모바일 overlay/sidebar에 safe-area inset 보정이 없습니다. 노치/홈 인디케이터가 있는 기기에서 상단/하단 인터랙션이 가장자리와 너무 붙습니다.  
+FIX: layout/topbar/sidebar에 `padding-top: env(safe-area-inset-top)` 및 `padding-bottom: env(safe-area-inset-bottom)`를 조건부로 반영하세요.
+
+추가 메모: `MarkdownRenderer` 자체의 코드블록/테이블은 가로 스크롤 방어가 들어가 있어 상대적으로 양호했습니다. 반면 모바일 리스크는 전역 버튼/탭, Topbar, Kanban/Vault 같은 상호작용 밀도가 높은 화면에 집중돼 있습니다.

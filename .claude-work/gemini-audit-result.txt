@@ -1,0 +1,44 @@
+[ERROR] [ImportProcessor] Failed to import RTK.md: ENOENT: no such file or directory, access '/home/linuxuser/.gemini/RTK.md'
+Loaded cached credentials.
+[ERROR] [ImportProcessor] Failed to import RTK.md: ENOENT: no such file or directory, access '/home/linuxuser/.gemini/RTK.md'
+Here is the mobile usability audit report for the Vulcan Mission Control web app, sorted by severity based on the 10 requested categories:
+
+[SEVERITY: Critical] [FILE: apps/web/components/Topbar.tsx] [LINE: ~72]
+ISSUE: Breakpoint inconsistency (Category 3). The mobile hamburger menu button is hidden using `md:hidden` (≥768px), while `Sidebar.tsx` and `layout.tsx` use `lg:hidden`/`lg:relative` (≥1024px) for the off-canvas behavior. On tablet/iPad screens (768px - 1023px), the user cannot open the sidebar because the button is missing and the sidebar remains hidden off-canvas.
+FIX: Change `md:hidden` to `lg:hidden` on the mobile menu button in `Topbar.tsx`.
+
+[SEVERITY: Major] [FILE: apps/web/components/Topbar.tsx] [LINE: ~86]
+ISSUE: iOS auto-zoom prevention (Category 7). The search input uses the `text-sm` class which computes to 14px. Focusing on an input with a font size less than 16px on iOS Safari will forcefully zoom the entire page, breaking the mobile layout.
+FIX: Change `text-sm` to `text-base md:text-sm` on the input so it uses 16px on mobile devices.
+
+[SEVERITY: Major] [FILE: apps/web/app/(layout)/layout.tsx] [LINE: ~26]
+ISSUE: Scroll traps/Navigation behavior (Category 8 & 9). When the mobile sidebar is open, the underlying `body` is not locked. Swiping on the overlay or sidebar can accidentally scroll the main page underneath, creating a jarring UX.
+FIX: Add `document.body.style.overflow = "hidden"` to the `useEffect` when `isSidebarOpen` is true, and restore it on cleanup.
+
+[SEVERITY: Major] [FILE: apps/web/components/Topbar.tsx] [LINE: ~71]
+ISSUE: Touch targets (Category 1). The mobile menu button touch target is too small (`p-1.5` with a 22px icon is roughly 28x28px), violating the ≥44px standard for interactive elements.
+FIX: Add `min-h-[44px] min-w-[44px] flex items-center justify-center` to the `<button>` classes.
+
+[SEVERITY: Major] [FILE: apps/web/components/VaultExplorer.tsx] [LINE: ~715]
+ISSUE: Touch targets (Category 1). The Note Action buttons (Edit, Rename, Delete) in the header have only `p-2` padding around 16px icons (~32x32px), making them difficult to tap accurately on mobile.
+FIX: Add `min-h-[44px] min-w-[44px] justify-center` to the `.vulcan-button-ghost` class applications for these specific buttons.
+
+[SEVERITY: Minor] [FILE: apps/web/app/globals.css] [LINE: ~554]
+ISSUE: Breakpoint consistency (Category 3). Custom mobile styles for Vault use `@media (max-width: 1024px)`. Tailwind's `lg` breakpoint triggers at `min-width: 1024px`. At exactly 1024px viewport width, both mobile and desktop styles conflict.
+FIX: Change `@media (max-width: 1024px)` to `@media (max-width: 1023px)` to align exactly with Tailwind's breakpoint logic.
+
+[SEVERITY: Minor] [FILE: apps/web/components/Sidebar.tsx] [LINE: ~121]
+ISSUE: Safe area insets (Category 10). The Gateway Status footer sits at the very bottom of the sidebar screen without bottom safe-area padding. On iPhones without physical home buttons, the UI might collide with the iOS home indicator bar.
+FIX: Add `pb-[max(env(safe-area-inset-bottom),_0.75rem)]` to the footer container padding.
+
+[SEVERITY: Minor] [FILE: apps/web/components/VaultExplorer.tsx] [LINE: ~318, 342]
+ISSUE: Font sizes (Category 5). Classes like `text-[10px]` are used for relative timestamps and search result paths. In `globals.css`, `.vault-breadcrumb` and `.vault-tag` are set to `0.7rem` (11.2px). This is below the recommended 12px minimum for readability on mobile.
+FIX: Increase text size bounds to at least 12px (`text-xs` or `0.75rem`).
+
+[SEVERITY: Minor] [FILE: apps/web/components/Topbar.tsx] [LINE: ~79]
+ISSUE: Horizontal overflow (Category 2 & 4). The `h1` element containing `{pageTitle}` has no truncation. A deeply nested Vault note or a long project title could stretch the flex container and cause horizontal scrolling on 375px screens.
+FIX: Add `truncate` to the `h1` tag and `min-w-0` to the parent container (`div.flex.items-center.gap-2`).
+
+[SEVERITY: Minor] [FILE: apps/web/components/VaultExplorer.tsx] [LINE: ~140]
+ISSUE: Modal mobile overflow (Category 6). `NewNoteModal`, `DeleteConfirmModal`, and `RenameNoteModal` wrap their inner `vulcan-card` without restricted heights. When the iOS virtual keyboard opens to type a note path, the container can be pushed upward or cut off.
+FIX: Add `max-h-[80vh] overflow-y-auto` to the modal card containers to ensure contents remain scrollable if the viewport shrinks.
