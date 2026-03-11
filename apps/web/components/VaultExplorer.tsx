@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle,
+  ChevronLeft,
   Edit3,
   Eye,
   FileEdit,
@@ -327,7 +328,7 @@ const TreeItem = memo(function TreeItem({
       <div>
         <button
           onClick={() => onToggle(node.path)}
-          className="flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+          className="vault-tree-item vault-tree-item--folder"
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
         >
           {isExpanded ? (
@@ -335,20 +336,23 @@ const TreeItem = memo(function TreeItem({
           ) : (
             <FolderClosed size={14} className="shrink-0" />
           )}
-          <span className="truncate font-medium">{node.name}</span>
+          <span className="truncate">{node.name}</span>
         </button>
-        {isExpanded &&
-          node.children.map((child) => (
-            <TreeItem
-              key={child.path}
-              node={child}
-              selectedPath={selectedPath}
-              expandedFolders={expandedFolders}
-              onToggle={onToggle}
-              onSelect={onSelect}
-              depth={depth + 1}
-            />
-          ))}
+        {isExpanded && (
+          <div className="vault-tree-children">
+            {node.children.map((child) => (
+              <TreeItem
+                key={child.path}
+                node={child}
+                selectedPath={selectedPath}
+                expandedFolders={expandedFolders}
+                onToggle={onToggle}
+                onSelect={onSelect}
+                depth={depth + 1}
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -358,11 +362,7 @@ const TreeItem = memo(function TreeItem({
   return (
     <button
       onClick={() => onSelect(node.note!.path)}
-      className={`flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 text-left text-sm transition-colors ${
-        isSelected
-          ? "border border-[var(--color-primary)] bg-[var(--color-primary-bg)] text-[var(--color-primary)]"
-          : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
-      }`}
+      className={`vault-tree-item ${isSelected ? "vault-tree-item--selected" : ""}`}
       style={{ paddingLeft: `${depth * 12 + 8}px` }}
     >
       <FileText size={14} className="shrink-0" />
@@ -799,7 +799,7 @@ export function VaultExplorer({
       )}
 
       {/* 상단 바 */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search
             size={16}
@@ -813,24 +813,25 @@ export function VaultExplorer({
             className="vulcan-input has-icon"
           />
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 text-sm"
-            title="볼트 동기화"
-          >
-            <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
-            싱크
-          </button>
-          <button
-            onClick={() => setShowNewNoteModal(true)}
-            className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 text-sm"
-          >
-            <FilePlus size={14} />
-            새 노트
-          </button>
-          <div className="relative flex-1 sm:w-64">
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 p-2 text-sm"
+          title="볼트 동기화"
+        >
+          <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+          <span className="hidden sm:inline">싱크</span>
+        </button>
+        <button
+          onClick={() => setShowNewNoteModal(true)}
+          className="vulcan-button-ghost flex shrink-0 items-center gap-1.5 p-2 text-sm"
+          title="새 노트"
+        >
+          <FilePlus size={14} />
+          <span className="hidden sm:inline">새 노트</span>
+        </button>
+        <div className="vault-clip-area hidden items-center gap-2 lg:flex">
+          <div className="relative w-64">
             <Link
               size={16}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]"
@@ -858,8 +859,8 @@ export function VaultExplorer({
       {/* 메인 그리드 */}
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[280px_1fr]">
         {/* 왼쪽 — 파일 트리 or 검색 결과 */}
-        <div className="vulcan-card flex flex-col overflow-hidden p-2">
-          <div className="overflow-y-auto">
+        <div className={`vulcan-card flex flex-col overflow-hidden p-2 vault-mobile-list ${selectedPath ? "vault-mobile-list--hidden" : ""}`}>
+          <div className="vault-sidebar-scroll">
             {searchResults && query.trim() ? (
               <SearchResultList
                 results={searchResults}
@@ -888,7 +889,7 @@ export function VaultExplorer({
         </div>
 
         {/* 오른쪽 — 본문 뷰어/에디터 */}
-        <div className="vulcan-card flex flex-col overflow-hidden">
+        <div className={`vulcan-card flex flex-col overflow-hidden vault-mobile-content ${selectedPath ? "vault-mobile-content--visible" : ""}`}>
           {loading ? (
             <div className="flex flex-1 items-center justify-center">
               <Loader2
@@ -899,18 +900,38 @@ export function VaultExplorer({
           ) : noteContent ? (
             <div className="flex h-full flex-col overflow-hidden">
               {/* 메타 헤더 + 액션 버튼 */}
-              <div className="flex items-start justify-between border-b border-[var(--color-border)] px-6 py-4">
+              <div className="vault-note-header flex items-start justify-between">
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
-                    {noteContent.title}
-                  </h2>
-                  <p className="mt-1 text-xs text-[var(--color-tertiary)]" suppressHydrationWarning>
-                    수정: {relativeTime(noteContent.modified)} · {noteContent.path}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedPath(null);
+                        setNoteContent(null);
+                        router.push("/vault", { scroll: false });
+                      }}
+                      className="vault-back-btn"
+                      title="목록으로"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <h2 className="text-xl font-semibold text-[var(--color-foreground)] truncate">
+                      {noteContent.title}
+                    </h2>
+                  </div>
+                  <div className="vault-breadcrumb">
+                    {noteContent.path.split("/").map((seg, i, arr) => (
+                      <span key={i}>
+                        <span>{seg}</span>
+                        {i < arr.length - 1 && <span className="vault-breadcrumb-sep">/</span>}
+                      </span>
+                    ))}
+                    <span className="vault-breadcrumb-sep">·</span>
+                    <span suppressHydrationWarning>{relativeTime(noteContent.modified)}</span>
+                  </div>
                   {tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {tags.map((tag) => (
-                        <span key={tag} className="vulcan-chip text-xs">
+                        <span key={tag} className="vault-tag">
                           {tag}
                         </span>
                       ))}
@@ -938,7 +959,7 @@ export function VaultExplorer({
                         ) : (
                           <Save size={14} />
                         )}
-                        저장
+                        <span className="hidden sm:inline">저장</span>
                       </button>
                       <button
                         onClick={cancelEditing}
@@ -979,7 +1000,6 @@ export function VaultExplorer({
               {/* 본문 영역 */}
               {editing ? (
                 <div className={`flex min-h-0 flex-1 ${showPreview ? "divide-x divide-[var(--color-border)]" : ""}`}>
-                  {/* CodeMirror 에디터 */}
                   <div className={`min-h-0 ${showPreview ? "w-1/2" : "w-full"}`}>
                     <MarkdownEditor
                       value={editContent}
@@ -989,9 +1009,8 @@ export function VaultExplorer({
                       onImagePaste={handleImageUpload}
                     />
                   </div>
-                  {/* 프리뷰 */}
                   {showPreview && (
-                    <div className="w-1/2 overflow-y-auto p-6">
+                    <div className="vault-content-pane w-1/2">
                       <MarkdownRenderer
                         content={editContent}
                         onWikiLink={handleWikiLink}
@@ -1000,7 +1019,7 @@ export function VaultExplorer({
                   )}
                 </div>
               ) : (
-                <div className="overflow-y-auto p-6">
+                <div className="vault-content-pane">
                   <MarkdownRenderer
                     content={noteContent.content}
                     onWikiLink={handleWikiLink}
@@ -1009,10 +1028,11 @@ export function VaultExplorer({
               )}
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-[var(--color-tertiary)]">
+            <div className="vault-empty-state">
               <div className="text-center">
-                <FileText size={48} className="mx-auto mb-3 opacity-30" />
-                <p>노트를 선택하세요</p>
+                <FileText size={48} className="mx-auto vault-empty-icon" />
+                <p className="vault-empty-text">노트를 선택하세요</p>
+                <p className="vault-empty-hint">왼쪽 트리에서 파일을 클릭하거나 검색하세요</p>
               </div>
             </div>
           )}

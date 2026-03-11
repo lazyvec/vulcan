@@ -315,3 +315,452 @@ a {
   line-height: 1.5;
   color: var(--color-tertiary);
 }
+
+/* ═══════════════════════════════════════════════════
+   Vault 뷰어 — Obsidian 네이티브 스타일
+   ═══════════════════════════════════════════════════ */
+
+/* ── 마크다운 타이포그래피 (.vault-prose) ───────── */
+
+.vault-prose {
+  font-size: var(--vault-font-size);
+  line-height: var(--vault-line-height);
+  color: var(--color-foreground);
+  max-width: var(--vault-max-width);
+}
+
+.vault-prose > * + * {
+  margin-top: 1em;
+}
+
+.vault-prose h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-foreground);
+  padding-bottom: 0.4em;
+  border-bottom: 2px solid var(--vault-heading-border);
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+}
+
+.vault-prose h2 {
+  font-size: 1.3rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--color-foreground);
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--vault-heading-border-subtle);
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+}
+
+.vault-prose h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-foreground);
+  padding-left: 0.75em;
+  border-left: 3px solid var(--color-primary);
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+}
+
+.vault-prose h4,
+.vault-prose h5,
+.vault-prose h6 {
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin-top: 1em;
+  margin-bottom: 0.3em;
+}
+
+/* 코드블록 */
+.vault-prose pre {
+  position: relative;
+  background: var(--vault-code-bg);
+  border: 1px solid var(--vault-code-border);
+  border-radius: var(--radius-card);
+  padding: 1em 1.25em;
+  overflow-x: auto;
+  font-size: 0.875em;
+  line-height: 1.6;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.vault-prose pre[data-language]::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 2px 10px;
+  font-size: 0.7em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--vault-code-badge-text);
+  background: var(--vault-code-badge-bg);
+  border-bottom-left-radius: var(--radius-control);
+  border-top-right-radius: calc(var(--radius-card) - 1px);
+}
+
+.vault-prose pre code {
+  background: transparent;
+  padding: 0;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* 인라인 코드 */
+.vault-prose :not(pre) > code {
+  background: var(--vault-inline-code-bg);
+  color: var(--vault-inline-code-text);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Blockquote */
+.vault-prose blockquote {
+  border-left: 3px solid var(--vault-blockquote-border);
+  background: var(--vault-blockquote-bg);
+  padding: 0.75em 1em;
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  color: var(--color-muted-foreground);
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.vault-prose blockquote p {
+  margin: 0;
+}
+
+/* 테이블 */
+.vault-prose .vault-table-wrap {
+  overflow-x: auto;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-border);
+}
+
+.vault-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.vault-prose thead th {
+  background: var(--vault-table-header-bg);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.6em 0.75em;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.vault-prose tbody td {
+  padding: 0.5em 0.75em;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 50%, transparent 50%);
+}
+
+.vault-prose tbody tr:nth-child(even) {
+  background: var(--vault-table-stripe-bg);
+}
+
+.vault-prose tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* HR */
+.vault-prose hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--vault-hr-color), transparent);
+  opacity: 0.4;
+  margin: 2em 0;
+}
+
+/* 리스트 */
+.vault-prose ul {
+  padding-left: 1.5em;
+  list-style: disc;
+}
+
+.vault-prose ol {
+  padding-left: 1.5em;
+  list-style: decimal;
+}
+
+.vault-prose li {
+  padding-left: 0.25em;
+}
+
+.vault-prose li::marker {
+  color: var(--color-primary);
+}
+
+/* mark (하이라이트) */
+.vault-prose mark {
+  background: rgba(250, 204, 21, 0.2);
+  color: var(--color-foreground);
+  padding: 0.05em 0.25em;
+  border-radius: 2px;
+  border-bottom: 2px solid rgba(250, 204, 21, 0.5);
+}
+
+/* 이미지 */
+.vault-prose img {
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+  max-width: 100%;
+  display: block;
+  margin: 1.25em auto;
+}
+
+/* 링크 */
+.vault-prose a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--color-primary) 40%, transparent 60%);
+  text-underline-offset: 2px;
+  transition: color var(--vault-ease), text-decoration-color var(--vault-ease);
+}
+
+.vault-prose a:hover {
+  color: var(--color-primary-hover);
+  text-decoration-color: var(--color-primary-hover);
+}
+
+/* 강조 */
+.vault-prose strong {
+  color: var(--color-foreground);
+  font-weight: 650;
+}
+
+.vault-prose p {
+  margin: 0;
+}
+
+.vault-prose p + p {
+  margin-top: 0.75em;
+}
+
+/* ── 사이드바 트리 ──────────────────────────────── */
+
+.vault-tree-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-control);
+  padding: 6px 8px;
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+  transition: background var(--vault-ease), color var(--vault-ease);
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.vault-tree-item:hover {
+  background: var(--color-muted);
+  color: var(--color-foreground);
+}
+
+.vault-tree-item--selected {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-color: color-mix(in oklab, var(--color-primary) 40%, transparent 60%);
+}
+
+.vault-tree-item--selected:hover {
+  background: color-mix(in oklab, var(--color-primary) 14%, transparent 86%);
+}
+
+.vault-tree-item--folder {
+  font-weight: 500;
+}
+
+.vault-tree-children {
+  position: relative;
+  padding-left: 8px;
+}
+
+.vault-tree-children::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--vault-tree-indent-guide);
+}
+
+.vault-sidebar-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.vault-sidebar-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.vault-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 20px;
+  border: none;
+}
+
+.vault-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── UI 요소 ────────────────────────────────────── */
+
+.vault-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: var(--vault-tag-bg);
+  color: var(--vault-tag-text);
+  border: 1px solid var(--vault-tag-border);
+  transition: background var(--vault-ease);
+}
+
+.vault-tag::before {
+  content: "#";
+  opacity: 0.6;
+}
+
+.vault-tag:hover {
+  background: color-mix(in oklab, var(--color-primary) 16%, transparent 84%);
+}
+
+.vault-note-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--color-surface) 95%, var(--color-primary) 5%) 0%, var(--color-surface) 100%);
+}
+
+.vault-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: var(--color-tertiary);
+  margin-top: 6px;
+}
+
+.vault-breadcrumb span {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-breadcrumb .vault-breadcrumb-sep {
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+.vault-content-pane {
+  overflow-y: auto;
+  padding: 24px 36px;
+  flex: 1;
+  min-height: 0;
+}
+
+.vault-empty-state {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-tertiary);
+}
+
+.vault-empty-icon {
+  opacity: 0.2;
+  margin-bottom: 12px;
+}
+
+.vault-empty-text {
+  font-size: 0.9rem;
+}
+
+.vault-empty-hint {
+  font-size: 0.75rem;
+  margin-top: 4px;
+  opacity: 0.6;
+}
+
+/* ── Vault 뒤로가기 버튼 (모바일) ──────────────── */
+
+.vault-back-btn {
+  display: none;
+}
+
+/* ── 모바일 반응형 ──────────────────────────────── */
+
+@media (max-width: 1024px) {
+  /* 사이드바/콘텐츠 전체화면 전환 */
+  .vault-mobile-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .vault-mobile-content {
+    display: none;
+  }
+
+  .vault-mobile-list--hidden {
+    display: none;
+  }
+
+  .vault-mobile-content--visible {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 상단 바: URL 클리핑 숨김 */
+  .vault-clip-area {
+    display: none;
+  }
+
+  /* 뒤로가기 버튼 표시 */
+  .vault-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: var(--radius-control);
+    font-size: 0.8rem;
+    color: var(--color-muted-foreground);
+    cursor: pointer;
+    transition: background var(--vault-ease);
+    border: none;
+    background: none;
+    flex-shrink: 0;
+  }
+
+  .vault-back-btn:hover {
+    background: var(--color-muted);
+    color: var(--color-foreground);
+  }
+
+  /* 콘텐츠 패딩 축소 */
+  .vault-content-pane {
+    padding: 16px;
+  }
+
+  .vault-note-header {
+    padding: 12px 16px;
+  }
+}

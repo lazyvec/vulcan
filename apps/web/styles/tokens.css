@@ -65,6 +65,49 @@
   /* Focus ring */
   --color-focus-ring: rgba(224, 122, 64, 0.5);
 
+  /* ── Vault 전용 토큰 ──────────────────────────── */
+
+  /* Vault 타이포그래피 */
+  --vault-font-size: 15px;
+  --vault-line-height: 1.75;
+  --vault-max-width: 72ch;
+
+  /* Vault Heading Accent */
+  --vault-heading-border: color-mix(in oklab, var(--color-primary) 40%, transparent 60%);
+  --vault-heading-border-subtle: color-mix(in oklab, var(--color-foreground) 12%, transparent 88%);
+
+  /* Vault Code Block */
+  --vault-code-bg: #1e1d1b;
+  --vault-code-border: color-mix(in oklab, var(--color-primary) 25%, var(--color-border) 75%);
+  --vault-code-badge-bg: color-mix(in oklab, var(--color-primary) 18%, transparent 82%);
+  --vault-code-badge-text: var(--color-primary);
+
+  /* Vault Inline Code */
+  --vault-inline-code-bg: rgba(224, 140, 80, 0.1);
+  --vault-inline-code-text: #e8a66a;
+
+  /* Vault Blockquote */
+  --vault-blockquote-border: var(--color-primary);
+  --vault-blockquote-bg: rgba(224, 122, 64, 0.05);
+
+  /* Vault Table */
+  --vault-table-header-bg: color-mix(in oklab, var(--color-muted) 80%, black 20%);
+  --vault-table-stripe-bg: rgba(255, 255, 255, 0.02);
+
+  /* Vault HR */
+  --vault-hr-color: var(--color-primary);
+
+  /* Vault Tree */
+  --vault-tree-indent-guide: color-mix(in oklab, var(--color-border) 60%, transparent 40%);
+
+  /* Vault Tag */
+  --vault-tag-bg: var(--color-primary-bg);
+  --vault-tag-text: var(--color-primary);
+  --vault-tag-border: color-mix(in oklab, var(--color-primary) 30%, transparent 70%);
+
+  /* Vault Transition */
+  --vault-ease: 180ms cubic-bezier(0.2, 0, 0, 1);
+
   /* Radius */
   --radius-control: 8px;
   --radius-card: 12px;

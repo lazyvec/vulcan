@@ -177,7 +177,7 @@ export function MarkdownRenderer({
   onWikiLink?: (path: string) => void;
 }) {
   return (
-    <div className="prose prose-invert max-w-none text-[var(--color-foreground)]">
+    <div className="vault-prose">
       <ReactMarkdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}
@@ -203,14 +203,12 @@ export function MarkdownRenderer({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] underline"
               >
                 {children}
               </a>
             );
           },
           img: ({ src, alt, ...props }) => {
-            // 상대경로 이미지를 vault files API로 라우팅
             const srcStr = typeof src === "string" ? src : "";
             let resolvedSrc = srcStr;
             if (
@@ -227,55 +225,42 @@ export function MarkdownRenderer({
               <img
                 src={resolvedSrc}
                 alt={alt ?? ""}
-                className="max-w-full rounded-[var(--radius-control)]"
                 loading="lazy"
                 {...props}
               />
             );
           },
-          code: ({ className, children, ...props }) => {
-            const isBlock = className?.startsWith("language-");
-            if (isBlock) {
-              return (
-                <code
-                  className={`${className} block overflow-x-auto rounded-[var(--radius-control)] bg-[var(--color-muted)] p-3 text-sm`}
-                  {...props}
-                >
-                  {children}
-                </code>
-              );
+          pre: ({ children, ...props }) => {
+            // code 자식에서 언어 추출
+            let lang = "";
+            if (
+              children &&
+              typeof children === "object" &&
+              "props" in (children as React.ReactElement)
+            ) {
+              const codeProps = (children as React.ReactElement).props as { className?: string };
+              const match = codeProps.className?.match(/language-(\w+)/);
+              if (match) lang = match[1];
             }
             return (
-              <code
-                className="rounded bg-[var(--color-muted)] px-1.5 py-0.5 text-sm"
-                {...props}
-              >
+              <pre {...(lang ? { "data-language": lang } : {})} {...props}>
                 {children}
-              </code>
+              </pre>
             );
           },
+          code: ({ className, children, ...props }) => (
+            <code className={className} {...props}>
+              {children}
+            </code>
+          ),
           table: ({ children }) => (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-[var(--color-border)] text-sm">
-                {children}
-              </table>
+            <div className="vault-table-wrap">
+              <table>{children}</table>
             </div>
           ),
-          th: ({ children }) => (
-            <th className="border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2 text-left font-semibold">
-              {children}
-            </th>
-          ),
-          td: ({ children }) => (
-            <td className="border border-[var(--color-border)] px-3 py-2">
-              {children}
-            </td>
-          ),
-          mark: ({ children }) => (
-            <mark className="rounded px-0.5 bg-yellow-500/30 text-[var(--color-foreground)]">
-              {children}
-            </mark>
-          ),
+          th: ({ children }) => <th>{children}</th>,
+          td: ({ children }) => <td>{children}</td>,
+          mark: ({ children }) => <mark>{children}</mark>,
         }}
       >
         {content}
