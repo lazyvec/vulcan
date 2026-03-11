@@ -36,11 +36,15 @@ export default function MissionLayout({
 
   useEffect(() => {
     if (!isSidebarOpen) return;
+    document.body.style.overflow = "hidden";
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") setSidebarOpen(false);
     };
     window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleEscape);
+    };
   }, [isSidebarOpen]);
 
   return (

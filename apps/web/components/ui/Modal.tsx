@@ -81,7 +81,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "max-
             <button
               type="button"
               aria-label="닫기"
-              className="rounded p-1 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
               onClick={onClose}
             >
               <X size={18} aria-hidden="true" />
@@ -90,7 +90,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "max-
         )}
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] px-5 py-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--color-border)] px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {footer}
           </div>
         )}

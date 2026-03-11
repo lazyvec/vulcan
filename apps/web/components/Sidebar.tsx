@@ -145,7 +145,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
         </nav>
 
         {/* Footer: Gateway status */}
-        <div className={`border-t border-[var(--color-border)] p-3 ${isCollapsed ? "flex justify-center" : ""}`}>
+        <div className={`border-t border-[var(--color-border)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] ${isCollapsed ? "flex justify-center" : ""}`}>
           <div className={`flex items-center gap-2 ${isCollapsed ? "" : "rounded-[var(--radius-control)] bg-[var(--color-muted)]/50 px-3 py-2"}`} title={gatewayConnected ? "게이트웨이 연결됨" : "게이트웨이 연결 끊김"}>
             {gatewayConnected ? (
               <Wifi size={14} className="text-[var(--color-success)]" aria-hidden="true" />

@@ -213,7 +213,7 @@ function DroppableLane({
   const taskIds = tasks.map((t) => t.id);
 
   return (
-    <div className="flex min-w-[240px] snap-center flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/75 p-2 md:min-w-0 md:snap-align-none">
+    <div className="flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-background)]/75 p-2 lg:min-w-[200px] lg:snap-center">
       <div className="mb-3 flex items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2">
         <div className="flex items-center gap-1.5">
           {laneIcon(lane.key)}
@@ -413,7 +413,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
       </div>
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="grid min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid min-h-0 flex-1 gap-3 overflow-x-auto pb-2 lg:snap-x lg:snap-mandatory lg:grid-cols-3 xl:grid-cols-6">
           {LANES.map((lane) => {
             const laneTasks = filtered.filter((task) => task.lane === lane.key);
             return (

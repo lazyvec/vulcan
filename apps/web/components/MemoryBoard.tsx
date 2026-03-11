@@ -84,18 +84,18 @@ function MemoryCard({
           <button
             type="button"
             onClick={() => onEdit(item)}
-            className="rounded p-1 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] cursor-pointer"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] cursor-pointer"
             title="편집"
           >
-            <Edit2 size={14} />
+            <Edit2 size={16} />
           </button>
           <button
             type="button"
             onClick={() => onDelete(item.id)}
-            className="rounded p-1 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)] cursor-pointer"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)] cursor-pointer"
             title="삭제"
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} />
           </button>
         </div>
       </div>

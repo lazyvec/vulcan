@@ -30,7 +30,7 @@ export function Tabs({ items, activeKey, onChange, className = "" }: TabsProps) 
   );
 
   return (
-    <div role="tablist" className={`flex gap-1 border-b border-[var(--color-border)] ${className}`}>
+    <div role="tablist" className={`flex gap-1 overflow-x-auto border-b border-[var(--color-border)] ${className}`}>
       {items.map((item, i) => (
         <button
           key={item.key}
@@ -40,7 +40,7 @@ export function Tabs({ items, activeKey, onChange, className = "" }: TabsProps) 
           tabIndex={activeKey === item.key ? 0 : -1}
           onClick={() => onChange(item.key)}
           onKeyDown={(e) => handleKeyDown(e, i)}
-          className={`cursor-pointer rounded-t-[var(--radius-control)] px-4 py-2 text-sm font-medium transition-colors ${
+          className={`min-h-[44px] shrink-0 cursor-pointer whitespace-nowrap rounded-t-[var(--radius-control)] px-4 py-2 text-sm font-medium transition-colors ${
             activeKey === item.key
               ? "border-b-2 border-[var(--color-primary)] bg-[var(--color-surface)] text-[var(--color-foreground)]"
               : "text-[var(--color-tertiary)] hover:text-[var(--color-foreground)]"

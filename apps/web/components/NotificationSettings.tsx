@@ -170,7 +170,7 @@ export function NotificationSettings({ initialPreferences, initialLogs }: Props)
           </button>
         </div>
         {silentHours && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-[var(--color-foreground)]">
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--color-foreground)]">
             <select
               value={silentHours.startHour}
               onChange={(e) => updateSilentHour("startHour", Number(e.target.value))}
@@ -200,19 +200,19 @@ export function NotificationSettings({ initialPreferences, initialLogs }: Props)
       </div>
 
       {/* 테스트 발송 */}
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
           disabled={testing}
           onClick={sendTestNotification}
-          className="rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="min-h-[44px] rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {testing ? "발송 중..." : "테스트 알림 발송"}
         </button>
         <button
           type="button"
           onClick={refreshLogs}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-foreground)] transition-opacity hover:opacity-80"
+          className="min-h-[44px] rounded-[var(--radius-control)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-foreground)] transition-opacity hover:opacity-80"
         >
           로그 새로고침
         </button>

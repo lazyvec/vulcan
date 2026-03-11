@@ -287,6 +287,21 @@ a {
   .sidebar-nav-item {
     min-height: 44px;
   }
+  /* 공용 Button 컴포넌트 최소 터치 타겟 */
+  button:not([role="tab"]) {
+    min-height: 44px;
+  }
+}
+
+/* Safe area insets */
+@supports (padding: env(safe-area-inset-top)) {
+  .vulcan-shell > header,
+  .vulcan-shell > div > header {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+  .vulcan-shell > aside {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
 }
 
 /* prefers-reduced-motion 존중 */
@@ -793,7 +808,7 @@ a {
 
 /* ── 모바일 반응형 ──────────────────────────────── */
 
-@media (max-width: 1024px) {
+@media (max-width: 1023px) {
   /* 사이드바: 노트 미선택 시 전체화면 */
   .vault-mobile-list {
     display: flex !important;

@@ -253,7 +253,7 @@ export function LiveActivityPanel({
   };
 
   return (
-    <section className="vulcan-card flex h-full min-h-[420px] flex-col p-4">
+    <section className="vulcan-card flex h-full flex-col p-4 lg:min-h-[420px]">
       {/* 헤더 */}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <h2 className="mr-auto text-base font-semibold text-[var(--color-foreground)]">{title}</h2>

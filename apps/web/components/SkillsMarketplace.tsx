@@ -231,7 +231,7 @@ export function SkillsMarketplace({ initialSkills, initialAgents, initialRegistr
           ))}
         </div>
 
-        <div className="max-h-[calc(100vh-320px)] space-y-1 overflow-y-auto">
+        <div className="space-y-1 overflow-y-auto lg:max-h-[calc(100vh-320px)]">
           {filteredSkills.length === 0 && (
             <p className="py-4 text-center text-xs text-[var(--color-muted-foreground)]">
               {skills.length === 0 ? "Sync를 클릭하여 스킬을 가져오세요" : "검색 결과 없음"}
