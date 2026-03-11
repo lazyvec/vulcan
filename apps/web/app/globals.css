@@ -739,28 +739,38 @@ a {
 /* ── 모바일 반응형 ──────────────────────────────── */
 
 @media (max-width: 1024px) {
-  /* 사이드바/콘텐츠 전체화면 전환 */
+  /* 사이드바: 노트 미선택 시 전체화면 */
   .vault-mobile-list {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex-shrink: 1 !important;
   }
 
-  .vault-mobile-content {
-    display: none;
-  }
-
+  /* 사이드바: 노트 선택 시 숨김 */
   .vault-mobile-list--hidden {
-    display: none;
+    display: none !important;
   }
 
+  /* 콘텐츠: 기본 숨김 */
+  .vault-mobile-content {
+    display: none !important;
+  }
+
+  /* 콘텐츠: 노트 선택 시 전체화면 */
   .vault-mobile-content--visible {
-    display: flex;
+    display: flex !important;
     flex-direction: column;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 0% !important;
   }
 
   /* 상단 바: URL 클리핑 숨김 */
   .vault-clip-area {
-    display: none;
+    display: none !important;
   }
 
   /* 뒤로가기 버튼 표시 */
@@ -786,14 +796,7 @@ a {
 
   /* 리사이즈 핸들 숨김 */
   .vault-resize-handle {
-    display: none;
-  }
-
-  /* 사이드바 width 인라인 스타일 무시 */
-  .vault-mobile-list {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
+    display: none !important;
   }
 
   /* 콘텐츠 패딩 축소 */

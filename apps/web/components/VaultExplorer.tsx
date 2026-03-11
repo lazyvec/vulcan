@@ -886,14 +886,11 @@ export function VaultExplorer({
       </div>
 
       {/* 메인 그리드 */}
-      <div
-        className="flex min-h-0 flex-1 gap-0 lg:gap-0"
-        style={{ display: "flex" }}
-      >
+      <div className="flex min-h-0 flex-1 gap-0">
         {/* 왼쪽 — 파일 트리 or 검색 결과 */}
         <div
           className={`vulcan-card flex flex-col overflow-hidden p-2 vault-mobile-list ${selectedPath ? "vault-mobile-list--hidden" : ""}`}
-          style={{ width: `${sidebarWidth}px`, minWidth: "180px", maxWidth: "600px", flexShrink: 0 }}
+          style={{ width: sidebarWidth, minWidth: 180, maxWidth: 600, flexShrink: 0 }}
         >
           <div className="vault-sidebar-scroll">
             {searchResults && query.trim() ? (
