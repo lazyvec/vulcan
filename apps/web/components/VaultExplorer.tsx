@@ -1,7 +1,6 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   CheckCircle,
   ChevronLeft,
@@ -436,7 +435,6 @@ export function VaultExplorer({
   initialNotes: VaultNoteSummary[];
   initialNotePath?: string;
 }) {
-  const router = useRouter();
   const [notes, setNotes] = useState(initialNotes);
   const [selectedPath, setSelectedPath] = useState<string | null>(initialNotePath ?? null);
   const [noteContent, setNoteContent] = useState<VaultNote | null>(null);
@@ -464,6 +462,37 @@ export function VaultExplorer({
 
   /* 싱크 상태 */
   const [syncing, setSyncing] = useState(false);
+
+  /* 패널 리사이즈 */
+  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const resizingRef = useRef(false);
+  const resizeStartRef = useRef({ x: 0, width: 0 });
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = true;
+    resizeStartRef.current = { x: e.clientX, width: sidebarWidth };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const delta = ev.clientX - resizeStartRef.current.x;
+      const newWidth = Math.min(600, Math.max(180, resizeStartRef.current.width + delta));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleUp = () => {
+      resizingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
+    };
+
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
+  }, [sidebarWidth]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const { toasts, show: showToast } = useToast();
@@ -529,8 +558,8 @@ export function VaultExplorer({
     setSelectedPath(path);
     setLoading(true);
 
-    // URL 딥링크 업데이트 (push → 뒤로가기 지원)
-    router.push(`/vault?note=${encodeURIComponent(path)}`, { scroll: false });
+    // URL 딥링크 업데이트 — pushState로 서버 재호출 방지
+    window.history.pushState(null, "", `/vault?note=${encodeURIComponent(path)}`);
 
     try {
       const res = await fetch(`/api/vault/notes/${encodeURIComponent(path)}`);
@@ -541,7 +570,7 @@ export function VaultExplorer({
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   /* 초기 딥링크 로드 */
   useEffect(() => {
@@ -677,7 +706,7 @@ export function VaultExplorer({
       setSelectedPath(null);
       setNoteContent(null);
       setEditing(false);
-      router.push("/vault", { scroll: false });
+      window.history.pushState(null, "", "/vault");
       showToast("success", "노트 삭제 완료");
       doSearch(query);
     } catch (err) {
@@ -686,7 +715,7 @@ export function VaultExplorer({
         `삭제 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`,
       );
     }
-  }, [selectedPath, query, doSearch, showToast, router]);
+  }, [selectedPath, query, doSearch, showToast]);
 
   /* 노트 이름 변경 */
   const handleRenameNote = useCallback(
@@ -709,7 +738,7 @@ export function VaultExplorer({
         setShowRenameModal(false);
         setSelectedPath(data.note.path);
         setNoteContent(data.note);
-        router.push(`/vault?note=${encodeURIComponent(data.note.path)}`, { scroll: false });
+        window.history.pushState(null, "", `/vault?note=${encodeURIComponent(data.note.path)}`);
         showToast("success", "이름 변경 완료");
         doSearch(query);
       } catch (err) {
@@ -719,7 +748,7 @@ export function VaultExplorer({
         );
       }
     },
-    [selectedPath, query, doSearch, showToast, router],
+    [selectedPath, query, doSearch, showToast],
   );
 
   /* 이미지 붙여넣기/업로드 */
@@ -857,9 +886,15 @@ export function VaultExplorer({
       </div>
 
       {/* 메인 그리드 */}
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[280px_1fr]">
+      <div
+        className="flex min-h-0 flex-1 gap-0 lg:gap-0"
+        style={{ display: "flex" }}
+      >
         {/* 왼쪽 — 파일 트리 or 검색 결과 */}
-        <div className={`vulcan-card flex flex-col overflow-hidden p-2 vault-mobile-list ${selectedPath ? "vault-mobile-list--hidden" : ""}`}>
+        <div
+          className={`vulcan-card flex flex-col overflow-hidden p-2 vault-mobile-list ${selectedPath ? "vault-mobile-list--hidden" : ""}`}
+          style={{ width: `${sidebarWidth}px`, minWidth: "180px", maxWidth: "600px", flexShrink: 0 }}
+        >
           <div className="vault-sidebar-scroll">
             {searchResults && query.trim() ? (
               <SearchResultList
@@ -888,8 +923,14 @@ export function VaultExplorer({
           </div>
         </div>
 
+        {/* 리사이즈 핸들 */}
+        <div
+          className="vault-resize-handle"
+          onMouseDown={handleResizeStart}
+        />
+
         {/* 오른쪽 — 본문 뷰어/에디터 */}
-        <div className={`vulcan-card flex flex-col overflow-hidden vault-mobile-content ${selectedPath ? "vault-mobile-content--visible" : ""}`}>
+        <div className={`vulcan-card flex min-w-0 flex-1 flex-col overflow-hidden vault-mobile-content ${selectedPath ? "vault-mobile-content--visible" : ""}`}>
           {loading ? (
             <div className="flex flex-1 items-center justify-center">
               <Loader2
@@ -907,7 +948,7 @@ export function VaultExplorer({
                       onClick={() => {
                         setSelectedPath(null);
                         setNoteContent(null);
-                        router.push("/vault", { scroll: false });
+                        window.history.pushState(null, "", "/vault");
                       }}
                       className="vault-back-btn"
                       title="목록으로"

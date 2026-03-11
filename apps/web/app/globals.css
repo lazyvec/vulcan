@@ -701,6 +701,35 @@ a {
   opacity: 0.6;
 }
 
+/* ── 리사이즈 핸들 ──────────────────────────────── */
+
+.vault-resize-handle {
+  width: 6px;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.vault-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background var(--vault-ease), height var(--vault-ease);
+}
+
+.vault-resize-handle:hover::after,
+.vault-resize-handle:active::after {
+  background: var(--color-primary);
+  height: 48px;
+}
+
 /* ── Vault 뒤로가기 버튼 (모바일) ──────────────── */
 
 .vault-back-btn {
@@ -753,6 +782,18 @@ a {
   .vault-back-btn:hover {
     background: var(--color-muted);
     color: var(--color-foreground);
+  }
+
+  /* 리사이즈 핸들 숨김 */
+  .vault-resize-handle {
+    display: none;
+  }
+
+  /* 사이드바 width 인라인 스타일 무시 */
+  .vault-mobile-list {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
   }
 
   /* 콘텐츠 패딩 축소 */
