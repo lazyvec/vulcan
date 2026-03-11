@@ -55,10 +55,6 @@
   border-color: var(--color-border);
 }
 
-html {
-  overscroll-behavior: none;
-}
-
 html,
 body {
   margin: 0;
@@ -70,7 +66,6 @@ body {
 body {
   font-family: var(--font-geist-sans), sans-serif;
   background: var(--gradient-bg);
-  overscroll-behavior: none;
 }
 
 ::-webkit-scrollbar {
