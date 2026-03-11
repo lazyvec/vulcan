@@ -290,6 +290,34 @@ export async function searchVaultNotesWithSnippet(
   return results;
 }
 
+/** URL 도메인/키워드 기반 카테고리 자동 분류 */
+function classifyCategory(url: string, title: string, description: string): string {
+  const haystack = `${url} ${title} ${description}`.toLowerCase();
+
+  const rules: [string, RegExp][] = [
+    ["AI", /\b(ai|llm|gpt|claude|openai|anthropic|machine.?learn|neural|transformer|agent|rag)\b/],
+    ["Tech", /\b(github|programming|developer|api|framework|docker|kubernetes|database|linux|typescript|python|rust)\b/],
+    ["Crypto", /\b(crypto|bitcoin|ethereum|blockchain|web3|defi|nft|token)\b/],
+    ["Startup", /\b(startup|yc|venture|fundrais|founder|pivot|mvp|saas|indie.?hack)\b/],
+    ["Biz", /\b(business|revenue|profit|market|strategy|growth|monetiz|pricing|수익|매출|사업)\b/],
+    ["Life", /\b(life|productiv|habit|health|mindset|book|review|travel|삶|습관|독서)\b/],
+  ];
+
+  for (const [category, pattern] of rules) {
+    if (pattern.test(haystack)) return category;
+  }
+  return "Uncategorized";
+}
+
+/** 파일명 안전 문자열 생성 */
+function sanitizeFileName(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9가-힣\s_-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
+
 export async function clipUrlToVault(url: string): Promise<ClipResult> {
   const vaultPath = getVaultPath();
   const { Defuddle } = await import("defuddle/node");
@@ -306,16 +334,26 @@ export async function clipUrlToVault(url: string): Promise<ClipResult> {
   const author = result.author ?? "";
   const published = result.published ?? "";
   const description = result.description ?? "";
-
-  const slug = title
-    .replace(/[^a-zA-Z0-9가-힣\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .slice(0, 80);
   const dateStr = new Date().toISOString().slice(0, 10);
-  const fileName = `${dateStr}-${slug}.md`;
-  const clippingsDir = join(vaultPath, "Clippings");
 
+  // 카테고리 자동 분류
+  const category = classifyCategory(url, title, description);
+
+  // 제목 기반 파일명 (날짜 접두어 없음 — Steph Ango 방식)
+  const safeName = sanitizeFileName(title) || "Untitled Clipping";
+  let fileName = `${safeName}.md`;
+  const clippingsDir = join(vaultPath, "Clippings", category);
   await mkdir(clippingsDir, { recursive: true });
+
+  // 중복 파일명 처리
+  let filePath = join(clippingsDir, fileName);
+  try {
+    await access(filePath);
+    fileName = `${safeName} (${dateStr}).md`;
+    filePath = join(clippingsDir, fileName);
+  } catch {
+    // 파일 없음 — 정상
+  }
 
   const frontmatterObj = {
     title,
@@ -323,10 +361,11 @@ export async function clipUrlToVault(url: string): Promise<ClipResult> {
     published,
     description,
     source: url,
+    category,
+    tags: ["clipping", "web"],
     clipped: dateStr,
   };
   const fileContent = matter.stringify(markdown, frontmatterObj);
-  const filePath = join(clippingsDir, fileName);
   await writeFile(filePath, fileContent, "utf-8");
 
   return {
