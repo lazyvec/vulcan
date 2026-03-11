@@ -62,7 +62,7 @@ export default function MissionLayout({
               role="button"
               tabIndex={0}
               aria-label="사이드바 닫기"
-              className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
               onClick={toggleSidebar}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") toggleSidebar(); }}
             />

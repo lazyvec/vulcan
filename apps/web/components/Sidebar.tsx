@@ -78,8 +78,8 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
   return (
     <aside
       aria-label="기본 내비게이션"
-      aria-hidden={!isOpen ? "true" : undefined}
-      className={`fixed inset-y-0 left-0 z-40 transform border-r transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
+      aria-hidden={undefined}
+      className={`fixed inset-y-0 left-0 z-40 transform border-r transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 ${
         isOpen ? "translate-x-0" : "-translate-x-full"
       } ${isCollapsed ? "w-16" : "w-[260px]"}`}
       style={{
@@ -102,7 +102,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
             onClick={onToggleCollapse}
             aria-label={isCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
             aria-expanded={!isCollapsed}
-            className="hidden rounded p-1 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] md:flex"
+            className="hidden rounded p-1 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] lg:flex"
           >
             {isCollapsed ? <ChevronsRight size={18} aria-hidden="true" /> : <ChevronsLeft size={18} aria-hidden="true" />}
           </button>

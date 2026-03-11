@@ -53,6 +53,7 @@
 * {
   box-sizing: border-box;
   border-color: var(--color-border);
+  -webkit-tap-highlight-color: rgba(224, 122, 64, 0.15);
 }
 
 html,
@@ -116,7 +117,7 @@ a {
   grid-template-columns: 64px 1fr;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1023px) {
   .vulcan-shell,
   .vulcan-shell[data-collapsed="true"] {
     grid-template-columns: 1fr;
@@ -180,6 +181,7 @@ a {
   background: color-mix(in oklab, var(--color-muted) 72%, black 28%);
   color: var(--color-foreground);
   padding: 10px 12px;
+  font-size: 1rem; /* iOS 자동 줌 방지: 16px 미만이면 포커스 시 페이지 확대됨 */
 }
 
 .vulcan-input.has-icon {
@@ -257,6 +259,34 @@ a {
 
 .page-enter {
   animation: pageEnter 280ms ease both;
+}
+
+/* 터치 기기 hover sticky 방지 */
+@media (hover: none) {
+  .vulcan-button:hover,
+  .vulcan-button-ghost:hover,
+  .sidebar-nav-item:hover,
+  .vault-tree-item:hover,
+  .vault-tag:hover,
+  .vault-back-btn:hover {
+    background: unset;
+    color: unset;
+    border-color: unset;
+  }
+  .sidebar-nav-active:hover {
+    background: var(--color-primary-bg) !important;
+  }
+}
+
+/* 터치 기기 타겟 확보 */
+@media (pointer: coarse) {
+  .vulcan-chip {
+    padding: 8px 12px;
+    min-height: 44px;
+  }
+  .sidebar-nav-item {
+    min-height: 44px;
+  }
 }
 
 /* prefers-reduced-motion 존중 */
@@ -857,14 +887,14 @@ a {
 
   /* 테이블 스크롤 힌트 */
   .vault-prose .vault-table-wrap {
-    -webkit-overflow-scrolling: touch;
+    /* overflow: auto inherits momentum scrolling on modern iOS */
   }
 
   /* 중첩 스크롤 격리 */
   .vault-content-pane,
   .vault-sidebar-scroll {
     overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
+    /* overflow: auto inherits momentum scrolling on modern iOS */
   }
 
   /* breadcrumb 오버플로우 방지 */
