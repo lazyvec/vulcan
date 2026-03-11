@@ -323,16 +323,16 @@ export function MarkdownEditor({
     <div className="flex h-full flex-col">
       {/* 툴바 */}
       {!readOnly && (
-        <div className="flex items-center gap-0.5 border-b border-[var(--color-border)] px-2 py-1.5">
+        <div className="flex items-center gap-0.5 overflow-x-auto border-b border-[var(--color-border)] px-2 py-1.5">
           {toolbarActions.map(({ icon: Icon, title, action }) => (
             <button
               key={title}
               type="button"
               title={title}
               onClick={() => viewRef.current && action(viewRef.current)}
-              className="rounded p-1.5 text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+              className="flex shrink-0 items-center justify-center rounded p-2 min-h-[44px] min-w-[44px] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
             >
-              <Icon size={15} />
+              <Icon size={16} />
             </button>
           ))}
         </div>

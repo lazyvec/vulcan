@@ -123,7 +123,7 @@ function useToast() {
 function ToastContainer({ toasts }: { toasts: ToastMessage[] }) {
   if (toasts.length === 0) return null;
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pb-[env(safe-area-inset-bottom)]">
       {toasts.map((t) => (
         <div
           key={t.id}
@@ -169,7 +169,7 @@ function NewNoteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="vulcan-card w-full max-w-md p-6">
         <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">
           새 노트 생성
@@ -215,7 +215,7 @@ function DeleteConfirmModal({
   onConfirm: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="vulcan-card w-full max-w-md p-6">
         <h3 className="mb-2 text-lg font-semibold text-[var(--color-foreground)]">
           노트 삭제
@@ -267,7 +267,7 @@ function RenameNoteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="vulcan-card w-full max-w-md p-6">
         <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">
           노트 이름 변경
@@ -397,7 +397,7 @@ function SearchResultList({
         <button
           key={r.path}
           onClick={() => onSelect(r.path)}
-          className={`flex w-full flex-col gap-1 rounded-[var(--radius-control)] px-3 py-2 text-left transition-colors ${
+          className={`flex w-full flex-col gap-1 rounded-[var(--radius-control)] px-3 py-3 min-h-[44px] text-left transition-colors ${
             r.path === selectedPath
               ? "border border-[var(--color-primary)] bg-[var(--color-primary-bg)]"
               : "hover:bg-[var(--color-muted)]"
@@ -801,7 +801,7 @@ export function VaultExplorer({
   }, [noteContent]);
 
   return (
-    <div className="flex flex-col gap-4" style={{ height: "calc(100vh - 8rem)" }}>
+    <div className="flex flex-col gap-4" style={{ height: "calc(100dvh - 8rem)" }}>
       {/* Toast */}
       <ToastContainer toasts={toasts} />
 
@@ -845,14 +845,14 @@ export function VaultExplorer({
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="vulcan-button-ghost flex shrink-0 items-center justify-center p-2"
+          className="vulcan-button-ghost flex shrink-0 items-center justify-center min-h-[44px] min-w-[44px] p-2"
           title="볼트 동기화"
         >
           <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
         </button>
         <button
           onClick={() => setShowNewNoteModal(true)}
-          className="vulcan-button-ghost flex shrink-0 items-center justify-center p-2"
+          className="vulcan-button-ghost flex shrink-0 items-center justify-center min-h-[44px] min-w-[44px] p-2"
           title="새 노트"
         >
           <FilePlus size={16} />
@@ -888,7 +888,7 @@ export function VaultExplorer({
         {/* 왼쪽 — 파일 트리 or 검색 결과 */}
         <div
           className={`vulcan-card flex flex-col overflow-hidden p-2 vault-mobile-list ${selectedPath ? "vault-mobile-list--hidden" : ""}`}
-          style={{ width: sidebarWidth, minWidth: 180, maxWidth: 600, flexShrink: 0 }}
+          style={{ "--vault-sidebar-w": `${sidebarWidth}px` } as React.CSSProperties}
         >
           <div className="vault-sidebar-scroll">
             {searchResults && query.trim() ? (
@@ -927,16 +927,17 @@ export function VaultExplorer({
         {/* 오른쪽 — 본문 뷰어/에디터 */}
         <div className={`vulcan-card flex min-w-0 flex-1 flex-col overflow-hidden vault-mobile-content ${selectedPath ? "vault-mobile-content--visible" : ""}`}>
           {loading ? (
-            <div className="flex flex-1 items-center justify-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-2">
               <Loader2
-                size={24}
+                size={32}
                 className="animate-spin text-[var(--color-primary)]"
               />
+              <span className="text-sm text-[var(--color-tertiary)]">로딩 중...</span>
             </div>
           ) : noteContent ? (
             <div className="flex h-full flex-col overflow-hidden">
               {/* 메타 헤더 + 액션 버튼 */}
-              <div className="vault-note-header flex items-start justify-between">
+              <div className="vault-note-header flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <button
@@ -974,7 +975,7 @@ export function VaultExplorer({
                     </div>
                   )}
                 </div>
-                <div className="ml-4 flex shrink-0 items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-2 self-end lg:ml-4 lg:gap-1.5">
                   {editing ? (
                     <>
                       <button
@@ -1035,8 +1036,8 @@ export function VaultExplorer({
 
               {/* 본문 영역 */}
               {editing ? (
-                <div className={`flex min-h-0 flex-1 ${showPreview ? "divide-x divide-[var(--color-border)]" : ""}`}>
-                  <div className={`min-h-0 ${showPreview ? "w-1/2" : "w-full"}`}>
+                <div className={`flex min-h-0 flex-1 ${showPreview ? "lg:divide-x lg:divide-[var(--color-border)]" : ""}`}>
+                  <div className={`min-h-0 ${showPreview ? "hidden lg:block lg:w-1/2" : "w-full"}`}>
                     <MarkdownEditor
                       value={editContent}
                       onChange={setEditContent}
@@ -1046,7 +1047,7 @@ export function VaultExplorer({
                     />
                   </div>
                   {showPreview && (
-                    <div className="vault-content-pane w-1/2">
+                    <div className="vault-content-pane w-full lg:w-1/2">
                       <MarkdownRenderer
                         content={editContent}
                         onWikiLink={handleWikiLink}
@@ -1068,7 +1069,10 @@ export function VaultExplorer({
               <div className="text-center">
                 <FileText size={48} className="mx-auto vault-empty-icon" />
                 <p className="vault-empty-text">노트를 선택하세요</p>
-                <p className="vault-empty-hint">왼쪽 트리에서 파일을 클릭하거나 검색하세요</p>
+                <p className="vault-empty-hint">
+                  <span className="hidden lg:inline">왼쪽 트리에서 파일을 클릭하거나 검색하세요</span>
+                  <span className="lg:hidden">목록에서 노트를 선택하세요</span>
+                </p>
               </div>
             </div>
           )}
