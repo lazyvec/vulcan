@@ -148,6 +148,7 @@ import {
   renameVaultNote,
   uploadToVault,
 } from "./vault";
+import { runVaultSync } from "./vault-sync";
 
 const app = new Hono();
 const WS_PATH = "/api/ws";
@@ -2020,6 +2021,52 @@ app.get("/api/vault/notes", async (c) => {
       return c.json({ error: "vault not configured" }, 503);
     }
     return c.json({ error: getErrorMessage(error) }, 500);
+  }
+});
+
+app.post("/api/vault/sync", async (c) => {
+  try {
+    const sync = await runVaultSync();
+    const notes = await listVaultNotes();
+
+    writeAudit({
+      action: "vault.sync",
+      entityType: "vault",
+      entityId: "obsidian-vault",
+      after: {
+        durationMs: sync.durationMs,
+        scriptPath: sync.scriptPath,
+        noteCount: notes.length,
+      },
+    });
+    const event = appendEvent({
+      type: "vault.sync",
+      source: "vulcan-api",
+      summary: `볼트 동기화 완료 (${notes.length}개 노트)`,
+      payloadJson: JSON.stringify({
+        durationMs: sync.durationMs,
+        noteCount: notes.length,
+      }),
+    });
+    publishEvent(event);
+
+    return c.json({
+      ok: true,
+      message: "NAS와 볼트 동기화 완료",
+      sync,
+      notes,
+    });
+  } catch (error) {
+    const msg = getErrorMessage(error);
+    console.error("[vulcan-api] vault sync failed", error);
+    if (msg.includes("not configured")) return c.json({ error: "vault not configured" }, 503);
+    if (msg.includes("ENOENT") || msg.includes("EACCES")) {
+      return c.json({ error: "vault sync script unavailable" }, 500);
+    }
+    if (msg.toLowerCase().includes("timed out")) {
+      return c.json({ error: "vault sync timed out" }, 504);
+    }
+    return c.json({ error: "vault sync failed" }, 500);
   }
 });
 

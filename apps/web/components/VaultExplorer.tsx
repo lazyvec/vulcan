@@ -469,11 +469,15 @@ export function VaultExplorer({
   const { toasts, show: showToast } = useToast();
   const initialLoadDone = useRef(false);
 
-  /* 수동 싱크 — vault 노트 목록 새로고침 */
+  /* 수동 싱크 — NAS와 bisync 후 vault 노트 목록 새로고침 */
   const handleSync = useCallback(async () => {
     setSyncing(true);
     try {
-      const res = await fetch("/api/vault/notes");
+      const res = await fetch("/api/vault/sync", { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(typeof err.error === "string" ? err.error : `${res.status}`);
+      }
       const data = await res.json();
       setNotes(data.notes ?? []);
       // 현재 열린 노트도 새로고침
@@ -482,9 +486,9 @@ export function VaultExplorer({
         const noteData = await noteRes.json();
         if (noteData.note) setNoteContent(noteData.note);
       }
-      showToast("success", "볼트 동기화 완료");
-    } catch {
-      showToast("error", "동기화 실패");
+      showToast("success", data.message ?? "NAS와 볼트 동기화 완료");
+    } catch (err) {
+      showToast("error", `동기화 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`);
     } finally {
       setSyncing(false);
     }
