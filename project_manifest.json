@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "id": "vulcan",
+  "name": "Vulcan Mission Control",
+  "description": "OpenClaw 에이전트 팀의 개인 전용 Mission Control. 에이전트 모니터링, 태스크 관리, 실시간 WebSocket, 승인/거버넌스.",
+  "type": "monorepo",
+  "path": "/home/linuxuser/projects/vulcan",
+  "packageManager": "pnpm@9.15.9",
+  "stack": {
+    "framework": ["Next.js 16", "Hono"],
+    "language": "TypeScript (strict)",
+    "database": ["PostgreSQL 16", "Redis 7", "SQLite + Drizzle ORM"],
+    "realtime": ["WebSocket", "SSE fallback"],
+    "ui": ["Tailwind CSS v4", "Framer Motion", "Lucide React"],
+    "deployment": ["PM2", "Docker Compose"],
+    "testing": ["Vitest", "Playwright"]
+  },
+  "environment": {
+    "dev": {
+      "web": "http://localhost:3000",
+      "api": "http://localhost:8787"
+    },
+    "prod": {
+      "web": "http://127.0.0.1:3001",
+      "api": "PM2 managed (port 8787)"
+    }
+  },
+  "infrastructure": {
+    "postgres": { "image": "postgres:16-alpine", "port": 5433 },
+    "redis": { "image": "redis:7-alpine", "port": 6380 }
+  },
+  "agents": {
+    "primary": "daedalus",
+    "review": "hermes",
+    "monitoring": "aegis"
+  },
+  "commands": {
+    "dev": "pnpm dev",
+    "build": "pnpm build",
+    "test": "pnpm test",
+    "lint": "pnpm lint",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down"
+  },
+  "phase": "Phase 10 완료 (Docker 배포) → Phase 11~12 백로그",
+  "priority": "high",
+  "category": "infrastructure"
+}

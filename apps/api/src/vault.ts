@@ -318,6 +318,58 @@ function sanitizeFileName(name: string): string {
     .slice(0, 80);
 }
 
+function decodeHtmlEntities(input: string): string {
+  return input
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(parseInt(dec, 10)));
+}
+
+function cleanTitleCandidate(value: string | null | undefined): string {
+  return decodeHtmlEntities(value ?? "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractTitleFromHtml(html: string): string {
+  const patterns = [
+    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["'][^>]*>/i,
+    /<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["'][^>]*>/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:title["'][^>]*>/i,
+    /<title[^>]*>([\s\S]*?)<\/title>/i,
+    /<h1[^>]*>([\s\S]*?)<\/h1>/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    const candidate = cleanTitleCandidate(match?.[1]);
+    if (candidate) return candidate;
+  }
+  return "";
+}
+
+function pickClipTitle(url: string, html: string, extractedTitle: string | null | undefined): string {
+  const candidates = [
+    cleanTitleCandidate(extractedTitle),
+    extractTitleFromHtml(html),
+    cleanTitleCandidate(new URL(url).hostname.replace(/^www\./, "")),
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && !/^untitled clipping\b/i.test(candidate) && !/^untitled\b/i.test(candidate)) {
+      return candidate;
+    }
+  }
+
+  return "Untitled Clipping";
+}
+
 export async function clipUrlToVault(url: string): Promise<ClipResult> {
   const vaultPath = getVaultPath();
   const { Defuddle } = await import("defuddle/node");
@@ -330,7 +382,7 @@ export async function clipUrlToVault(url: string): Promise<ClipResult> {
   const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
   const markdown = td.turndown(result.content ?? html);
 
-  const title = result.title ?? new URL(url).hostname;
+  const title = pickClipTitle(url, html, result.title);
   const author = result.author ?? "";
   const published = result.published ?? "";
   const description = result.description ?? "";
