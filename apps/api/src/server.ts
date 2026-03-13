@@ -115,6 +115,8 @@ import {
   getAllCircuitBreakerConfigs,
   upsertCircuitBreakerConfig,
   checkCircuitBreaker,
+  getCBTriggerHistory,
+  getTaskActivity,
   createWorkOrder,
   getWorkOrder,
   listWorkOrders,
@@ -799,6 +801,21 @@ app.put("/api/agents/:id", async (c) => {
     } catch (error) {
       gatewayResult = { ok: false, error: getErrorMessage(error) };
     }
+  }
+
+  // status가 변경된 경우 실시간 이벤트 발행
+  if (parsed.data.status && parsed.data.status !== before.status) {
+    const statusEvent = appendEvent({
+      source: "vulcan-api",
+      type: "agent.status_changed",
+      agentId,
+      summary: `${agentId} → ${parsed.data.status}`,
+      payloadJson: JSON.stringify({
+        previousStatus: before.status,
+        newStatus: parsed.data.status,
+      }),
+    });
+    publishEvent(statusEvent);
   }
 
   writeAudit({
@@ -1671,6 +1688,13 @@ app.post("/api/tasks/:id/comments", async (c) => {
   });
 
   return c.json({ comment }, 201);
+});
+
+app.get("/api/tasks/:id/activity", (c) => {
+  const task = getTaskById(c.req.param("id"));
+  if (!task) return c.json({ error: "task not found" }, 404);
+  const activity = getTaskActivity(c.req.param("id"));
+  return c.json({ ok: true, ...activity });
 });
 
 app.get("/api/tasks/:id/deps", (c) => {
@@ -3341,9 +3365,18 @@ app.get("/api/traces", (c) => {
 });
 
 app.get("/api/traces/daily-cost", (c) => {
-  const since = Number(c.req.query("since") ?? Date.now() - 7 * 86400000);
+  const days = Math.min(Math.max(1, Number(c.req.query("days") ?? 0) || 0), 90);
+  const since = days > 0
+    ? Date.now() - days * 86_400_000
+    : Number(c.req.query("since") ?? Date.now() - 7 * 86_400_000);
   const summaries = getDailyCostSummaries(since);
   return c.json({ ok: true, summaries });
+});
+
+app.get("/api/traces/cb-history", (c) => {
+  const since = Number(c.req.query("since") ?? Date.now() - 30 * 86_400_000);
+  const history = getCBTriggerHistory(since);
+  return c.json({ ok: true, history });
 });
 
 app.get("/api/circuit-breaker", (c) => {

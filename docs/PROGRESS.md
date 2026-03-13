@@ -2,6 +2,63 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-13 | 브랜치: `main`
 
+## 2026-03-13: Phase 4 (Mission Control 메트릭스 강화) — 실시간 대시보드
+
+### 요약
+마스터 플랜 Phase 4: 에이전트 오피스 뷰, 실시간 상태 표시, FinOps 대시보드 강화, Kanban WorkOrder 연동 구현.
+
+### 변경 내용
+
+#### 4.1 에이전트 오피스 뷰
+- **신규**: `AgentOfficeView.tsx` — CSS Grid 6존 레이아웃 (Library, Red Corner, Hallway, Watercooler, Desk, Workbench)
+- 에이전트별 2글자 아바타 + 상태 도트 + CSS 애니메이션 (idle=정적, writing/researching=파란 펄스, executing=녹색 펄스, syncing=녹색 정적, error=빨간 깜빡임)
+- 에이전트 클릭 → 현재 WorkOrder 요약 + 오늘 토큰 소비 팝오버
+- `tokens.css`에 `agent-pulse-blue`, `agent-pulse-green`, `agent-blink-red` 등 5개 애니메이션 클래스 추가
+- `/office` 페이지 리뉴얼 (WorkOrder + 토큰 데이터 SSR fetch)
+
+#### 4.2 에이전트 상태 실시간 표시
+- **신규**: `useAgentStatus.ts` — WebSocket + 15초 폴링 fallback 결합 커스텀 훅
+- `server.ts`: `PUT /api/agents/:id`에서 status 변경 시 `agent.status_changed` 이벤트 발행
+- WebSocket 연결 상태 인디케이터 (실시간/폴링 뱃지)
+
+#### 4.3 FinOps 대시보드 강화
+- `CostDashboard.tsx`: 기간 선택기 (7일/14일/30일), 비용 트렌드 지표 (전반부 vs 후반부 비교), CB 발동 이력 섹션
+- `GET /api/traces/daily-cost`: `days` 쿼리 파라미터 추가 (기본 7, 최대 90)
+- **신규**: `GET /api/traces/cb-history` — traces 테이블에서 `circuit_broken` 상태 집계
+- `store.ts`: `getCBTriggerHistory()` 함수
+- `api-server.ts`: `getCBHistory()`, `getDailyCostSummaries(since?, days?)` 확장
+
+#### 4.4 Kanban WorkOrder 연동
+- `KanbanBoard.tsx`: TaskCard에 WorkOrder 뱃지 (상태 + fromAgent→toAgent)
+- `TaskDetailModal.tsx`: "에이전트 활동" 탭 추가 (WorkOrder + 이벤트 로그)
+- **신규**: `GET /api/tasks/:id/activity` — taskId 관련 이벤트 + WorkOrder 조회
+- `store.ts`: `getTaskActivity()` 함수
+- `tasks/page.tsx`: WorkOrder 데이터 fetch → linkedTaskId 매핑 → KanbanBoard 전달
+
+### 변경 파일 (13개)
+| 파일 | 유형 |
+|------|------|
+| `apps/web/components/AgentOfficeView.tsx` | 신규 |
+| `apps/web/hooks/useAgentStatus.ts` | 신규 |
+| `apps/web/app/(layout)/office/page.tsx` | 수정 |
+| `apps/web/components/CostDashboard.tsx` | 수정 |
+| `apps/web/app/(layout)/costs/page.tsx` | 수정 |
+| `apps/web/components/KanbanBoard.tsx` | 수정 |
+| `apps/web/components/TaskDetailModal.tsx` | 수정 |
+| `apps/web/app/(layout)/tasks/page.tsx` | 수정 |
+| `apps/web/lib/api-server.ts` | 수정 |
+| `apps/web/lib/types.ts` | 수정 |
+| `apps/web/styles/tokens.css` | 수정 |
+| `apps/api/src/server.ts` | 수정 |
+| `apps/api/src/store.ts` | 수정 |
+
+### 테스트 결과
+- ✅ TypeScript 타입체크 통과 (API + Web)
+- ✅ 프로덕션 빌드 성공
+- ✅ Vitest 66/66 통과
+
+---
+
 ## 2026-03-13: Phase 3 (WorkOrder 실전 적용) — 에이전트 간 구조화된 통신
 
 ### 요약

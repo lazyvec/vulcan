@@ -178,14 +178,35 @@ export async function getNotificationLogs(limit = 50) {
 
 // ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
 
-export async function getDailyCostSummaries(since?: number) {
+export async function getDailyCostSummaries(since?: number, days?: number) {
   const params = new URLSearchParams();
-  if (since) params.set("since", String(since));
+  if (days) {
+    params.set("days", String(days));
+  } else if (since) {
+    params.set("since", String(since));
+  }
   const suffix = params.toString();
   const data = await requestJson<{ ok: boolean; summaries: DailyCostSummary[] }>(
     suffix ? `/api/traces/daily-cost?${suffix}` : "/api/traces/daily-cost",
   );
   return data.summaries;
+}
+
+export interface CBHistoryItem {
+  date: string;
+  agentId: string;
+  count: number;
+  totalTokens: number;
+}
+
+export async function getCBHistory(since?: number) {
+  const params = new URLSearchParams();
+  if (since) params.set("since", String(since));
+  const suffix = params.toString();
+  const data = await requestJson<{ ok: boolean; history: CBHistoryItem[] }>(
+    suffix ? `/api/traces/cb-history?${suffix}` : "/api/traces/cb-history",
+  );
+  return data.history;
 }
 
 export async function getCircuitBreakerConfigs() {
@@ -225,6 +246,15 @@ export async function getWorkOrderDetail(id: string) {
     workOrder: WorkOrder;
     results: WorkResult[];
   }>(`/api/work-orders/${id}`);
+  return data;
+}
+
+export async function getTaskActivity(taskId: string) {
+  const data = await requestJson<{
+    ok: boolean;
+    events: import("@vulcan/shared/types").EventItem[];
+    workOrders: WorkOrder[];
+  }>(`/api/tasks/${taskId}/activity`);
   return data;
 }
 

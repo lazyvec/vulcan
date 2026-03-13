@@ -2249,6 +2249,30 @@ export function checkCircuitBreaker(agentId: string): {
   };
 }
 
+export function getCBTriggerHistory(since: number): Array<{
+  date: string;
+  agentId: string;
+  count: number;
+  totalTokens: number;
+}> {
+  ensureSchema();
+  const sqlite = getSqlite();
+  const rows = sqlite
+    .prepare(
+      `SELECT
+        date(ts / 1000, 'unixepoch', '+9 hours') as date,
+        agent_id as agentId,
+        count(*) as count,
+        coalesce(sum(input_tokens + output_tokens), 0) as totalTokens
+      FROM traces
+      WHERE ts > ? AND status = 'circuit_broken'
+      GROUP BY date, agent_id
+      ORDER BY date DESC, agent_id`,
+    )
+    .all(since) as Array<{ date: string; agentId: string; count: number; totalTokens: number }>;
+  return rows;
+}
+
 // ── WorkOrder / WorkResult (Phase 3) ──────────────────────────────────────
 
 function mapWorkOrder(row: Record<string, unknown>): WorkOrder {
@@ -2452,6 +2476,30 @@ export function getWorkResultsByOrderId(workOrderId: string): WorkResult[] {
 
 export function saveWorkOrderCheckpoint(id: string, checkpointJson: string): WorkOrder | null {
   return updateWorkOrder(id, { checkpointJson });
+}
+
+export function getTaskActivity(taskId: string): {
+  events: EventItem[];
+  workOrders: WorkOrder[];
+} {
+  ensureSchema();
+  const events = db
+    .select()
+    .from(eventsTable)
+    .where(eq(eventsTable.taskId, taskId))
+    .orderBy(eventsTable.ts)
+    .all()
+    .map(mapEvent);
+
+  const workOrders = db
+    .select()
+    .from(workOrdersTable)
+    .where(eq(workOrdersTable.linkedTaskId, taskId))
+    .orderBy(workOrdersTable.createdAt)
+    .all()
+    .map(mapWorkOrder);
+
+  return { events, workOrders };
 }
 
 export function getWorkOrderStats(): {

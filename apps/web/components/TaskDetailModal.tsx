@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Agent, Task, TaskComment, TaskLane, TaskPriority } from "@/lib/types";
-import { MessageSquare, Send, Trash2, X } from "lucide-react";
+import type { Agent, EventItem, Task, TaskComment, TaskLane, TaskPriority, WorkOrder } from "@/lib/types";
+import { Activity, MessageSquare, Send, Trash2, X } from "lucide-react";
 
 const LANES: Array<{ key: TaskLane; label: string }> = [
   { key: "backlog", label: "Backlog" },
@@ -60,6 +60,10 @@ export function TaskDetailModal({
   const [comments, setComments] = useState<TaskComment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
+  const [activeTab, setActiveTab] = useState<"details" | "activity">("details");
+  const [activityEvents, setActivityEvents] = useState<EventItem[]>([]);
+  const [activityWorkOrders, setActivityWorkOrders] = useState<WorkOrder[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +76,19 @@ export function TaskDetailModal({
       .catch(() => {})
       .finally(() => setLoadingComments(false));
   }, [task]);
+
+  useEffect(() => {
+    if (!task || activeTab !== "activity") return;
+    setLoadingActivity(true);
+    fetch(`/api/tasks/${task.id}/activity`)
+      .then((res) => res.json())
+      .then((data) => {
+        setActivityEvents(data.events ?? []);
+        setActivityWorkOrders(data.workOrders ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingActivity(false));
+  }, [task, activeTab]);
 
   useEffect(() => {
     function handleKeydown(e: KeyboardEvent) {
@@ -206,8 +223,45 @@ export function TaskDetailModal({
           </div>
         </div>
 
+        {/* Tab Navigation */}
+        {!isCreate && (
+          <div className="flex border-b border-[var(--color-border)] px-5">
+            <button
+              type="button"
+              className={`px-3 py-2 text-xs font-medium transition-colors ${
+                activeTab === "details"
+                  ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+              }`}
+              onClick={() => setActiveTab("details")}
+            >
+              상세
+            </button>
+            <button
+              type="button"
+              className={`flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors ${
+                activeTab === "activity"
+                  ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+              }`}
+              onClick={() => setActiveTab("activity")}
+            >
+              <Activity size={12} />
+              에이전트 활동
+            </button>
+          </div>
+        )}
+
         {/* Body */}
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+          {activeTab === "activity" && !isCreate ? (
+            <AgentActivityTab
+              events={activityEvents}
+              workOrders={activityWorkOrders}
+              loading={loadingActivity}
+            />
+          ) : (
+          <>
           {/* Title */}
           <div>
             <label className="mb-1 block text-xs font-medium text-[var(--color-muted-foreground)]">
@@ -370,6 +424,8 @@ export function TaskDetailModal({
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
 
         {/* Footer */}
@@ -390,6 +446,101 @@ export function TaskDetailModal({
             {saving ? "Saving..." : isCreate ? "Create" : "Save"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentActivityTab({
+  events,
+  workOrders,
+  loading,
+}: {
+  events: EventItem[];
+  workOrders: WorkOrder[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return <p className="py-6 text-center text-xs text-[var(--color-tertiary)]">로딩 중...</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* WorkOrders */}
+      {workOrders.length > 0 && (
+        <div>
+          <h4 className="mb-2 text-xs font-semibold text-[var(--color-muted-foreground)]">연결된 WorkOrder</h4>
+          <div className="space-y-2">
+            {workOrders.map((wo) => {
+              const statusColor =
+                wo.status === "in_progress" ? "var(--color-primary)"
+                : wo.status === "completed" ? "var(--color-success)"
+                : wo.status === "failed" ? "var(--color-destructive)"
+                : "var(--color-muted-foreground)";
+
+              return (
+                <div
+                  key={wo.id}
+                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-background)]/50 p-3"
+                >
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-sm font-medium text-[var(--color-foreground)]">{wo.summary}</span>
+                    <span
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                      style={{
+                        background: `color-mix(in srgb, ${statusColor} 12%, transparent)`,
+                        color: statusColor,
+                      }}
+                    >
+                      {wo.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-[var(--color-tertiary)]">
+                    <span>{wo.fromAgentId} → {wo.toAgentId}</span>
+                    <span>{wo.type}</span>
+                    {wo.completedAt && <span>완료: {formatDate(wo.completedAt)}</span>}
+                  </div>
+                  {wo.acceptanceCriteria.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-[10px] font-medium text-[var(--color-muted-foreground)]">수락 기준:</p>
+                      <ul className="ml-3 list-disc text-[11px] text-[var(--color-tertiary)]">
+                        {wo.acceptanceCriteria.map((criterion: string, idx: number) => (
+                          <li key={idx}>{criterion}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Event Log */}
+      <div>
+        <h4 className="mb-2 text-xs font-semibold text-[var(--color-muted-foreground)]">
+          이벤트 로그
+          {events.length > 0 && <span className="vulcan-chip ml-2 text-[10px]">{events.length}</span>}
+        </h4>
+        {events.length > 0 ? (
+          <div className="max-h-64 space-y-1 overflow-y-auto">
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className="flex items-center gap-2 rounded border border-[var(--color-border)]/50 bg-[var(--color-background)]/30 px-2 py-1.5"
+              >
+                <span className="vulcan-chip text-[9px]">{event.type}</span>
+                <span className="flex-1 truncate text-xs text-[var(--color-foreground)]">{event.summary}</span>
+                <span className="text-[10px] text-[var(--color-tertiary)]">
+                  {new Date(event.ts).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="py-4 text-center text-xs text-[var(--color-tertiary)]">관련 이벤트 없음</p>
+        )}
       </div>
     </div>
   );

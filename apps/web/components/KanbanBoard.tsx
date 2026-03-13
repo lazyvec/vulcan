@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Agent, Task, TaskLane, TaskPriority } from "@/lib/types";
+import type { Agent, Task, TaskLane, TaskPriority, WorkOrder } from "@/lib/types";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   AlertTriangle,
@@ -43,6 +43,7 @@ interface KanbanBoardProps {
   initialTasks: Task[];
   agents: Agent[];
   initialQuery?: string;
+  workOrdersByTaskId?: Record<string, WorkOrder>;
 }
 
 function Avatar({ agent }: { agent?: Agent }) {
@@ -104,13 +105,38 @@ function formatUpdatedAt(ts: number) {
   });
 }
 
+function WorkOrderBadge({ workOrder }: { workOrder: WorkOrder }) {
+  const statusColor =
+    workOrder.status === "in_progress" ? "var(--color-primary)"
+    : workOrder.status === "completed" ? "var(--color-success)"
+    : workOrder.status === "failed" ? "var(--color-destructive)"
+    : "var(--color-muted-foreground)";
+
+  return (
+    <div className="flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-background)]/50 px-1.5 py-0.5">
+      <span
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ background: statusColor }}
+      />
+      <span className="text-[9px] text-[var(--color-muted-foreground)]">
+        WO:{workOrder.status}
+      </span>
+      <span className="text-[9px] text-[var(--color-tertiary)]">
+        {workOrder.fromAgentId}→{workOrder.toAgentId}
+      </span>
+    </div>
+  );
+}
+
 function SortableTaskCard({
   task,
   agent,
+  workOrder,
   onOpenDetail,
 }: {
   task: Task;
   agent?: Agent;
+  workOrder?: WorkOrder;
   onOpenDetail: (task: Task) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -161,6 +187,11 @@ function SortableTaskCard({
           </div>
         )}
       </div>
+      {workOrder && (
+        <div className="mb-2">
+          <WorkOrderBadge workOrder={workOrder} />
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-xs text-[var(--color-muted-foreground)]">
           #{task.id.split("-")[0]} · {formatUpdatedAt(task.updatedAt)}
@@ -203,12 +234,14 @@ function DroppableLane({
   agentMap,
   count,
   onOpenDetail,
+  workOrdersByTaskId,
 }: {
   lane: (typeof LANES)[number];
   tasks: Task[];
   agentMap: Map<string, Agent>;
   count: number;
   onOpenDetail: (task: Task) => void;
+  workOrdersByTaskId: Record<string, WorkOrder>;
 }) {
   const taskIds = tasks.map((t) => t.id);
 
@@ -232,6 +265,7 @@ function DroppableLane({
               key={task.id}
               task={task}
               agent={agentMap.get(task.assigneeAgentId ?? "")}
+              workOrder={workOrdersByTaskId[task.id]}
               onOpenDetail={onOpenDetail}
             />
           ))}
@@ -244,7 +278,7 @@ function DroppableLane({
   );
 }
 
-export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanBoardProps) {
+export function KanbanBoard({ initialTasks, agents, initialQuery = "", workOrdersByTaskId = {} }: KanbanBoardProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [query, setQuery] = useState(initialQuery);
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
@@ -424,6 +458,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "" }: KanbanB
                 agentMap={agentMap}
                 count={laneCounts[lane.key]}
                 onOpenDetail={handleOpenDetail}
+                workOrdersByTaskId={workOrdersByTaskId}
               />
             );
           })}

@@ -126,3 +126,56 @@
     radial-gradient(circle at 90% 100%, rgba(96, 165, 250, 0.1), transparent 28%),
     linear-gradient(180deg, #1A1917 0%, #1A1917 100%);
 }
+
+/* ── Agent Office 애니메이션 ──────────────────────────── */
+
+.agent-static-gray {
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
+  border-color: var(--color-border);
+}
+
+.agent-pulse-blue {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  border-color: var(--color-info);
+  animation: pulse-blue 2s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+.agent-pulse-green {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success);
+  animation: pulse-green 1.5s ease-in-out infinite;
+  will-change: box-shadow;
+}
+
+.agent-static-green {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success);
+}
+
+.agent-blink-red {
+  background: var(--color-destructive-bg);
+  color: var(--color-destructive-text);
+  border-color: var(--color-destructive);
+  animation: blink-red 1s step-end infinite;
+  will-change: opacity;
+}
+
+@keyframes pulse-blue {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(96, 165, 250, 0); }
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+}
+
+@keyframes blink-red {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

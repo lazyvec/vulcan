@@ -1,15 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import type { CircuitBreakerConfig, DailyCostSummary } from "@vulcan/shared/types";
-import { DollarSign, Cpu, AlertTriangle, Zap } from "lucide-react";
+import type { CBHistoryItem } from "@/lib/api-server";
+import { DollarSign, Cpu, AlertTriangle, Zap, TrendingUp, TrendingDown, Minus, ShieldAlert } from "lucide-react";
+
+const PERIOD_OPTIONS = [
+  { days: 7, label: "7일" },
+  { days: 14, label: "14일" },
+  { days: 30, label: "30일" },
+] as const;
 
 interface Props {
   summaries: DailyCostSummary[];
   cbConfigs: CircuitBreakerConfig[];
+  cbHistory: CBHistoryItem[];
+  initialDays?: number;
 }
 
 const AGENT_COLORS: Record<string, string> = {
@@ -29,7 +38,27 @@ function getAgentColor(agentId: string) {
   return AGENT_COLORS[agentId] ?? "var(--color-muted-foreground)";
 }
 
-export function CostDashboard({ summaries, cbConfigs }: Props) {
+export function CostDashboard({ summaries: initialSummaries, cbConfigs, cbHistory, initialDays = 7 }: Props) {
+  const [selectedDays, setSelectedDays] = useState(initialDays);
+  const [summaries, setSummaries] = useState(initialSummaries);
+  const [loading, setLoading] = useState(false);
+
+  const handlePeriodChange = useCallback(async (days: number) => {
+    setSelectedDays(days);
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/traces/daily-cost?days=${days}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSummaries(data.summaries ?? []);
+      }
+    } catch {
+      // 실패 시 유지
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const totalCost = useMemo(
     () => summaries.reduce((sum, s) => sum + s.totalCost, 0),
     [summaries],
@@ -42,6 +71,22 @@ export function CostDashboard({ summaries, cbConfigs }: Props) {
     () => summaries.reduce((sum, s) => sum + s.callCount, 0),
     [summaries],
   );
+
+  // 트렌드: 전반부 vs 후반부 비교
+  const trend = useMemo(() => {
+    if (summaries.length === 0) return { ratio: 0, direction: "flat" as const };
+    const sorted = [...summaries].sort((a, b) => a.date.localeCompare(b.date));
+    const mid = Math.floor(sorted.length / 2);
+    if (mid === 0) return { ratio: 0, direction: "flat" as const };
+    const firstHalf = sorted.slice(0, mid).reduce((s, d) => s + d.totalCost, 0);
+    const secondHalf = sorted.slice(mid).reduce((s, d) => s + d.totalCost, 0);
+    if (firstHalf === 0) return { ratio: 0, direction: "flat" as const };
+    const ratio = ((secondHalf - firstHalf) / firstHalf) * 100;
+    return {
+      ratio: Math.abs(ratio),
+      direction: ratio > 5 ? ("up" as const) : ratio < -5 ? ("down" as const) : ("flat" as const),
+    };
+  }, [summaries]);
 
   // 에이전트별 합계 (PieChart)
   const byAgent = useMemo(() => {
@@ -85,14 +130,44 @@ export function CostDashboard({ summaries, cbConfigs }: Props) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
-      <h2 className="section-title text-xl font-semibold">비용 대시보드</h2>
+      {/* 헤더 + 기간 선택기 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="mr-auto section-title text-xl font-semibold">비용 대시보드</h2>
+        <div className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-0.5">
+          {PERIOD_OPTIONS.map((opt) => (
+            <button
+              key={opt.days}
+              type="button"
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                selectedDays === opt.days
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+              }`}
+              onClick={() => void handlePeriodChange(opt.days)}
+              disabled={loading}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {loading && (
+          <span className="text-xs text-[var(--color-muted-foreground)]">로딩...</span>
+        )}
+      </div>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MetricCard icon={DollarSign} label="총 비용 (7일)" value={`$${totalCost.toFixed(4)}`} />
+        <MetricCard icon={DollarSign} label={`총 비용 (${selectedDays}일)`} value={`$${totalCost.toFixed(4)}`} />
         <MetricCard icon={Cpu} label="총 토큰" value={totalTokens.toLocaleString()} />
         <MetricCard icon={Zap} label="총 호출" value={totalCalls.toLocaleString()} />
-        <MetricCard icon={AlertTriangle} label="CB 설정" value={`${cbActiveCount}개 활성`} />
+        <MetricCard
+          icon={trend.direction === "up" ? TrendingUp : trend.direction === "down" ? TrendingDown : Minus}
+          label="비용 트렌드"
+          value={`${trend.direction === "up" ? "+" : trend.direction === "down" ? "-" : ""}${trend.ratio.toFixed(1)}%`}
+          valueColor={
+            trend.direction === "up" ? "var(--color-destructive)" : trend.direction === "down" ? "var(--color-success)" : undefined
+          }
+        />
       </div>
 
       {/* Charts Row */}
@@ -177,9 +252,50 @@ export function CostDashboard({ summaries, cbConfigs }: Props) {
         </div>
       </div>
 
+      {/* CB 발동 이력 */}
+      <div className="vulcan-card rounded-xl p-4">
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
+          <ShieldAlert size={16} className="text-[var(--color-destructive)]" />
+          Circuit Breaker 발동 이력
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-[var(--color-muted-foreground)]">
+                <th className="pb-2 font-medium">날짜</th>
+                <th className="pb-2 font-medium">에이전트</th>
+                <th className="pb-2 font-medium">발동 횟수</th>
+                <th className="pb-2 font-medium">차단 토큰</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cbHistory.map((h, i) => (
+                <tr key={`${h.date}-${h.agentId}-${i}`} className="border-b border-[var(--color-border)]/50">
+                  <td className="py-2 text-[var(--color-foreground)]">{h.date}</td>
+                  <td className="py-2 text-[var(--color-foreground)]">{h.agentId}</td>
+                  <td className="py-2 text-[var(--color-destructive)]">{h.count}</td>
+                  <td className="py-2 text-[var(--color-muted-foreground)]">{h.totalTokens.toLocaleString()}</td>
+                </tr>
+              ))}
+              {cbHistory.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-4 text-center text-[var(--color-muted-foreground)]">
+                    발동 이력 없음
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Circuit Breaker Table */}
       <div className="vulcan-card rounded-xl p-4">
-        <h3 className="mb-4 text-sm font-semibold text-[var(--color-foreground)]">Circuit Breaker 설정</h3>
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
+          <AlertTriangle size={16} className="text-[var(--color-warning)]" />
+          Circuit Breaker 설정
+          <span className="vulcan-chip text-[10px]">{cbActiveCount}개 활성</span>
+        </h3>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -224,14 +340,29 @@ export function CostDashboard({ summaries, cbConfigs }: Props) {
   );
 }
 
-function MetricCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  valueColor,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  valueColor?: string;
+}) {
   return (
     <div className="vulcan-card rounded-xl p-4">
       <div className="flex items-center gap-2">
         <Icon size={16} className="text-[var(--color-primary)]" />
         <span className="text-xs text-[var(--color-muted-foreground)]">{label}</span>
       </div>
-      <p className="mt-2 text-2xl font-semibold text-[var(--color-foreground)]">{value}</p>
+      <p
+        className="mt-2 text-2xl font-semibold"
+        style={{ color: valueColor ?? "var(--color-foreground)" }}
+      >
+        {value}
+      </p>
     </div>
   );
 }

@@ -42,6 +42,12 @@
 - **Trace/FinOps**: traces 테이블, Circuit Breaker, CostDashboard, Telegram 일별 비용 알림
 - **WorkOrder**: work_orders/work_results 테이블, 7개 API, 상태 머신, Executor→Verifier 검증 루프, WorkOrderDashboard
 
+### 마스터 플랜 Phase 4 완료 (Mission Control 메트릭스 강화)
+- **에이전트 오피스 뷰**: AgentOfficeView (6존 CSS Grid + 상태 애니메이션 + 팝오버)
+- **실시간 상태**: useAgentStatus 훅 (WebSocket + 15초 폴링 fallback), agent.status_changed 이벤트
+- **FinOps 강화**: 기간 선택기 (7/14/30일), 트렌드 지표, CB 발동 이력 테이블
+- **Kanban 연동**: TaskCard WorkOrder 뱃지, TaskDetailModal 에이전트 활동 탭
+
 ### 목표 (Phase 12+)
 - **Phase 12**: 외부 연동 확장 (GitHub, Linear 등 서드파티 통합)
 
@@ -92,4 +98,5 @@
 | 10 | Docker 배포 (인프라 Docker, App PM2 유지) | 완료 |
 | 11 | Observability + Governance 고도화 | 완료 |
 | 11+ | WorkOrder 실전 적용 (마스터 플랜 Phase 3) | 완료 |
+| 11++ | Mission Control 메트릭스 강화 (마스터 플랜 Phase 4) | 완료 |
 | 12 | agency-agents 레퍼런스 트랙 | 백로그 |

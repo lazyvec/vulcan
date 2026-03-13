@@ -29,4 +29,6 @@ export type {
   ApprovalPolicy,
   Approval,
   ApprovalStatus,
+  WorkOrder,
+  WorkOrderStatus,
 } from "@vulcan/shared/types";
