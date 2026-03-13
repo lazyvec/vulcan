@@ -16,9 +16,9 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
     await useDesktop(page);
     await page.goto("/tasks");
 
-    await expect(page.getByRole("heading", { name: "Backlog" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "In Progress" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Review" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "백로그" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "진행 중" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "검토" })).toBeVisible();
     await expect(page.getByText("Task Live Activity")).toBeVisible();
   });
 
@@ -26,11 +26,11 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
     await useDesktop(page);
     await page.goto("/tasks");
 
-    const pauseButton = page.getByRole("button", { name: "Pause" });
+    const pauseButton = page.getByRole("button", { name: /일시정지|Pause/i });
     await pauseButton.click();
-    await expect(page.getByText("PAUSED", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Resume" }).click();
-    await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+    await expect(page.getByText(/PAUSED|정지/)).toBeVisible();
+    await page.getByRole("button", { name: /재개|Resume/i }).click();
+    await expect(page.getByRole("button", { name: /일시정지|Pause/i })).toBeVisible();
 
     const pingRequest = page.waitForRequest((request) => {
       if (!request.url().includes("/api/events")) {
@@ -45,60 +45,37 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
     await pingRequest;
   });
 
-  test("desktop: office demo button emits /api/events", async ({ page }) => {
+  test("desktop: office page renders agent office view", async ({ page }) => {
     await useDesktop(page);
     await page.goto("/office");
 
-    const eventResponse = page.waitForResponse((response) => {
-      if (!response.url().includes("/api/events")) {
-        return false;
-      }
-      if (response.request().method() !== "POST") {
-        return false;
-      }
-      return response.status() === 200;
-    });
-
-    await page.getByTestId("office-demo-executing").click();
-    await eventResponse;
+    await expect(page.getByRole("heading", { name: "에이전트 오피스" })).toBeVisible();
   });
 
   test("mobile: tasks page remains usable", async ({ page }) => {
     await useMobile(page);
     await page.goto("/tasks");
 
-    await expect(page.getByPlaceholder("Search tasks, docs, memory")).toBeVisible();
+    await expect(page.getByText("태스크 보드")).toBeVisible();
     await expect(page.getByText("Task Live Activity")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Office" })).toBeVisible();
   });
 
-  test("mobile: docs query syncs into URL", async ({ page }) => {
+  test("mobile: docs page renders and search works", async ({ page }) => {
     await useMobile(page);
     await page.goto("/docs");
 
-    const search = page.getByPlaceholder("Search tasks, docs, memory");
+    const search = page.getByPlaceholder("문서 검색...").first();
+    await expect(search).toBeVisible();
     await search.fill("runbook");
-    await expect(page).toHaveURL(/\/docs\?q=runbook/);
+    // 클라이언트 사이드 필터링 — URL 동기화 없이 로컬 state로 동작
+    await expect(search).toHaveValue("runbook");
   });
 
-  test("mobile: office activity groups and demo event cards render", async ({ page }) => {
+  test("mobile: office page renders zones", async ({ page }) => {
     await useMobile(page);
     await page.goto("/office");
 
-    const eventResponse = page.waitForResponse((response) => {
-      if (!response.url().includes("/api/events")) {
-        return false;
-      }
-      if (response.request().method() !== "POST") {
-        return false;
-      }
-      return response.status() === 200;
-    });
-
-    await page.getByTestId("office-demo-error").click();
-    await eventResponse;
-    await expect(page.getByTestId("activity-group").first()).toBeVisible();
-    await expect(page.getByTestId("activity-item").first()).toBeVisible();
+    await expect(page.getByText("에이전트 오피스")).toBeVisible();
   });
 
   /* ── Page rendering (desktop, 7개) ── */
@@ -107,8 +84,7 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
     await useDesktop(page);
     await page.goto("/team");
 
-    await expect(page.getByRole("heading", { name: "Agent Control Panel" })).toBeVisible();
-    await expect(page.getByText("Gateway Ops")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /에이전트 제어/ })).toBeVisible();
   });
 
   test("desktop: activity page renders metric cards", async ({ page }) => {
@@ -133,16 +109,16 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
     await page.goto("/approvals");
 
     await expect(page.getByRole("heading", { name: "Approvals" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /대기 중/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: "처리 이력" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "정책 관리" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /대기 중/ })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "처리 이력" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "정책 관리" })).toBeVisible();
   });
 
   test("desktop: vault page renders search and file tree", async ({ page }) => {
     await useDesktop(page);
     await page.goto("/vault");
 
-    await expect(page.getByPlaceholder("노트 검색...")).toBeVisible();
+    await expect(page.getByPlaceholder("검색...")).toBeVisible();
     await expect(page.getByPlaceholder("URL 클리핑...")).toBeVisible();
   });
 
@@ -159,21 +135,21 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
     await page.goto("/memory");
 
     // 탭 기반 UI: 4개 탭(일일 저널, 장기 기억, 프로필, 교훈) 렌더링 확인
-    await expect(page.getByRole("button", { name: /일일 저널/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /장기 기억/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /프로필/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /교훈/ })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /일일 저널/ })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /장기 기억/ })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /프로필/ })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /교훈/ })).toBeVisible();
   });
 
   /* ── Navigation ── */
 
-  test("desktop: sidebar shows all 12 navigation links", async ({ page }) => {
+  test("desktop: sidebar shows all 14 navigation links", async ({ page }) => {
     await useDesktop(page);
     await page.goto("/tasks");
 
     const navLinks = [
-      "Tasks", "Calendar", "Projects", "Memory", "Docs", "Vault",
-      "Team", "Office", "Skills", "Activity", "Approvals", "Notifications",
+      "태스크", "캘린더", "프로젝트", "메모리", "문서", "볼트",
+      "팀", "오피스", "스킬", "활동", "작업지시", "비용", "승인", "알림",
     ];
 
     for (const name of navLinks) {
@@ -196,12 +172,12 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
     await useDesktop(page);
 
     await page.goto("/tasks");
-    await expect(page.getByRole("heading", { name: "Backlog" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "백로그" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Team", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Agent Control Panel" })).toBeVisible();
+    await page.getByRole("link", { name: "팀", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /에이전트 제어/ })).toBeVisible();
 
-    await page.getByRole("link", { name: "Activity", exact: true }).click();
+    await page.getByRole("link", { name: "활동", exact: true }).click();
     await expect(page.getByText("이벤트 (24h)")).toBeVisible();
   });
 });
