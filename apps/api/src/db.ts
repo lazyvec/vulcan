@@ -317,6 +317,36 @@ function ensureLegacyBootstrap() {
     CREATE INDEX IF NOT EXISTS idx_approvals_command_id ON approvals (agent_command_id);
     CREATE INDEX IF NOT EXISTS idx_approvals_status ON approvals (status);
     CREATE INDEX IF NOT EXISTS idx_approvals_expires ON approvals (expires_at);
+
+    CREATE TABLE IF NOT EXISTS traces (
+      id TEXT PRIMARY KEY,
+      trace_id TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      agent_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      model TEXT NOT NULL,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      cost REAL NOT NULL DEFAULT 0,
+      latency_ms INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'ok',
+      meta_json TEXT NOT NULL DEFAULT '{}'
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_traces_ts ON traces (ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_traces_agent_ts ON traces (agent_id, ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_traces_trace_id ON traces (trace_id);
+    CREATE INDEX IF NOT EXISTS idx_traces_type_ts ON traces (type, ts DESC);
+
+    CREATE TABLE IF NOT EXISTS circuit_breaker_config (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      daily_token_limit INTEGER NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_cb_config_agent ON circuit_breaker_config (agent_id);
   `);
 
   ensureColumn("approvals", "telegram_message_id", "telegram_message_id INTEGER");

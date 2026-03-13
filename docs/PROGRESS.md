@@ -1,6 +1,58 @@
 # PROGRESS
 
-<!-- last-session --> **마지막 세션**: 2026-03-10 | 브랜치: `main`
+<!-- last-session --> **마지막 세션**: 2026-03-13 | 브랜치: `main`
+
+## 2026-03-13: Phase 2 (Observability) — Trace 수집 + FinOps + Lightpanda
+
+### 요약
+Vulcan MC Phase 11 (Observability): Trace 수집, Circuit Breaker, 비용 대시보드 구현.
+동시에 BRS 브라우저 백엔드를 Lightpanda 경량 브라우저로 전환.
+
+### Workstream A: Lightpanda 도입
+- `~/.local/bin/lightpanda` — nightly 바이너리 설치 (메모리 ~6MB)
+- `~/.config/systemd/user/lightpanda.service` — CDP 서버 상시 실행 (port 9222)
+- `brs-browser` — Lightpanda CDP 우선 + Chromium fallback + 셸 인젝션 수정
+- `brs-web` — Crawl4AI CDP 시도 + 자동 Chromium fallback + 셸 인젝션 수정
+- `~/hermes/TOOLS.md` — Lightpanda 섹션 추가
+
+### Workstream B: Trace/FinOps
+- **타입**: `TraceEnvelope`, `CircuitBreakerConfig`, `DailyCostSummary` (shared/types.ts)
+- **Zod**: `traceEnvelopeInputSchema`, `traceIngestPayloadSchema`, `circuitBreakerConfigInputSchema` (shared/schemas.ts)
+- **DB**: `traces`, `circuit_breaker_config` 테이블 (schema.ts + db.ts + pg-schema.ts)
+- **Store**: `appendTrace`, `getTracesSince`, `getDailyTokenUsage`, `getDailyCostSummaries`, `getCircuitBreakerConfig`, `upsertCircuitBreakerConfig`, `checkCircuitBreaker`
+- **API**: `POST /api/traces/ingest`, `GET /api/traces`, `GET /api/traces/daily-cost`, `GET /api/circuit-breaker`, `PUT /api/circuit-breaker`
+- **CB 시드**: 10개 에이전트 기본 토큰 상한 자동 생성
+- **Telegram**: 매일 23:00 KST 에이전트별 비용 요약 알림
+- **MC UI**: `CostDashboard.tsx` (일별 BarChart + 에이전트 PieChart + CB 테이블), `/costs` 페이지, Sidebar 네비 추가
+
+### 검증
+- TypeScript 타입체크: shared + api + web 전부 통과
+- 빌드: `pnpm -r build` 성공 (/costs 라우트 확인)
+- 테스트: 66개 전부 통과
+- brs-browser: 5/5 URL 성공 (4 lightpanda + 1 chromium fallback)
+- 교차검증: sonnet 코드 리뷰 → 셸 인젝션, uniqueIndex 누락, 타이머 격리, NaN 방어 4건 즉시 수정
+
+### 변경 파일 (16개)
+| 워크스트림 | 파일 | 변경 |
+|-----------|------|------|
+| A | `~/.local/bin/lightpanda` | 신규 (바이너리) |
+| A | `~/.config/systemd/user/lightpanda.service` | 신규 |
+| A | `~/.best-research-stack/bin/brs-browser` | 수정 |
+| A | `~/.best-research-stack/bin/brs-web` | 수정 |
+| A | `~/hermes/TOOLS.md` | 수정 |
+| B | `packages/shared/src/types.ts` | 수정 |
+| B | `packages/shared/src/schemas.ts` | 수정 |
+| B | `apps/api/src/schema.ts` | 수정 |
+| B | `apps/api/src/db.ts` | 수정 |
+| B | `apps/api/src/pg-schema.ts` | 수정 |
+| B | `apps/api/src/store.ts` | 수정 |
+| B | `apps/api/src/server.ts` | 수정 |
+| B | `apps/web/lib/api-server.ts` | 수정 |
+| B | `apps/web/components/CostDashboard.tsx` | 신규 |
+| B | `apps/web/app/(layout)/costs/page.tsx` | 신규 |
+| B | `apps/web/components/Sidebar.tsx` | 수정 |
+
+---
 
 ## 2026-03-10: 텔레그램 미디어 다운로드 실패 수정 (IPv6→IPv4 강제)
 

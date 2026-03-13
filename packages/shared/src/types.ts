@@ -273,6 +273,43 @@ export interface ClipResult {
   savedPath: string;
 }
 
+// ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
+
+export type TraceStatus = "ok" | "error" | "timeout" | "circuit_broken";
+export type TraceType = "llm_call" | "tool_call" | "embedding" | "search" | "other";
+
+export interface TraceEnvelope {
+  id: string;
+  traceId: string;
+  ts: number;
+  agentId: string;
+  type: TraceType;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cost: number;
+  latencyMs: number;
+  status: TraceStatus;
+  metaJson: string;
+}
+
+export interface CircuitBreakerConfig {
+  id: string;
+  agentId: string;
+  dailyTokenLimit: number;
+  isActive: boolean;
+  updatedAt: number;
+}
+
+export interface DailyCostSummary {
+  date: string;
+  agentId: string;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCost: number;
+  callCount: number;
+}
+
 // ── Activity Stats ──────────────────────────────────────────────────────────
 
 export interface ActivityStats {

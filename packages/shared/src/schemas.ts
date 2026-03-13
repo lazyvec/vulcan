@@ -264,6 +264,40 @@ export type CreateApprovalPolicyInput = z.infer<typeof createApprovalPolicyInput
 export type UpdateApprovalPolicyInput = z.infer<typeof updateApprovalPolicyInputSchema>;
 export type ResolveApprovalInput = z.infer<typeof resolveApprovalInputSchema>;
 
+// ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
+
+export const traceStatusSchema = z.enum(["ok", "error", "timeout", "circuit_broken"]);
+export const traceTypeSchema = z.enum(["llm_call", "tool_call", "embedding", "search", "other"]);
+
+export const traceEnvelopeInputSchema = z.object({
+  traceId: z.string().min(1),
+  ts: z.number().int().nonnegative().optional(),
+  agentId: z.string().min(1),
+  type: traceTypeSchema,
+  model: z.string().min(1),
+  inputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  cost: z.number().nonnegative(),
+  latencyMs: z.number().int().nonnegative(),
+  status: traceStatusSchema.optional(),
+  metaJson: z.string().optional(),
+});
+
+export const traceIngestPayloadSchema = z.union([
+  z.object({ traces: z.array(traceEnvelopeInputSchema).min(1) }),
+  traceEnvelopeInputSchema,
+]);
+
+export const circuitBreakerConfigInputSchema = z.object({
+  agentId: z.string().min(1),
+  dailyTokenLimit: z.number().int().positive(),
+  isActive: z.boolean().optional(),
+});
+
+export type TraceEnvelopeInput = z.infer<typeof traceEnvelopeInputSchema>;
+export type TraceIngestPayload = z.infer<typeof traceIngestPayloadSchema>;
+export type CircuitBreakerConfigInput = z.infer<typeof circuitBreakerConfigInputSchema>;
+
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;

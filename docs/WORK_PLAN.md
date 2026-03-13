@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 0~10 완료 → Phase 11~12 백로그
+## 현재 Phase: 0~10 완료, Phase 11 착수 중 → Phase 12 백로그
 
-> M0 + Phase 0~10 완료. 다음: Phase 11 (Observability) 또는 Phase 12 (agency-agents).
+> Phase 11 (Trace 수집 + FinOps 기반) 착수 완료. 다음: Govrix 프록시 연동, 고급 분석 UI.
 
 ---
 
@@ -144,10 +144,15 @@
 - [ ] Dockerfile (web, api 멀티스테이지 빌드) — 필요 시 별도 세션
 - [ ] PM2 → Docker Compose 전환 — 현재 PM2 유지 (App은 Docker화 보류)
 
-## Phase 11: Observability/Governance 업그레이드 (백로그 예정)
+## Phase 11: Observability/Governance 업그레이드 (착수: 2026-03-13)
 
-> 목적: Govrix + PM Skills + Everything-Claude-Code에서 필요한 요소만 선택 흡수해 Vulcan 운영 품질을 한 단계 끌어올린다.
+> 목적: Trace 수집 + FinOps + Govrix 연동으로 운영 가시성 확보.
 
+- [x] Trace 수집 API: `POST /api/traces/ingest` (단건/배치), `GET /api/traces`, `GET /api/traces/daily-cost`
+- [x] Circuit Breaker: `GET/PUT /api/circuit-breaker`, 10개 에이전트 기본 상한 시드
+- [x] 비용 대시보드: CostDashboard.tsx (일별 BarChart + PieChart + CB 테이블), `/costs` 페이지
+- [x] Telegram 일별 비용 알림: 매일 23:00 KST 에이전트별 요약 자동 발송
+- [x] DB 스키마: `traces` + `circuit_breaker_config` 테이블 (SQLite + PG 포워드호환)
 - [ ] Govrix PoC: 프록시 기반 LLM 트래픽 계측(cost/token/latency) + Vulcan ingest 연결
 - [ ] Govrix UI 연동 전략: 대체가 아닌 병행(모듈형) 통합 설계
 - [ ] PII/감사 추적 정책 실험 (Merkle/tamper-evidence 개념 검토 포함)

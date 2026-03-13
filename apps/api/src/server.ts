@@ -22,8 +22,10 @@ import {
   ingestPayloadSchema,
   installSkillInputSchema,
   realtimeClientMessageSchema,
+  circuitBreakerConfigInputSchema,
   resolveApprovalInputSchema,
   taskLanePatchSchema,
+  traceIngestPayloadSchema,
   updateAgentInputSchema,
   updateApprovalPolicyInputSchema,
   updateNotificationPreferencesSchema,
@@ -102,6 +104,13 @@ import {
   getPendingExpiredApprovals,
   getPendingApprovalCount,
   updateApprovalTelegramMessageId,
+  appendTrace,
+  getTracesSince,
+  getDailyCostSummaries,
+  getCircuitBreakerConfig,
+  getAllCircuitBreakerConfigs,
+  upsertCircuitBreakerConfig,
+  checkCircuitBreaker,
 } from "./store";
 import { ensureSchema, getSqlite } from "./db";
 import {
@@ -586,6 +595,42 @@ subscribeEvents((event) => {
     }
   });
 });
+
+// Phase 11: 일별 비용 요약 Telegram 알림 (매일 23:00 KST)
+let costReportTimer: ReturnType<typeof setInterval> | null = null;
+
+function scheduleDailyCostReport() {
+  // 1분마다 체크하여 KST 23:00에 발송
+  costReportTimer = setInterval(() => {
+    const now = new Date();
+    const kstHour = (now.getUTCHours() + 9) % 24;
+    const kstMin = now.getUTCMinutes();
+    // 23:00 KST (= 14:00 UTC)에 한 번만 발송
+    if (kstHour !== 23 || kstMin !== 0) return;
+
+    const chatId = getDefaultNotificationChatId();
+    if (!chatId) return;
+
+    const since = Date.now() - 86400000;
+    const summaries = getDailyCostSummaries(since);
+    if (summaries.length === 0) return;
+
+    let totalCost = 0;
+    let totalTokens = 0;
+    const lines: string[] = ["<b>📊 일별 비용 요약 (오늘)</b>\n"];
+    for (const s of summaries) {
+      const tokens = s.totalInputTokens + s.totalOutputTokens;
+      totalCost += s.totalCost;
+      totalTokens += tokens;
+      lines.push(
+        `• <b>${s.agentId}</b>: ${tokens.toLocaleString()} tok, $${s.totalCost.toFixed(4)} (${s.callCount}건)`,
+      );
+    }
+    lines.push(`\n<b>합계</b>: ${totalTokens.toLocaleString()} tok, $${totalCost.toFixed(4)}`);
+
+    void sendTelegramMessage(chatId, lines.join("\n"));
+  }, 60_000);
+}
 
 app.use("*", logger());
 app.use("/api/*", async (c, next) => {
@@ -3238,6 +3283,85 @@ app.get("/", (c) => c.json({ service: "vulcan-api", ok: true }));
 // 테스트에서 app 인스턴스를 사용할 수 있도록 export
 export { app };
 
+// ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
+
+app.post("/api/traces/ingest", async (c) => {
+  const body = await c.req.json();
+  const parsed = traceIngestPayloadSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ ok: false, error: parsed.error.issues }, 400);
+  }
+  const traces = "traces" in parsed.data ? parsed.data.traces : [parsed.data];
+  const results = [];
+  const warnings: string[] = [];
+  for (const t of traces) {
+    const saved = appendTrace(t);
+    results.push(saved);
+    // Circuit breaker advisory check
+    const cb = checkCircuitBreaker(t.agentId);
+    if (cb.exceeded) {
+      warnings.push(
+        `[CB] ${t.agentId}: ${cb.usage.toLocaleString()}/${cb.limit.toLocaleString()} 토큰 상한 초과`,
+      );
+    }
+    // 실시간 이벤트 전파
+    publishEvent({
+      id: saved.id,
+      ts: saved.ts,
+      source: "trace",
+      agentId: saved.agentId,
+      projectId: null,
+      taskId: null,
+      type: "trace.ingested",
+      summary: `${saved.type} ${saved.model} ${saved.inputTokens + saved.outputTokens}tok $${saved.cost.toFixed(4)}`,
+      payloadJson: JSON.stringify({ traceId: saved.traceId, status: saved.status }),
+    });
+  }
+  return c.json({ ok: true, count: results.length, warnings });
+});
+
+app.get("/api/traces", (c) => {
+  const since = Number(c.req.query("since") ?? Date.now() - 86400000);
+  const agentId = c.req.query("agentId") || undefined;
+  const limit = Math.min(Math.max(1, Number(c.req.query("limit") ?? 100) || 100), 1000);
+  const traces = getTracesSince(since, agentId, limit);
+  return c.json({ ok: true, traces, count: traces.length });
+});
+
+app.get("/api/traces/daily-cost", (c) => {
+  const since = Number(c.req.query("since") ?? Date.now() - 7 * 86400000);
+  const summaries = getDailyCostSummaries(since);
+  return c.json({ ok: true, summaries });
+});
+
+app.get("/api/circuit-breaker", (c) => {
+  const agentId = c.req.query("agentId");
+  if (agentId) {
+    const config = getCircuitBreakerConfig(agentId);
+    if (!config) {
+      return c.json({ ok: false, error: "not found" }, 404);
+    }
+    const status = checkCircuitBreaker(agentId);
+    return c.json({ ok: true, config, status });
+  }
+  const configs = getAllCircuitBreakerConfigs();
+  return c.json({ ok: true, configs });
+});
+
+app.put("/api/circuit-breaker", async (c) => {
+  const body = await c.req.json();
+  const parsed = circuitBreakerConfigInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ ok: false, error: parsed.error.issues }, 400);
+  }
+  const config = upsertCircuitBreakerConfig(
+    parsed.data.agentId,
+    parsed.data.dailyTokenLimit,
+    parsed.data.isActive ?? true,
+  );
+  return c.json({ ok: true, config });
+});
+
 // 직접 실행 시에만 서버 시작 (테스트에서 import할 때는 실행하지 않음)
 const isDirectRun =
   process.argv[1]?.endsWith("server.ts") ||
@@ -3259,6 +3383,33 @@ if (isDirectRun) {
 
   injectWebSocket(server);
 
+  // Phase 11: 비용 알림 스케줄러
+  scheduleDailyCostReport();
+
+  // Phase 11: Circuit Breaker 기본값 시드
+  {
+    const cbDefaults: Record<string, number> = {
+      hermes: 500_000,
+      daedalus: 300_000,
+      metis: 200_000,
+      athena: 200_000,
+      themis: 150_000,
+      iris: 150_000,
+      nike: 150_000,
+      calliope: 150_000,
+      aegis: 100_000,
+      argus: 100_000,
+    };
+    const existing = getAllCircuitBreakerConfigs();
+    const existingIds = new Set(existing.map((c) => c.agentId));
+    for (const [agentId, limit] of Object.entries(cbDefaults)) {
+      if (!existingIds.has(agentId)) {
+        upsertCircuitBreakerConfig(agentId, limit);
+        console.log(`[vulcan-api] CB 시드: ${agentId} → ${limit.toLocaleString()} tokens/day`);
+      }
+    }
+  }
+
   let isShuttingDown = false;
 
   async function shutdown(signal: string) {
@@ -3272,6 +3423,10 @@ if (isDirectRun) {
     if (healthcheckQueueTimer) {
       clearInterval(healthcheckQueueTimer);
       healthcheckQueueTimer = null;
+    }
+    if (costReportTimer) {
+      clearInterval(costReportTimer);
+      costReportTimer = null;
     }
 
     // Phase 8: 승인 타임아웃 정리

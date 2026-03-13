@@ -1,4 +1,4 @@
-import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const agentsTable = sqliteTable("agents", {
   id: text("id").primaryKey(),
@@ -279,6 +279,46 @@ export const approvalsTable = sqliteTable(
     idxApprovalsCommandId: index("idx_approvals_command_id").on(table.agentCommandId),
     idxApprovalsStatus: index("idx_approvals_status").on(table.status),
     idxApprovalsExpires: index("idx_approvals_expires").on(table.expiresAt),
+  }),
+);
+
+// ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
+
+export const tracesTable = sqliteTable(
+  "traces",
+  {
+    id: text("id").primaryKey(),
+    traceId: text("trace_id").notNull(),
+    ts: integer("ts").notNull(),
+    agentId: text("agent_id").notNull(),
+    type: text("type").notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    cost: real("cost").notNull().default(0),
+    latencyMs: integer("latency_ms").notNull().default(0),
+    status: text("status").notNull().default("ok"),
+    metaJson: text("meta_json").notNull().default("{}"),
+  },
+  (table) => ({
+    idxTracesTs: index("idx_traces_ts").on(table.ts),
+    idxTracesAgentTs: index("idx_traces_agent_ts").on(table.agentId, table.ts),
+    idxTracesTraceId: index("idx_traces_trace_id").on(table.traceId),
+    idxTracesTypeTs: index("idx_traces_type_ts").on(table.type, table.ts),
+  }),
+);
+
+export const circuitBreakerConfigTable = sqliteTable(
+  "circuit_breaker_config",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    dailyTokenLimit: integer("daily_token_limit").notNull(),
+    isActive: integer("is_active").notNull().default(1),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => ({
+    idxCbConfigAgent: uniqueIndex("idx_cb_config_agent").on(table.agentId),
   }),
 );
 

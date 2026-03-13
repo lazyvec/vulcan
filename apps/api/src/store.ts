@@ -31,9 +31,14 @@ import type {
 } from "@vulcan/shared/types";
 import { db, ensureSchema, getSqlite } from "./db";
 import type {
+  CircuitBreakerConfig,
+  DailyCostSummary,
   NotificationCategory,
   NotificationLog,
   NotificationPreference,
+  TraceEnvelope,
+  TraceStatus,
+  TraceType,
 } from "@vulcan/shared/types";
 import {
   agentCommandsTable,
@@ -52,9 +57,11 @@ import {
   schedulesTable,
   skillRegistryTable,
   skillsTable,
+  circuitBreakerConfigTable,
   taskCommentsTable,
   taskDependenciesTable,
   tasksTable,
+  tracesTable,
 } from "./schema";
 
 const DEFAULT_SOURCE = "openclaw";
@@ -2027,4 +2034,210 @@ export function getPendingApprovalCount(): number {
     .where(eq(approvalsTable.status, "pending"))
     .all();
   return row?.count ?? 0;
+}
+
+// ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
+
+function mapTrace(row: Record<string, unknown>): TraceEnvelope {
+  return {
+    id: row.id as string,
+    traceId: row.traceId as string,
+    ts: row.ts as number,
+    agentId: row.agentId as string,
+    type: row.type as TraceType,
+    model: row.model as string,
+    inputTokens: row.inputTokens as number,
+    outputTokens: row.outputTokens as number,
+    cost: row.cost as number,
+    latencyMs: row.latencyMs as number,
+    status: (row.status as TraceStatus) || "ok",
+    metaJson: (row.metaJson as string) || "{}",
+  };
+}
+
+function mapCircuitBreakerConfig(row: Record<string, unknown>): CircuitBreakerConfig {
+  return {
+    id: row.id as string,
+    agentId: row.agentId as string,
+    dailyTokenLimit: row.dailyTokenLimit as number,
+    isActive: (row.isActive as number) === 1,
+    updatedAt: row.updatedAt as number,
+  };
+}
+
+export function appendTrace(input: {
+  traceId: string;
+  ts?: number;
+  agentId: string;
+  type: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cost: number;
+  latencyMs: number;
+  status?: string;
+  metaJson?: string;
+}): TraceEnvelope {
+  ensureSchema();
+  const id = randomUUID();
+  const now = Date.now();
+  const row = {
+    id,
+    traceId: input.traceId,
+    ts: input.ts ?? now,
+    agentId: input.agentId,
+    type: input.type,
+    model: input.model,
+    inputTokens: input.inputTokens,
+    outputTokens: input.outputTokens,
+    cost: input.cost,
+    latencyMs: input.latencyMs,
+    status: input.status ?? "ok",
+    metaJson: input.metaJson ?? "{}",
+  };
+  db.insert(tracesTable).values(row).run();
+  return mapTrace(row);
+}
+
+export function getTracesSince(
+  since: number,
+  agentId?: string,
+  limit = 100,
+): TraceEnvelope[] {
+  ensureSchema();
+  const conditions = [gt(tracesTable.ts, since)];
+  if (agentId) {
+    conditions.push(eq(tracesTable.agentId, agentId));
+  }
+  return db
+    .select()
+    .from(tracesTable)
+    .where(and(...conditions))
+    .orderBy(desc(tracesTable.ts))
+    .limit(limit)
+    .all()
+    .map(mapTrace);
+}
+
+export function getDailyTokenUsage(
+  agentId: string,
+  dateStr: string,
+): { inputTokens: number; outputTokens: number; cost: number; callCount: number } {
+  ensureSchema();
+  // dateStr: "2026-03-13" → compute start/end epoch ms
+  const dayStart = new Date(dateStr + "T00:00:00+09:00").getTime();
+  const dayEnd = dayStart + 86400000;
+  const [row] = db
+    .select({
+      inputTokens: sql<number>`coalesce(sum(${tracesTable.inputTokens}), 0)`,
+      outputTokens: sql<number>`coalesce(sum(${tracesTable.outputTokens}), 0)`,
+      cost: sql<number>`coalesce(sum(${tracesTable.cost}), 0)`,
+      callCount: sql<number>`count(*)`,
+    })
+    .from(tracesTable)
+    .where(
+      and(
+        eq(tracesTable.agentId, agentId),
+        gt(tracesTable.ts, dayStart),
+        sql`${tracesTable.ts} <= ${dayEnd}`,
+      ),
+    )
+    .all();
+  return {
+    inputTokens: row?.inputTokens ?? 0,
+    outputTokens: row?.outputTokens ?? 0,
+    cost: row?.cost ?? 0,
+    callCount: row?.callCount ?? 0,
+  };
+}
+
+export function getDailyCostSummaries(since: number): DailyCostSummary[] {
+  ensureSchema();
+  const sqlite = getSqlite();
+  const rows = sqlite
+    .prepare(
+      `SELECT
+        date(ts / 1000, 'unixepoch', '+9 hours') as date,
+        agent_id as agentId,
+        coalesce(sum(input_tokens), 0) as totalInputTokens,
+        coalesce(sum(output_tokens), 0) as totalOutputTokens,
+        coalesce(sum(cost), 0) as totalCost,
+        count(*) as callCount
+      FROM traces
+      WHERE ts > ?
+      GROUP BY date, agent_id
+      ORDER BY date DESC, agent_id`,
+    )
+    .all(since) as DailyCostSummary[];
+  return rows;
+}
+
+export function getCircuitBreakerConfig(agentId: string): CircuitBreakerConfig | null {
+  ensureSchema();
+  const [row] = db
+    .select()
+    .from(circuitBreakerConfigTable)
+    .where(eq(circuitBreakerConfigTable.agentId, agentId))
+    .all();
+  return row ? mapCircuitBreakerConfig(row) : null;
+}
+
+export function getAllCircuitBreakerConfigs(): CircuitBreakerConfig[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(circuitBreakerConfigTable)
+    .all()
+    .map(mapCircuitBreakerConfig);
+}
+
+export function upsertCircuitBreakerConfig(
+  agentId: string,
+  dailyTokenLimit: number,
+  isActive = true,
+): CircuitBreakerConfig {
+  ensureSchema();
+  const now = Date.now();
+  const existing = getCircuitBreakerConfig(agentId);
+  if (existing) {
+    db.update(circuitBreakerConfigTable)
+      .set({ dailyTokenLimit, isActive: isActive ? 1 : 0, updatedAt: now })
+      .where(eq(circuitBreakerConfigTable.agentId, agentId))
+      .run();
+    return { ...existing, dailyTokenLimit, isActive, updatedAt: now };
+  }
+  const id = randomUUID();
+  const row = {
+    id,
+    agentId,
+    dailyTokenLimit,
+    isActive: isActive ? 1 : 0,
+    updatedAt: now,
+  };
+  db.insert(circuitBreakerConfigTable).values(row).run();
+  return { id, agentId, dailyTokenLimit, isActive, updatedAt: now };
+}
+
+export function checkCircuitBreaker(agentId: string): {
+  exceeded: boolean;
+  usage: number;
+  limit: number;
+} {
+  ensureSchema();
+  const config = getCircuitBreakerConfig(agentId);
+  if (!config || !config.isActive) {
+    return { exceeded: false, usage: 0, limit: 0 };
+  }
+  // 오늘 KST 기준 사용량
+  const now = new Date();
+  const kstOffset = 9 * 60 * 60 * 1000;
+  const kstNow = new Date(now.getTime() + kstOffset);
+  const dateStr = kstNow.toISOString().slice(0, 10);
+  const { inputTokens, outputTokens } = getDailyTokenUsage(agentId, dateStr);
+  const totalTokens = inputTokens + outputTokens;
+  return {
+    exceeded: totalTokens >= config.dailyTokenLimit,
+    usage: totalTokens,
+    limit: config.dailyTokenLimit,
+  };
 }

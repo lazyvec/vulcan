@@ -5,6 +5,8 @@ import type {
   Approval,
   ApprovalPolicy,
   AuditLogItem,
+  CircuitBreakerConfig,
+  DailyCostSummary,
   DocItem,
   EventItem,
   MemoryItem,
@@ -170,6 +172,25 @@ export async function getNotificationLogs(limit = 50) {
     `/api/notifications/logs?limit=${limit}`,
   );
   return data.logs;
+}
+
+// ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
+
+export async function getDailyCostSummaries(since?: number) {
+  const params = new URLSearchParams();
+  if (since) params.set("since", String(since));
+  const suffix = params.toString();
+  const data = await requestJson<{ ok: boolean; summaries: DailyCostSummary[] }>(
+    suffix ? `/api/traces/daily-cost?${suffix}` : "/api/traces/daily-cost",
+  );
+  return data.summaries;
+}
+
+export async function getCircuitBreakerConfigs() {
+  const data = await requestJson<{ ok: boolean; configs: CircuitBreakerConfig[] }>(
+    "/api/circuit-breaker",
+  );
+  return data.configs;
 }
 
 // ── Approval / Governance (Phase 8) ──────────────────────────────────────────

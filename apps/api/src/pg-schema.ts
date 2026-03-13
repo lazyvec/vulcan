@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -377,6 +378,46 @@ export const approvalsPgTable = pgTable(
       columns: [table.policyId],
       foreignColumns: [approvalPoliciesPgTable.id],
     }).onDelete("cascade"),
+  }),
+);
+
+// ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
+
+export const tracesPgTable = pgTable(
+  "traces",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    traceId: text("trace_id").notNull(),
+    ts: timestamp("ts", { withTimezone: false }).notNull(),
+    agentId: text("agent_id").notNull(),
+    type: text("type").notNull(),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    cost: doublePrecision("cost").notNull().default(0),
+    latencyMs: integer("latency_ms").notNull().default(0),
+    status: text("status").notNull().default("ok"),
+    metaJson: jsonb("meta_json").$type<Record<string, unknown>>().notNull().default({}),
+  },
+  (table) => ({
+    idxTracesTs: index("idx_traces_ts_pg").on(table.ts),
+    idxTracesAgentTs: index("idx_traces_agent_ts_pg").on(table.agentId, table.ts),
+    idxTracesTraceId: index("idx_traces_trace_id_pg").on(table.traceId),
+    idxTracesTypeTs: index("idx_traces_type_ts_pg").on(table.type, table.ts),
+  }),
+);
+
+export const circuitBreakerConfigPgTable = pgTable(
+  "circuit_breaker_config",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    agentId: text("agent_id").notNull(),
+    dailyTokenLimit: integer("daily_token_limit").notNull(),
+    isActive: integer("is_active").notNull().default(1),
+    updatedAt: nowTs("updated_at"),
+  },
+  (table) => ({
+    idxCbConfigAgent: uniqueIndex("idx_cb_config_agent_pg").on(table.agentId),
   }),
 );
 
