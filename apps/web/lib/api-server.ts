@@ -10,6 +10,7 @@ import type {
   DocItem,
   EventItem,
   MemoryItem,
+  MemoryStats,
   NotificationLog,
   NotificationPreference,
   Project,
@@ -256,6 +257,13 @@ export async function getTaskActivity(taskId: string) {
     workOrders: WorkOrder[];
   }>(`/api/tasks/${taskId}/activity`);
   return data;
+}
+
+// ── Hermes Memory (Phase 5) ──────────────────────────────────────────────────
+
+export async function getHermesMemoryStats() {
+  const data = await requestJson<{ ok: boolean; stats: MemoryStats }>("/api/memories/stats");
+  return data.stats;
 }
 
 // ── Approval / Governance (Phase 8) ──────────────────────────────────────────

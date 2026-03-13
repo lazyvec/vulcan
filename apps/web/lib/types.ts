@@ -31,4 +31,12 @@ export type {
   ApprovalStatus,
   WorkOrder,
   WorkOrderStatus,
+  HermesMemory,
+  HermesMemoryType,
+  MemoryLayer,
+  MemoryLifecycle,
+  MemorySearchResult,
+  MemorySyncResult,
+  MemoryDecayResult,
+  MemoryStats,
 } from "@vulcan/shared/types";

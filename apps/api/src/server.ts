@@ -35,6 +35,9 @@ import {
   updateNotificationPreferencesSchema,
   updateTaskInputSchema,
   upsertSkillInputSchema,
+  hermesMemoryPatchSchema,
+  memorySyncInputSchema,
+  memoryDecayInputSchema,
 } from "@vulcan/shared/schemas";
 import type {
   AgentCommand,
@@ -125,7 +128,28 @@ import {
   getWorkResultsByOrderId,
   saveWorkOrderCheckpoint,
   getWorkOrderStats,
+  getHermesMemories,
+  getHermesMemoryById,
+  upsertHermesMemory,
+  updateHermesMemory,
+  deleteHermesMemory,
+  searchHermesMemories,
+  getHermesMemoryExisting,
+  getHermesMemoryStats,
+  applyTemporalDecay,
 } from "./store";
+import { scanAllMemoryFiles, syncMemories, startAutoFlush, stopAutoFlush } from "./memory-sync";
+import { classifyMemory, classifyAll, buildClassifyPrompt } from "./memory-classify";
+import {
+  generateEmbedding,
+  generateEmbeddings,
+  semanticSearch,
+  hybridSearchRRF,
+  cacheEmbedding,
+  isEmbeddingAvailable,
+  getEmbeddingCacheSize,
+  memoryToEmbeddingText,
+} from "./memory-embedding";
 import { ensureSchema, getSqlite } from "./db";
 import {
   getSubscriberCount,
@@ -1893,6 +1917,224 @@ app.delete("/api/memory/:id", (c) => {
   const deleted = deleteMemoryItem(id);
   if (!deleted) return c.json({ error: "not found" }, 404);
   return c.json({ ok: true });
+});
+
+// ── Hermes Memory (Phase 5) ──────────────────────────────────────────────────
+
+app.get("/api/memories", (c) => {
+  const layer = c.req.query("layer") as import("@vulcan/shared/types").MemoryLayer | undefined;
+  const memoryType = c.req.query("type") as import("@vulcan/shared/types").HermesMemoryType | undefined;
+  const lifecycle = c.req.query("lifecycle") as import("@vulcan/shared/types").MemoryLifecycle | undefined;
+  const limit = c.req.query("limit") ? Number(c.req.query("limit")) : undefined;
+  return c.json({ ok: true, memories: getHermesMemories({ layer, memoryType, lifecycle, limit }) });
+});
+
+app.get("/api/memories/search", (c) => {
+  const q = c.req.query("q") ?? "";
+  const layer = c.req.query("layer") as import("@vulcan/shared/types").MemoryLayer | undefined;
+  const memoryType = c.req.query("type") as import("@vulcan/shared/types").HermesMemoryType | undefined;
+  const limit = c.req.query("limit") ? Number(c.req.query("limit")) : undefined;
+  return c.json({ ok: true, results: searchHermesMemories(q, { layer, memoryType, limit }) });
+});
+
+app.get("/api/memories/stats", (c) => {
+  return c.json({ ok: true, stats: getHermesMemoryStats() });
+});
+
+// Phase 5.6: 시맨틱 검색 (vector + FTS hybrid) — `:id` 보다 먼저 등록
+app.get("/api/memories/semantic", async (c) => {
+  const q = c.req.query("q") ?? "";
+  const limit = c.req.query("limit") ? Number(c.req.query("limit")) : 20;
+  if (!q) return c.json({ ok: false, error: "q 파라미터 필요" }, 400);
+
+  // FTS 결과
+  const ftsResults = searchHermesMemories(q, { limit });
+
+  // 벡터 검색 시도
+  if (isEmbeddingAvailable()) {
+    const queryEmb = await generateEmbedding(q);
+    if (queryEmb) {
+      const memories = getHermesMemories({ limit: 500 });
+      const vectorResults = semanticSearch(queryEmb, memories, limit);
+      const hybrid = hybridSearchRRF(ftsResults, vectorResults, limit);
+      return c.json({ ok: true, mode: "hybrid", results: hybrid });
+    }
+  }
+
+  // 벡터 불가 시 FTS만 반환
+  return c.json({ ok: true, mode: "fts", results: ftsResults });
+});
+
+// Phase 5.6: 임베딩 상태 조회 — `:id` 보다 먼저 등록
+app.get("/api/memories/embedding-status", (c) => {
+  return c.json({
+    ok: true,
+    available: isEmbeddingAvailable(),
+    cacheSize: getEmbeddingCacheSize(),
+    model: "text-embedding-3-small",
+    dimensions: 1536,
+  });
+});
+
+app.get("/api/memories/:id", (c) => {
+  const id = c.req.param("id");
+  const memory = getHermesMemoryById(id);
+  if (!memory) return c.json({ error: "not found" }, 404);
+  return c.json({ ok: true, memory });
+});
+
+app.patch("/api/memories/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+  const parsed = hermesMemoryPatchSchema.safeParse(body);
+  if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+  const memory = updateHermesMemory(id, parsed.data);
+  if (!memory) return c.json({ error: "not found" }, 404);
+  return c.json({ ok: true, memory });
+});
+
+app.post("/api/memories/sync", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parsed = memorySyncInputSchema.safeParse(body);
+  const force = parsed.success ? parsed.data.force : false;
+
+  const scanned = scanAllMemoryFiles();
+  const existing = getHermesMemoryExisting();
+
+  const result = syncMemories(
+    scanned,
+    force ? [] : existing,
+    (file, existingId) => {
+      upsertHermesMemory({
+        id: existingId,
+        filePath: file.filePath,
+        memoryType: file.memoryType,
+        layer: file.layer,
+        title: file.title,
+        content: file.content,
+        contentHash: file.contentHash,
+        tags: file.tags,
+        fileSize: file.fileSize,
+        fileModifiedAt: file.fileModifiedAt,
+      });
+    },
+    (id) => deleteHermesMemory(id),
+  );
+
+  return c.json({ ok: true, result });
+});
+
+app.post("/api/memories/decay", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const parsed = memoryDecayInputSchema.safeParse(body);
+  const options = parsed.success ? parsed.data : {};
+  const result = applyTemporalDecay(options);
+  return c.json({ ok: true, result });
+});
+
+// Phase 5.4: 단일 메모리 규칙 기반 분류
+app.post("/api/memories/:id/classify", (c) => {
+  const id = c.req.param("id");
+  const memory = getHermesMemoryById(id);
+  if (!memory) return c.json({ error: "not found" }, 404);
+
+  const result = classifyMemory(memory);
+  if (result.changed) {
+    updateHermesMemory(id, { tags: result.tags, memoryType: result.memoryType });
+  }
+  return c.json({ ok: true, changed: result.changed, tags: result.tags, memoryType: result.memoryType });
+});
+
+// Phase 5.4: 전체 메모리 일괄 규칙 기반 분류
+app.post("/api/memories/classify-all", (c) => {
+  const memories = getHermesMemories({ limit: 1000 });
+  const result = classifyAll(memories, (id, patch) => updateHermesMemory(id, patch));
+  return c.json({ ok: true, ...result });
+});
+
+// Phase 5.4: AI 분류 요청 (Gateway RPC → Metis 에이전트)
+app.post("/api/memories/:id/classify-ai", async (c) => {
+  const id = c.req.param("id");
+  const memory = getHermesMemoryById(id);
+  if (!memory) return c.json({ error: "not found" }, 404);
+
+  const prompt = buildClassifyPrompt(memory);
+
+  try {
+    const response = await gatewayRpcClient.chatSend({
+      agentId: "metis",
+      message: prompt,
+    });
+    // 응답에서 JSON 추출 시도
+    const text = typeof response === "string" ? response : JSON.stringify(response);
+    const jsonMatch = text.match(/\{[\s\S]*"memoryType"[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]) as { memoryType?: string; tags?: string[]; evergreen?: boolean };
+      const patch: Record<string, unknown> = {};
+      if (parsed.memoryType === "fact" || parsed.memoryType === "skill") {
+        patch.memoryType = parsed.memoryType;
+      }
+      if (Array.isArray(parsed.tags)) {
+        patch.tags = parsed.tags.filter((t): t is string => typeof t === "string");
+      }
+      if (typeof parsed.evergreen === "boolean") {
+        patch.evergreen = parsed.evergreen;
+      }
+      if (Object.keys(patch).length > 0) {
+        updateHermesMemory(id, patch);
+      }
+      return c.json({ ok: true, classification: parsed, applied: Object.keys(patch).length > 0 });
+    }
+    return c.json({ ok: false, error: "AI 응답에서 JSON을 추출할 수 없습니다", raw: text.slice(0, 500) });
+  } catch (err) {
+    return c.json({ ok: false, error: err instanceof Error ? err.message : "Gateway RPC 오류" }, 502);
+  }
+});
+
+// Phase 5.6: 전체 메모리 일괄 임베딩 생성 — `/:id/embed` 보다 먼저 등록
+app.post("/api/memories/embed-all", async (c) => {
+  if (!isEmbeddingAvailable()) {
+    return c.json({ ok: false, error: "OPENAI_API_KEY가 설정되지 않았습니다" }, 503);
+  }
+
+  const memories = getHermesMemories({ limit: 500 });
+  const texts = memories.map(memoryToEmbeddingText);
+
+  // 배치 크기 20으로 나누어 처리
+  const batchSize = 20;
+  let embedded = 0;
+  for (let i = 0; i < texts.length; i += batchSize) {
+    const batch = texts.slice(i, i + batchSize);
+    const batchMemories = memories.slice(i, i + batchSize);
+    const embeddings = await generateEmbeddings(batch);
+    for (let j = 0; j < embeddings.length; j++) {
+      if (embeddings[j]) {
+        cacheEmbedding(batchMemories[j].id, embeddings[j]!);
+        embedded++;
+      }
+    }
+  }
+
+  return c.json({ ok: true, total: memories.length, embedded, cacheSize: getEmbeddingCacheSize() });
+});
+
+// Phase 5.6: 단일 메모리 임베딩 생성
+app.post("/api/memories/:id/embed", async (c) => {
+  const id = c.req.param("id");
+  const memory = getHermesMemoryById(id);
+  if (!memory) return c.json({ error: "not found" }, 404);
+  if (!isEmbeddingAvailable()) {
+    return c.json({ ok: false, error: "OPENAI_API_KEY가 설정되지 않았습니다" }, 503);
+  }
+
+  const text = memoryToEmbeddingText(memory);
+  const embedding = await generateEmbedding(text);
+  if (!embedding) {
+    return c.json({ ok: false, error: "임베딩 생성 실패" }, 500);
+  }
+
+  cacheEmbedding(memory.id, embedding);
+  return c.json({ ok: true, dimensions: embedding.length });
 });
 
 app.get("/api/docs", (c) => {
@@ -3717,6 +3959,26 @@ if (isDirectRun) {
   // Phase 11: 비용 알림 스케줄러
   scheduleDailyCostReport();
 
+  // Phase 5: Hermes Memory Auto-Flush (파일 감시 + 5분 폴링)
+  startAutoFlush(() => {
+    const scanned = scanAllMemoryFiles();
+    const existing = getHermesMemoryExisting();
+    syncMemories(scanned, existing, (file, existingId) => {
+      upsertHermesMemory({
+        id: existingId,
+        filePath: file.filePath,
+        memoryType: file.memoryType,
+        layer: file.layer,
+        title: file.title,
+        content: file.content,
+        contentHash: file.contentHash,
+        tags: file.tags,
+        fileSize: file.fileSize,
+        fileModifiedAt: file.fileModifiedAt,
+      });
+    }, (id) => deleteHermesMemory(id));
+  });
+
   // Phase 11: Circuit Breaker 기본값 시드
   {
     const cbDefaults: Record<string, number> = {
@@ -3766,6 +4028,7 @@ if (isDirectRun) {
     }
     approvalTimeouts.clear();
 
+    stopAutoFlush();
     stopTelegramPolling();
     gatewayRpcClient.stop();
     await closeQueueResources().catch((error) => {

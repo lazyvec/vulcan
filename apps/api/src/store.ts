@@ -33,6 +33,13 @@ import { db, ensureSchema, getSqlite } from "./db";
 import type {
   CircuitBreakerConfig,
   DailyCostSummary,
+  HermesMemory,
+  HermesMemoryType,
+  MemoryDecayResult,
+  MemoryLayer,
+  MemoryLifecycle,
+  MemorySearchResult,
+  MemoryStats,
   NotificationCategory,
   NotificationLog,
   NotificationPreference,
@@ -63,6 +70,7 @@ import {
   skillRegistryTable,
   skillsTable,
   circuitBreakerConfigTable,
+  memoriesTable,
   taskCommentsTable,
   taskDependenciesTable,
   tasksTable,
@@ -2527,4 +2535,290 @@ export function getWorkOrderStats(): {
     byAgent[row.agent] = row.cnt;
   }
   return { total, byStatus, byAgent };
+}
+
+// ── Hermes Memory (Phase 5) ─────────────────────────────────────────────────
+
+function mapHermesMemory(row: typeof memoriesTable.$inferSelect): HermesMemory {
+  return {
+    id: row.id,
+    filePath: row.filePath,
+    memoryType: row.memoryType as HermesMemoryType,
+    layer: row.layer as MemoryLayer,
+    title: row.title,
+    content: row.content,
+    contentHash: row.contentHash,
+    tags: parseStringArray(row.tags),
+    agentId: row.agentId,
+    projectId: row.projectId,
+    lifecycle: row.lifecycle as MemoryLifecycle,
+    utilityScore: row.utilityScore,
+    accessCount: row.accessCount,
+    evergreen: row.evergreen !== 0,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    lastAccessedAt: row.lastAccessedAt,
+    expiresAt: row.expiresAt,
+    fileSize: row.fileSize,
+    fileModifiedAt: row.fileModifiedAt,
+  };
+}
+
+export function getHermesMemories(filters?: {
+  layer?: MemoryLayer;
+  memoryType?: HermesMemoryType;
+  lifecycle?: MemoryLifecycle;
+  limit?: number;
+}): HermesMemory[] {
+  ensureSchema();
+  const conditions = [];
+  if (filters?.layer) conditions.push(eq(memoriesTable.layer, filters.layer));
+  if (filters?.memoryType) conditions.push(eq(memoriesTable.memoryType, filters.memoryType));
+  if (filters?.lifecycle) conditions.push(eq(memoriesTable.lifecycle, filters.lifecycle));
+
+  const limit = filters?.limit ?? 200;
+  const rows = db
+    .select()
+    .from(memoriesTable)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(memoriesTable.updatedAt))
+    .limit(limit)
+    .all();
+
+  return rows.map(mapHermesMemory);
+}
+
+export function getHermesMemoryById(id: string): HermesMemory | null {
+  ensureSchema();
+  const row = db.select().from(memoriesTable).where(eq(memoriesTable.id, id)).get();
+  if (!row) return null;
+
+  // access_count 증가 + last_accessed_at 갱신
+  const now = Date.now();
+  db.update(memoriesTable)
+    .set({
+      accessCount: row.accessCount + 1,
+      lastAccessedAt: now,
+    })
+    .where(eq(memoriesTable.id, id))
+    .run();
+
+  return mapHermesMemory({ ...row, accessCount: row.accessCount + 1, lastAccessedAt: now });
+}
+
+export function upsertHermesMemory(input: {
+  id?: string;
+  filePath: string;
+  memoryType: string;
+  layer: string;
+  title: string;
+  content: string;
+  contentHash: string;
+  tags: string[];
+  fileSize: number;
+  fileModifiedAt: number;
+}): void {
+  ensureSchema();
+  const now = Date.now();
+  const id = input.id ?? randomUUID();
+
+  db.insert(memoriesTable)
+    .values({
+      id,
+      filePath: input.filePath,
+      memoryType: input.memoryType,
+      layer: input.layer,
+      title: input.title,
+      content: input.content,
+      contentHash: input.contentHash,
+      tags: JSON.stringify(input.tags),
+      lifecycle: "active",
+      utilityScore: 1.0,
+      accessCount: 0,
+      evergreen: 0,
+      createdAt: now,
+      updatedAt: now,
+      fileSize: input.fileSize,
+      fileModifiedAt: input.fileModifiedAt,
+    })
+    .onConflictDoUpdate({
+      target: memoriesTable.filePath,
+      set: {
+        title: input.title,
+        content: input.content,
+        contentHash: input.contentHash,
+        tags: JSON.stringify(input.tags),
+        layer: input.layer,
+        memoryType: input.memoryType,
+        updatedAt: now,
+        fileSize: input.fileSize,
+        fileModifiedAt: input.fileModifiedAt,
+      },
+    })
+    .run();
+}
+
+export function updateHermesMemory(
+  id: string,
+  patch: {
+    tags?: string[];
+    lifecycle?: MemoryLifecycle;
+    memoryType?: HermesMemoryType;
+    agentId?: string | null;
+    projectId?: string | null;
+    evergreen?: boolean;
+    utilityScore?: number;
+    expiresAt?: number | null;
+  },
+): HermesMemory | null {
+  ensureSchema();
+  const existing = db.select().from(memoriesTable).where(eq(memoriesTable.id, id)).get();
+  if (!existing) return null;
+
+  const updates: Record<string, unknown> = { updatedAt: Date.now() };
+  if (patch.tags !== undefined) updates.tags = JSON.stringify(patch.tags);
+  if (patch.lifecycle !== undefined) updates.lifecycle = patch.lifecycle;
+  if (patch.memoryType !== undefined) updates.memoryType = patch.memoryType;
+  if (patch.agentId !== undefined) updates.agentId = patch.agentId;
+  if (patch.projectId !== undefined) updates.projectId = patch.projectId;
+  if (patch.evergreen !== undefined) updates.evergreen = patch.evergreen ? 1 : 0;
+  if (patch.utilityScore !== undefined) updates.utilityScore = patch.utilityScore;
+  if (patch.expiresAt !== undefined) updates.expiresAt = patch.expiresAt;
+
+  db.update(memoriesTable).set(updates).where(eq(memoriesTable.id, id)).run();
+  const row = db.select().from(memoriesTable).where(eq(memoriesTable.id, id)).get();
+  return row ? mapHermesMemory(row) : null;
+}
+
+export function deleteHermesMemory(id: string): boolean {
+  ensureSchema();
+  const result = db.delete(memoriesTable).where(eq(memoriesTable.id, id)).run();
+  return result.changes > 0;
+}
+
+export function searchHermesMemories(
+  query: string,
+  filters?: { layer?: MemoryLayer; memoryType?: HermesMemoryType; limit?: number },
+): MemorySearchResult[] {
+  ensureSchema();
+  const q = query.trim();
+  if (!q) {
+    return getHermesMemories({ layer: filters?.layer, memoryType: filters?.memoryType, limit: filters?.limit })
+      .map((m) => ({ memory: m, rank: 0, snippet: m.content.slice(0, 200) }));
+  }
+
+  const sqlite = getSqlite();
+  const limit = filters?.limit ?? 50;
+
+  // FTS5 검색 (BM25 랭킹 + snippet)
+  let sql = `
+    SELECT m.*, rank, snippet(memories_fts, 1, '<mark>', '</mark>', '…', 40) as snip
+    FROM memories_fts fts
+    JOIN memories m ON m.rowid = fts.rowid
+    WHERE memories_fts MATCH ?
+  `;
+  const params: unknown[] = [q];
+
+  if (filters?.layer) {
+    sql += " AND m.layer = ?";
+    params.push(filters.layer);
+  }
+  if (filters?.memoryType) {
+    sql += " AND m.memory_type = ?";
+    params.push(filters.memoryType);
+  }
+
+  sql += " ORDER BY rank LIMIT ?";
+  params.push(limit);
+
+  type FtsRow = typeof memoriesTable.$inferSelect & { rank: number; snip: string };
+
+  try {
+    const rows = sqlite.prepare(sql).all(...params) as FtsRow[];
+    return rows.map((row) => ({
+      memory: mapHermesMemory(row),
+      rank: row.rank,
+      snippet: row.snip ?? row.content.slice(0, 200),
+    }));
+  } catch {
+    // FTS 쿼리 구문 오류 시 LIKE 폴백
+    return getHermesMemories({ layer: filters?.layer, memoryType: filters?.memoryType, limit })
+      .filter((m) => m.title.includes(q) || m.content.includes(q))
+      .map((m) => ({ memory: m, rank: 0, snippet: m.content.slice(0, 200) }));
+  }
+}
+
+export function getHermesMemoryExisting(): Array<{ id: string; filePath: string; contentHash: string }> {
+  ensureSchema();
+  return db
+    .select({
+      id: memoriesTable.id,
+      filePath: memoriesTable.filePath,
+      contentHash: memoriesTable.contentHash,
+    })
+    .from(memoriesTable)
+    .all();
+}
+
+export function getHermesMemoryStats(): MemoryStats {
+  ensureSchema();
+  const sqlite = getSqlite();
+
+  const total = (sqlite.prepare("SELECT COUNT(*) as cnt FROM memories").get() as { cnt: number }).cnt;
+  const layerRows = sqlite.prepare("SELECT layer, COUNT(*) as cnt FROM memories GROUP BY layer").all() as Array<{ layer: string; cnt: number }>;
+  const typeRows = sqlite.prepare("SELECT memory_type, COUNT(*) as cnt FROM memories GROUP BY memory_type").all() as Array<{ memory_type: string; cnt: number }>;
+  const lifecycleRows = sqlite.prepare("SELECT lifecycle, COUNT(*) as cnt FROM memories GROUP BY lifecycle").all() as Array<{ lifecycle: string; cnt: number }>;
+  const sizeRow = sqlite.prepare("SELECT COALESCE(SUM(file_size), 0) as total FROM memories").get() as { total: number };
+
+  const byLayer: Record<string, number> = {};
+  for (const r of layerRows) byLayer[r.layer] = r.cnt;
+  const byType: Record<string, number> = {};
+  for (const r of typeRows) byType[r.memory_type] = r.cnt;
+  const byLifecycle: Record<string, number> = {};
+  for (const r of lifecycleRows) byLifecycle[r.lifecycle] = r.cnt;
+
+  return { total, byLayer, byType, byLifecycle, totalFileSize: sizeRow.total };
+}
+
+export function applyTemporalDecay(options?: {
+  halfLifeDays?: number;
+  archiveThreshold?: number;
+}): MemoryDecayResult {
+  ensureSchema();
+  const sqlite = getSqlite();
+  const halfLife = options?.halfLifeDays ?? 30;
+  const threshold = options?.archiveThreshold ?? 0.1;
+  const now = Date.now();
+
+  // evergreen이 아니고 active인 항목만 대상
+  const rows = sqlite
+    .prepare("SELECT id, utility_score, last_accessed_at, created_at, evergreen FROM memories WHERE lifecycle = 'active' AND evergreen = 0")
+    .all() as Array<{ id: string; utility_score: number; last_accessed_at: number | null; created_at: number; evergreen: number }>;
+
+  let processed = 0;
+  let expired = 0;
+  const skippedEvergreen = (sqlite.prepare("SELECT COUNT(*) as cnt FROM memories WHERE evergreen = 1").get() as { cnt: number }).cnt;
+
+  const updateStmt = sqlite.prepare("UPDATE memories SET utility_score = ?, updated_at = ? WHERE id = ?");
+  const expireStmt = sqlite.prepare("UPDATE memories SET lifecycle = 'expired', utility_score = ?, updated_at = ? WHERE id = ?");
+
+  const transaction = sqlite.transaction(() => {
+    for (const row of rows) {
+      const lastAccess = row.last_accessed_at ?? row.created_at;
+      const daysSinceAccess = (now - lastAccess) / (1000 * 60 * 60 * 24);
+      const newScore = row.utility_score * Math.pow(0.5, daysSinceAccess / halfLife);
+
+      if (newScore < threshold) {
+        expireStmt.run(newScore, now, row.id);
+        expired++;
+      } else {
+        updateStmt.run(newScore, now, row.id);
+      }
+      processed++;
+    }
+  });
+
+  transaction();
+
+  return { processed, expired, skippedEvergreen };
 }

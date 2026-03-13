@@ -2,6 +2,87 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-13 | 브랜치: `main`
 
+## 2026-03-13: Phase 5 (Memory 검색 강화) — Hermes 지식 인덱싱
+
+### 요약
+마스터 플랜 Phase 5: Hermes 파일시스템 메모리(22개 마크다운, ~189KB)를 DB에 인덱싱하여 FTS5 검색 가능하게 구현.
+
+### 변경 내용
+
+#### 5.1 memories 테이블 + FTS5
+- **스키마**: `memories` 테이블 (id, file_path, memory_type, layer, title, content, content_hash, tags, lifecycle, utility_score, access_count, evergreen 등 20개 컬럼)
+- **FTS5**: `memories_fts` 가상 테이블 (content-sync 모드, unicode61 토크나이저)
+- **트리거**: INSERT/UPDATE/DELETE 3개 트리거로 FTS 자동 동기화
+- **Drizzle 정의**: SQLite(`memoriesTable`) + PostgreSQL(`memoriesPgTable`) 이중 스키마
+
+#### 5.2 파일 동기화 + Store + API
+- **신규**: `memory-sync.ts` — 파일 스캔, SHA-256 해시, title/tags 추출, 단방향 동기화
+- **Store**: 10개 함수 (get/upsert/update/delete/search/touch/decay/stats/existing)
+- **API 7개 라우트**: GET /api/memories, search, stats, :id, PATCH :id, POST sync, POST decay
+- **FTS5 검색**: BM25 랭킹, snippet 하이라이팅, LIKE 폴백
+
+#### 5.3 UI: 지식 검색 페이지
+- **신규**: `KnowledgeSearch.tsx` — 검색 바(debounce 300ms), layer/type 필터, 결과 카드, 상세 패널, 동기화/decay 버튼, 통계 대시보드
+- **신규**: `/knowledge` 페이지 (서버 컴포넌트, stats SSR)
+- **Sidebar**: 15개 네비게이션 ("지식" 추가, 메모리 아래)
+
+#### 5.4 Temporal Decay
+- `POST /api/memories/decay`: halfLifeDays(기본 30), archiveThreshold(기본 0.1)
+- 공식: `new_score = current × 0.5^(days_since_access / halfLife)`
+- evergreen=true 항목 면제
+
+#### 5.5 Auto-Flush (파일 변경 감지 → 자동 동기화)
+- `memory-sync.ts`에 `startAutoFlush()` / `stopAutoFlush()` 추가
+- `fs.watch` recursive 감시 + 5분 간격 setInterval 폴링 폴백
+- debounce 2초로 빈번한 변경 병합
+- 서버 시작 시 자동 활성화, 셧다운 시 정리
+
+#### 5.6 Category 자동갱신 (규칙 기반 + AI 트리거 태깅)
+- **신규**: `memory-classify.ts` — 25개 키워드→태그 매핑 규칙
+- `inferTags()`: 규칙 기반 자동 태깅 (에이전트, 개발, API 등)
+- `inferMemoryType()`: 콘텐츠 분석으로 fact/skill 자동 분류
+- `classifyAll()`: 전체 메모리 일괄 분류
+- Gateway RPC Metis 에이전트 연동 프롬프트 (`POST /api/memories/:id/classify-ai`)
+- API 3개 라우트: classify, classify-all, classify-ai
+
+#### 5.7 pgvector 벡터 임베딩 + 시맨틱 검색
+- **신규**: `memory-embedding.ts` — OpenAI text-embedding-3-small (1536차원)
+- `generateEmbedding()` / `generateEmbeddings()`: OpenAI API 단건/배치 호출
+- `semanticSearch()`: 인메모리 코사인 유사도 (SQLite 환경용)
+- `hybridSearchRRF()`: FTS5 BM25 + Vector → RRF 통합 검색
+- `pg-schema.ts`: vector(1536) 커스텀 타입 + embedding 컬럼
+- `docker-compose.yml`: `pgvector/pgvector:pg16` 이미지로 교체
+- API 4개 라우트: semantic, embed, embed-all, embedding-status
+- **UI**: 시맨틱/키워드 토글 버튼 (Sparkles 아이콘, 검색 모드 전환)
+
+### 변경 파일 (16개)
+| 파일 | 유형 |
+|------|------|
+| `packages/shared/src/types.ts` | 수정 |
+| `packages/shared/src/schemas.ts` | 수정 |
+| `apps/api/src/schema.ts` | 수정 |
+| `apps/api/src/pg-schema.ts` | 수정 |
+| `apps/api/src/db.ts` | 수정 |
+| `apps/api/src/memory-sync.ts` | 신규 |
+| `apps/api/src/memory-classify.ts` | 신규 |
+| `apps/api/src/memory-embedding.ts` | 신규 |
+| `apps/api/src/store.ts` | 수정 |
+| `apps/api/src/server.ts` | 수정 |
+| `apps/web/components/KnowledgeSearch.tsx` | 신규 |
+| `apps/web/app/(layout)/knowledge/page.tsx` | 신규 |
+| `apps/web/components/Sidebar.tsx` | 수정 |
+| `apps/web/lib/api-server.ts` | 수정 |
+| `apps/web/lib/types.ts` | 수정 |
+| `docker-compose.yml` | 수정 |
+
+### 테스트 결과
+- 빌드: 통과 (packages/shared + apps/api + apps/web)
+- 단위 테스트: 66개 통과
+- API 테스트: sync(22문서), search, semantic, stats, decay, classify-all 모두 정상
+- 스모크 테스트: 사이드바 15개 링크 반영
+
+---
+
 ## 2026-03-13: Phase 4 (Mission Control 메트릭스 강화) — 실시간 대시보드
 
 ### 요약

@@ -371,6 +371,75 @@ export interface WorkResult {
   completedAt: number;
 }
 
+// ── Hermes Memory (Phase 5) ─────────────────────────────────────────────────
+
+export type MemoryLayer = "resource" | "item" | "category";
+export type HermesMemoryType = "fact" | "skill";
+export type MemoryLifecycle = "active" | "merged" | "archived" | "expired";
+
+export interface HermesMemory {
+  id: string;
+  filePath: string;
+  memoryType: HermesMemoryType;
+  layer: MemoryLayer;
+  title: string;
+  content: string;
+  contentHash: string;
+  tags: string[];
+  agentId: string | null;
+  projectId: string | null;
+  lifecycle: MemoryLifecycle;
+  utilityScore: number;
+  accessCount: number;
+  evergreen: boolean;
+  createdAt: number;
+  updatedAt: number;
+  lastAccessedAt: number | null;
+  expiresAt: number | null;
+  fileSize: number;
+  fileModifiedAt: number;
+}
+
+export interface MemorySearchResult {
+  memory: HermesMemory;
+  rank: number;
+  snippet: string;
+}
+
+export interface MemorySyncResult {
+  added: number;
+  updated: number;
+  removed: number;
+  unchanged: number;
+  errors: string[];
+}
+
+export interface MemoryDecayResult {
+  processed: number;
+  expired: number;
+  skippedEvergreen: number;
+}
+
+export interface MemoryStats {
+  total: number;
+  byLayer: Record<string, number>;
+  byType: Record<string, number>;
+  byLifecycle: Record<string, number>;
+  totalFileSize: number;
+}
+
+export interface MemoryClassifyResult {
+  total: number;
+  updated: number;
+}
+
+export interface MemoryEmbeddingStatus {
+  available: boolean;
+  cacheSize: number;
+  model: string;
+  dimensions: number;
+}
+
 // ── Activity Stats ──────────────────────────────────────────────────────────
 
 export interface ActivityStats {

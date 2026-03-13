@@ -3,8 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 0~11 완료, Phase 11+ WorkOrder 완료, Phase 4 메트릭스 강화 완료 → Phase 12 백로그
+## 현재 Phase: 0~11 완료, Phase 11+ WorkOrder 완료, Phase 4 메트릭스 강화 완료, Phase 5 Memory 검색 강화 완료 → Phase 12 백로그
 
+> Phase 5 Memory 검색 강화 전체 완료 (memories FTS5, 파일 동기화, Auto-Flush, 규칙 기반 분류, pgvector 시맨틱 검색, 지식 검색 UI, Temporal Decay).
 > Phase 4 메트릭스 강화 완료 (에이전트 오피스 뷰, 실시간 상태, FinOps 대시보드 강화, Kanban WorkOrder 연동).
 
 ---

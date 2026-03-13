@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: Phase 0~11+ 완료 (Observability + WorkOrder) → Phase 12 백로그
+> **현재 Phase**: Phase 0~11+++ 완료 (Memory 검색 강화) → Phase 12 백로그
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -34,6 +34,7 @@
 - **승인/거버넌스**: approval_policies, Telegram 인라인 키보드 승인
 - **알림**: notification_preferences, Herald Bot Long Polling
 - **Memory**: journal/longterm/profile/lesson, importance, expiresAt
+- **Hermes 지식**: memories 테이블 (FTS5 인덱싱), 파일→DB 동기화, Auto-Flush(fs.watch+폴링), 규칙 기반 분류(25개 태그 규칙), pgvector 시맨틱 검색(OpenAI embedding+RRF), Temporal Decay, /knowledge UI
 - **실시간**: Hono WebSocket + Redis Pub/Sub + SSE 폴백
 - **CI/CD**: Vitest 63개+ Playwright 16개+ Husky + lint-staged
 - **인프라**: Docker Compose (PostgreSQL+Redis), PM2 (web+api+adapter)
@@ -99,4 +100,5 @@
 | 11 | Observability + Governance 고도화 | 완료 |
 | 11+ | WorkOrder 실전 적용 (마스터 플랜 Phase 3) | 완료 |
 | 11++ | Mission Control 메트릭스 강화 (마스터 플랜 Phase 4) | 완료 |
+| 11+++ | Memory 검색 강화 (마스터 플랜 Phase 5) | 완료 |
 | 12 | agency-agents 레퍼런스 트랙 | 백로그 |

@@ -363,6 +363,36 @@ export type UpdateWorkOrderInput = z.infer<typeof updateWorkOrderInputSchema>;
 export type WorkResultInput = z.infer<typeof workResultInputSchema>;
 export type WorkOrderCheckpointInput = z.infer<typeof workOrderCheckpointInputSchema>;
 
+// ── Hermes Memory (Phase 5) ─────────────────────────────────────────────────
+
+export const memoryLayerSchema = z.enum(["resource", "item", "category"]);
+export const hermesMemoryTypeSchema = z.enum(["fact", "skill"]);
+export const memoryLifecycleSchema = z.enum(["active", "merged", "archived", "expired"]);
+
+export const hermesMemoryPatchSchema = z.object({
+  tags: z.array(z.string().min(1)).optional(),
+  lifecycle: memoryLifecycleSchema.optional(),
+  memoryType: hermesMemoryTypeSchema.optional(),
+  agentId: z.string().min(1).nullable().optional(),
+  projectId: z.string().min(1).nullable().optional(),
+  evergreen: z.boolean().optional(),
+  utilityScore: z.number().min(0).max(1).optional(),
+  expiresAt: z.number().int().nonnegative().nullable().optional(),
+});
+
+export const memorySyncInputSchema = z.object({
+  force: z.boolean().optional(),
+});
+
+export const memoryDecayInputSchema = z.object({
+  halfLifeDays: z.number().positive().optional(),
+  archiveThreshold: z.number().min(0).max(1).optional(),
+});
+
+export type HermesMemoryPatch = z.infer<typeof hermesMemoryPatchSchema>;
+export type MemorySyncInput = z.infer<typeof memorySyncInputSchema>;
+export type MemoryDecayInput = z.infer<typeof memoryDecayInputSchema>;
+
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;

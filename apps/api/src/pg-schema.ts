@@ -1,4 +1,5 @@
 import {
+  customType,
   doublePrecision,
   foreignKey,
   index,
@@ -10,6 +11,23 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
+// pgvector 커스텀 타입 (vector(dimensions))
+const vector = (name: string, dimensions: number) =>
+  customType<{ data: number[]; driverData: string }>({
+    dataType() {
+      return `vector(${dimensions})`;
+    },
+    toDriver(value: number[]): string {
+      return `[${value.join(",")}]`;
+    },
+    fromDriver(value: string): number[] {
+      return value
+        .replace(/^\[|\]$/g, "")
+        .split(",")
+        .map(Number);
+    },
+  })(name);
 
 const nowTs = (columnName: string) =>
   timestamp(columnName, { withTimezone: false }).defaultNow().notNull();
@@ -476,6 +494,42 @@ export const circuitBreakerConfigPgTable = pgTable(
   },
   (table) => ({
     idxCbConfigAgent: uniqueIndex("idx_cb_config_agent_pg").on(table.agentId),
+  }),
+);
+
+// ── Hermes Memory (Phase 5) ────────────────────────────────────────────────
+
+export const memoriesPgTable = pgTable(
+  "memories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    filePath: text("file_path").notNull(),
+    memoryType: text("memory_type").notNull().default("fact"),
+    layer: text("layer").notNull(),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    contentHash: text("content_hash").notNull(),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    agentId: text("agent_id"),
+    projectId: text("project_id"),
+    lifecycle: text("lifecycle").notNull().default("active"),
+    utilityScore: doublePrecision("utility_score").notNull().default(1.0),
+    accessCount: integer("access_count").notNull().default(0),
+    evergreen: integer("evergreen").notNull().default(0),
+    createdAt: nowTs("created_at"),
+    updatedAt: nowTs("updated_at"),
+    lastAccessedAt: timestamp("last_accessed_at", { withTimezone: false }),
+    expiresAt: timestamp("expires_at", { withTimezone: false }),
+    fileSize: integer("file_size").notNull().default(0),
+    fileModifiedAt: nowTs("file_modified_at"),
+    embedding: vector("embedding", 1536),
+  },
+  (table) => ({
+    idxMemoriesFilePath: uniqueIndex("idx_memories_file_path_pg").on(table.filePath),
+    idxMemoriesLayer: index("idx_memories_layer_pg").on(table.layer),
+    idxMemoriesType: index("idx_memories_type_pg").on(table.memoryType),
+    idxMemoriesLifecycle: index("idx_memories_lifecycle_pg").on(table.lifecycle),
+    idxMemoriesScore: index("idx_memories_score_pg").on(table.utilityScore),
   }),
 );
 

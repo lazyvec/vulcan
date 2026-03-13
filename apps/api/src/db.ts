@@ -395,6 +395,35 @@ function ensureLegacyBootstrap() {
     );
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_cb_config_agent ON circuit_breaker_config (agent_id);
+
+    CREATE TABLE IF NOT EXISTS memories (
+      id TEXT PRIMARY KEY,
+      file_path TEXT NOT NULL,
+      memory_type TEXT NOT NULL DEFAULT 'fact',
+      layer TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      content_hash TEXT NOT NULL,
+      tags TEXT NOT NULL DEFAULT '[]',
+      agent_id TEXT,
+      project_id TEXT,
+      lifecycle TEXT NOT NULL DEFAULT 'active',
+      utility_score REAL NOT NULL DEFAULT 1.0,
+      access_count INTEGER NOT NULL DEFAULT 0,
+      evergreen INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      last_accessed_at INTEGER,
+      expires_at INTEGER,
+      file_size INTEGER NOT NULL DEFAULT 0,
+      file_modified_at INTEGER NOT NULL
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_file_path ON memories (file_path);
+    CREATE INDEX IF NOT EXISTS idx_memories_layer ON memories (layer);
+    CREATE INDEX IF NOT EXISTS idx_memories_type ON memories (memory_type);
+    CREATE INDEX IF NOT EXISTS idx_memories_lifecycle ON memories (lifecycle);
+    CREATE INDEX IF NOT EXISTS idx_memories_score ON memories (utility_score);
   `);
 
   ensureColumn("approvals", "telegram_message_id", "telegram_message_id INTEGER");
@@ -420,6 +449,35 @@ function ensureLegacyBootstrap() {
   sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);
     CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks (parent_task_id);
+  `);
+
+  // ── FTS5 가상 테이블 + 동기화 트리거 (Hermes Memory) ────────────────────
+  sqlite.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS memories_fts USING fts5(
+      title,
+      content,
+      tags,
+      content='memories',
+      content_rowid='rowid',
+      tokenize='unicode61 remove_diacritics 2'
+    );
+
+    CREATE TRIGGER IF NOT EXISTS memories_ai AFTER INSERT ON memories BEGIN
+      INSERT INTO memories_fts(rowid, title, content, tags)
+      VALUES (NEW.rowid, NEW.title, NEW.content, NEW.tags);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS memories_ad AFTER DELETE ON memories BEGIN
+      INSERT INTO memories_fts(memories_fts, rowid, title, content, tags)
+      VALUES ('delete', OLD.rowid, OLD.title, OLD.content, OLD.tags);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS memories_au AFTER UPDATE ON memories BEGIN
+      INSERT INTO memories_fts(memories_fts, rowid, title, content, tags)
+      VALUES ('delete', OLD.rowid, OLD.title, OLD.content, OLD.tags);
+      INSERT INTO memories_fts(rowid, title, content, tags)
+      VALUES (NEW.rowid, NEW.title, NEW.content, NEW.tags);
+    END;
   `);
 }
 

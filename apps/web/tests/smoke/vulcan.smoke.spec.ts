@@ -143,12 +143,12 @@ test.describe("Vulcan Mission Control smoke (16)", () => {
 
   /* ── Navigation ── */
 
-  test("desktop: sidebar shows all 14 navigation links", async ({ page }) => {
+  test("desktop: sidebar shows all 15 navigation links", async ({ page }) => {
     await useDesktop(page);
     await page.goto("/tasks");
 
     const navLinks = [
-      "태스크", "캘린더", "프로젝트", "메모리", "문서", "볼트",
+      "태스크", "캘린더", "프로젝트", "메모리", "지식", "문서", "볼트",
       "팀", "오피스", "스킬", "활동", "작업지시", "비용", "승인", "알림",
     ];
 

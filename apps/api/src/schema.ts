@@ -380,6 +380,41 @@ export const circuitBreakerConfigTable = sqliteTable(
   }),
 );
 
+// ── Hermes Memory (Phase 5) ────────────────────────────────────────────────
+
+export const memoriesTable = sqliteTable(
+  "memories",
+  {
+    id: text("id").primaryKey(),
+    filePath: text("file_path").notNull(),
+    memoryType: text("memory_type").notNull().default("fact"),
+    layer: text("layer").notNull(),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    contentHash: text("content_hash").notNull(),
+    tags: text("tags").notNull().default("[]"),
+    agentId: text("agent_id"),
+    projectId: text("project_id"),
+    lifecycle: text("lifecycle").notNull().default("active"),
+    utilityScore: real("utility_score").notNull().default(1.0),
+    accessCount: integer("access_count").notNull().default(0),
+    evergreen: integer("evergreen").notNull().default(0),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    lastAccessedAt: integer("last_accessed_at"),
+    expiresAt: integer("expires_at"),
+    fileSize: integer("file_size").notNull().default(0),
+    fileModifiedAt: integer("file_modified_at").notNull(),
+  },
+  (table) => ({
+    idxMemoriesFilePath: uniqueIndex("idx_memories_file_path").on(table.filePath),
+    idxMemoriesLayer: index("idx_memories_layer").on(table.layer),
+    idxMemoriesType: index("idx_memories_type").on(table.memoryType),
+    idxMemoriesLifecycle: index("idx_memories_lifecycle").on(table.lifecycle),
+    idxMemoriesScore: index("idx_memories_score").on(table.utilityScore),
+  }),
+);
+
 export const auditLogTable = sqliteTable(
   "audit_log",
   {
