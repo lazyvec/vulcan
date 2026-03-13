@@ -39,6 +39,11 @@ import type {
   TraceEnvelope,
   TraceStatus,
   TraceType,
+  WorkOrder,
+  WorkOrderStatus,
+  WorkOrderType,
+  WorkResult,
+  WorkResultStatus,
 } from "@vulcan/shared/types";
 import {
   agentCommandsTable,
@@ -62,6 +67,8 @@ import {
   taskDependenciesTable,
   tasksTable,
   tracesTable,
+  workOrdersTable,
+  workResultsTable,
 } from "./schema";
 
 const DEFAULT_SOURCE = "openclaw";
@@ -2240,4 +2247,236 @@ export function checkCircuitBreaker(agentId: string): {
     usage: totalTokens,
     limit: config.dailyTokenLimit,
   };
+}
+
+// ── WorkOrder / WorkResult (Phase 3) ──────────────────────────────────────
+
+function mapWorkOrder(row: Record<string, unknown>): WorkOrder {
+  return {
+    id: row.id as string,
+    type: row.type as WorkOrderType,
+    summary: row.summary as string,
+    fromAgentId: row.fromAgentId as string,
+    toAgentId: row.toAgentId as string,
+    project: (row.project as string) ?? null,
+    priority: (row.priority as string as TaskPriority) ?? "medium",
+    status: row.status as WorkOrderStatus,
+    acceptanceCriteria: parseStringArray(row.acceptanceCriteria as string),
+    inputsJson: (row.inputsJson as string) ?? "{}",
+    timeoutSeconds: (row.timeoutSeconds as number) ?? 600,
+    parentWorkOrderId: (row.parentWorkOrderId as string) ?? null,
+    linkedTaskId: (row.linkedTaskId as string) ?? null,
+    linkedCommandId: (row.linkedCommandId as string) ?? null,
+    checkpointJson: (row.checkpointJson as string) ?? null,
+    verifierAgentId: (row.verifierAgentId as string) ?? null,
+    retryCount: (row.retryCount as number) ?? 0,
+    deadline: (row.deadline as number) ?? null,
+    createdAt: row.createdAt as number,
+    updatedAt: row.updatedAt as number,
+    completedAt: (row.completedAt as number) ?? null,
+  };
+}
+
+function mapWorkResult(row: Record<string, unknown>): WorkResult {
+  return {
+    id: row.id as string,
+    workOrderId: row.workOrderId as string,
+    agentId: row.agentId as string,
+    status: row.status as WorkResultStatus,
+    summary: row.summary as string,
+    errorDetail: (row.errorDetail as string) ?? null,
+    changesJson: (row.changesJson as string) ?? "[]",
+    evidenceJson: (row.evidenceJson as string) ?? "{}",
+    metricsJson: (row.metricsJson as string) ?? "{}",
+    followUp: parseStringArray(row.followUp as string),
+    startedAt: (row.startedAt as number) ?? null,
+    completedAt: row.completedAt as number,
+  };
+}
+
+export function createWorkOrder(input: {
+  type: string;
+  summary: string;
+  fromAgentId: string;
+  toAgentId: string;
+  project?: string | null;
+  priority?: string;
+  acceptanceCriteria?: string[];
+  inputsJson?: string;
+  timeoutSeconds?: number;
+  parentWorkOrderId?: string | null;
+  linkedTaskId?: string | null;
+  linkedCommandId?: string | null;
+  verifierAgentId?: string | null;
+  deadline?: number | null;
+}): WorkOrder {
+  ensureSchema();
+  const id = randomUUID();
+  const now = Date.now();
+  const row = {
+    id,
+    type: input.type,
+    summary: input.summary,
+    fromAgentId: input.fromAgentId,
+    toAgentId: input.toAgentId,
+    project: input.project ?? null,
+    priority: input.priority ?? "medium",
+    status: "pending",
+    acceptanceCriteria: JSON.stringify(input.acceptanceCriteria ?? []),
+    inputsJson: input.inputsJson ?? "{}",
+    timeoutSeconds: input.timeoutSeconds ?? 600,
+    parentWorkOrderId: input.parentWorkOrderId ?? null,
+    linkedTaskId: input.linkedTaskId ?? null,
+    linkedCommandId: input.linkedCommandId ?? null,
+    checkpointJson: null,
+    verifierAgentId: input.verifierAgentId ?? null,
+    retryCount: 0,
+    deadline: input.deadline ?? null,
+    createdAt: now,
+    updatedAt: now,
+    completedAt: null,
+  };
+  db.insert(workOrdersTable).values(row).run();
+  return mapWorkOrder(row);
+}
+
+export function getWorkOrder(id: string): WorkOrder | null {
+  ensureSchema();
+  const row = db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id)).get();
+  return row ? mapWorkOrder(row) : null;
+}
+
+export function listWorkOrders(opts?: {
+  status?: string;
+  toAgentId?: string;
+  fromAgentId?: string;
+  project?: string;
+  limit?: number;
+}): WorkOrder[] {
+  ensureSchema();
+  const conditions = [];
+  if (opts?.status) conditions.push(eq(workOrdersTable.status, opts.status));
+  if (opts?.toAgentId) conditions.push(eq(workOrdersTable.toAgentId, opts.toAgentId));
+  if (opts?.fromAgentId) conditions.push(eq(workOrdersTable.fromAgentId, opts.fromAgentId));
+  if (opts?.project) conditions.push(eq(workOrdersTable.project, opts.project));
+
+  const query = db
+    .select()
+    .from(workOrdersTable)
+    .orderBy(desc(workOrdersTable.updatedAt))
+    .limit(opts?.limit ?? 100);
+
+  if (conditions.length > 0) {
+    return query.where(and(...conditions)).all().map(mapWorkOrder);
+  }
+  return query.all().map(mapWorkOrder);
+}
+
+export function updateWorkOrder(
+  id: string,
+  updates: {
+    status?: string;
+    toAgentId?: string;
+    priority?: string;
+    acceptanceCriteria?: string[];
+    checkpointJson?: string | null;
+    verifierAgentId?: string | null;
+    deadline?: number | null;
+    linkedCommandId?: string | null;
+    retryCount?: number;
+    completedAt?: number | null;
+  },
+): WorkOrder | null {
+  ensureSchema();
+  const now = Date.now();
+  const sets: Record<string, unknown> = { updatedAt: now };
+  if (updates.status !== undefined) sets.status = updates.status;
+  if (updates.toAgentId !== undefined) sets.toAgentId = updates.toAgentId;
+  if (updates.priority !== undefined) sets.priority = updates.priority;
+  if (updates.acceptanceCriteria !== undefined)
+    sets.acceptanceCriteria = JSON.stringify(updates.acceptanceCriteria);
+  if (updates.checkpointJson !== undefined) sets.checkpointJson = updates.checkpointJson;
+  if (updates.verifierAgentId !== undefined) sets.verifierAgentId = updates.verifierAgentId;
+  if (updates.deadline !== undefined) sets.deadline = updates.deadline;
+  if (updates.linkedCommandId !== undefined) sets.linkedCommandId = updates.linkedCommandId;
+  if (updates.retryCount !== undefined) sets.retryCount = updates.retryCount;
+  if (updates.completedAt !== undefined) sets.completedAt = updates.completedAt;
+
+  db.update(workOrdersTable).set(sets).where(eq(workOrdersTable.id, id)).run();
+  return getWorkOrder(id);
+}
+
+export function createWorkResult(input: {
+  workOrderId: string;
+  agentId: string;
+  status: string;
+  summary: string;
+  errorDetail?: string | null;
+  changesJson?: string;
+  evidenceJson?: string;
+  metricsJson?: string;
+  followUp?: string[];
+  startedAt?: number | null;
+}): WorkResult {
+  ensureSchema();
+  const id = randomUUID();
+  const now = Date.now();
+  const row = {
+    id,
+    workOrderId: input.workOrderId,
+    agentId: input.agentId,
+    status: input.status,
+    summary: input.summary,
+    errorDetail: input.errorDetail ?? null,
+    changesJson: input.changesJson ?? "[]",
+    evidenceJson: input.evidenceJson ?? "{}",
+    metricsJson: input.metricsJson ?? "{}",
+    followUp: JSON.stringify(input.followUp ?? []),
+    startedAt: input.startedAt ?? null,
+    completedAt: now,
+  };
+  db.insert(workResultsTable).values(row).run();
+  return mapWorkResult(row);
+}
+
+export function getWorkResultsByOrderId(workOrderId: string): WorkResult[] {
+  ensureSchema();
+  return db
+    .select()
+    .from(workResultsTable)
+    .where(eq(workResultsTable.workOrderId, workOrderId))
+    .orderBy(desc(workResultsTable.completedAt))
+    .all()
+    .map(mapWorkResult);
+}
+
+export function saveWorkOrderCheckpoint(id: string, checkpointJson: string): WorkOrder | null {
+  return updateWorkOrder(id, { checkpointJson });
+}
+
+export function getWorkOrderStats(): {
+  total: number;
+  byStatus: Record<string, number>;
+  byAgent: Record<string, number>;
+} {
+  ensureSchema();
+  const sqlite = getSqlite();
+  const statusRows = sqlite
+    .prepare("SELECT status, COUNT(*) as cnt FROM work_orders GROUP BY status")
+    .all() as Array<{ status: string; cnt: number }>;
+  const agentRows = sqlite
+    .prepare("SELECT to_agent_id as agent, COUNT(*) as cnt FROM work_orders GROUP BY to_agent_id")
+    .all() as Array<{ agent: string; cnt: number }>;
+
+  const byStatus: Record<string, number> = {};
+  let total = 0;
+  for (const row of statusRows) {
+    byStatus[row.status] = row.cnt;
+    total += row.cnt;
+  }
+  const byAgent: Record<string, number> = {};
+  for (const row of agentRows) {
+    byAgent[row.agent] = row.cnt;
+  }
+  return { total, byStatus, byAgent };
 }

@@ -3,9 +3,9 @@
 > 이 파일은 세션 시작 시 자동으로 참조됩니다. 미완료 Phase를 확인하고 이어서 작업하세요.
 > 전체 로드맵은 `docs/ROADMAP.md`, 제품 정의는 `docs/Vulcan_PRODUCT_MASTER.md` 참조.
 
-## 현재 Phase: 0~10 완료, Phase 11 착수 중 → Phase 12 백로그
+## 현재 Phase: 0~11 완료, Phase 11+ WorkOrder 완료 → Phase 12 백로그
 
-> Phase 11 (Trace 수집 + FinOps 기반) 착수 완료. 다음: Govrix 프록시 연동, 고급 분석 UI.
+> Phase 11 Observability 완료. WorkOrder 실전 적용 (마스터 플랜 Phase 3) 완료.
 
 ---
 
@@ -160,6 +160,22 @@
 - [ ] everything-claude-code에서 hook/profile/verification-loop 핵심 모듈만 선별 도입
 - [ ] 과도한 도입 방지 가드: 토큰비/복잡도 상한 정의 + 기능 플래그화
 - [ ] 라이선스/저작권 최종 검증 체크리스트(상업 사용, 공지 의무, NOTICE) 문서화
+
+## Phase 11+: WorkOrder 실전 적용 (완료: 2026-03-13) — 마스터 플랜 Phase 3
+
+> 목적: 에이전트 간 구조화된 통신(WorkOrder/WorkResult) 실전 가동. Executor→Verifier 검증 루프.
+
+- [x] WorkOrder/WorkResult 타입 + Zod 스키마 (shared 패키지)
+- [x] work_orders + work_results DB 테이블 (SQLite + PG 포워드호환)
+- [x] Store 함수 (CRUD + checkpoint + stats — GROUP BY SQL)
+- [x] API 7개 엔드포인트 (create/list/detail/update/result/checkpoint/verify)
+- [x] 상태 전이 머신 (pending→accepted→in_progress→review→completed, 역방향 차단)
+- [x] 검증 루프: WorkResult 제출 → Argus 자동 검증 → 실패 시 1회 재시도 → CEO Telegram 에스컬레이션
+- [x] WorkOrder 대시보드 UI (WorkOrderDashboard.tsx, /work-orders 페이지)
+- [x] Sidebar "작업지시" 네비 추가
+- [x] OpenClaw JSON Schema 10인 에이전트 enum 업데이트
+- [x] 교차검증: 8건 수정 (상태 전이 가드, result/verify 상태 검증, 풀스캔→GROUP BY, deadline 타입 정합, JSON 검증)
+- [x] 검증: 빌드 통과, 66개 테스트 통과
 
 ## Phase 12: Agency Agents 레퍼런스 트랙 (백로그 예정)
 

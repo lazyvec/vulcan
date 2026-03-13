@@ -318,6 +318,54 @@ function ensureLegacyBootstrap() {
     CREATE INDEX IF NOT EXISTS idx_approvals_status ON approvals (status);
     CREATE INDEX IF NOT EXISTS idx_approvals_expires ON approvals (expires_at);
 
+    CREATE TABLE IF NOT EXISTS work_orders (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      from_agent_id TEXT NOT NULL,
+      to_agent_id TEXT NOT NULL,
+      project TEXT,
+      priority TEXT NOT NULL DEFAULT 'medium',
+      status TEXT NOT NULL DEFAULT 'pending',
+      acceptance_criteria TEXT NOT NULL DEFAULT '[]',
+      inputs_json TEXT NOT NULL DEFAULT '{}',
+      timeout_seconds INTEGER NOT NULL DEFAULT 600,
+      parent_work_order_id TEXT,
+      linked_task_id TEXT,
+      linked_command_id TEXT,
+      checkpoint_json TEXT,
+      verifier_agent_id TEXT,
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      deadline INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      completed_at INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_work_orders_status ON work_orders (status, updated_at);
+    CREATE INDEX IF NOT EXISTS idx_work_orders_to ON work_orders (to_agent_id, status);
+    CREATE INDEX IF NOT EXISTS idx_work_orders_from ON work_orders (from_agent_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_work_orders_project ON work_orders (project);
+    CREATE INDEX IF NOT EXISTS idx_work_orders_parent ON work_orders (parent_work_order_id);
+
+    CREATE TABLE IF NOT EXISTS work_results (
+      id TEXT PRIMARY KEY,
+      work_order_id TEXT NOT NULL,
+      agent_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      error_detail TEXT,
+      changes_json TEXT NOT NULL DEFAULT '[]',
+      evidence_json TEXT NOT NULL DEFAULT '{}',
+      metrics_json TEXT NOT NULL DEFAULT '{}',
+      follow_up TEXT NOT NULL DEFAULT '[]',
+      started_at INTEGER,
+      completed_at INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_work_results_order ON work_results (work_order_id);
+    CREATE INDEX IF NOT EXISTS idx_work_results_agent ON work_results (agent_id, completed_at);
+
     CREATE TABLE IF NOT EXISTS traces (
       id TEXT PRIMARY KEY,
       trace_id TEXT NOT NULL,

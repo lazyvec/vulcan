@@ -298,6 +298,71 @@ export type TraceEnvelopeInput = z.infer<typeof traceEnvelopeInputSchema>;
 export type TraceIngestPayload = z.infer<typeof traceIngestPayloadSchema>;
 export type CircuitBreakerConfigInput = z.infer<typeof circuitBreakerConfigInputSchema>;
 
+// ── WorkOrder / WorkResult (Phase 3) ────────────────────────────────────────
+
+export const workOrderTypeSchema = z.enum([
+  "research", "code", "review", "content", "infra", "strategy", "analysis",
+]);
+
+export const workOrderStatusSchema = z.enum([
+  "pending", "accepted", "in_progress", "review", "completed", "failed", "cancelled",
+]);
+
+export const workResultStatusSchema = z.enum([
+  "completed", "partial", "failed", "blocked",
+]);
+
+export const createWorkOrderInputSchema = z.object({
+  type: workOrderTypeSchema,
+  summary: z.string().min(1).max(200),
+  fromAgentId: z.string().min(1),
+  toAgentId: z.string().min(1),
+  project: z.string().min(1).nullable().optional(),
+  priority: taskPrioritySchema.optional(),
+  acceptanceCriteria: z.array(z.string().min(1)).optional(),
+  inputsJson: z.string().refine((s) => { try { JSON.parse(s); return true; } catch { return false; } }, { message: "유효한 JSON이어야 합니다" }).optional(),
+  timeoutSeconds: z.number().int().positive().optional(),
+  parentWorkOrderId: z.string().min(1).nullable().optional(),
+  linkedTaskId: z.string().min(1).nullable().optional(),
+  linkedCommandId: z.string().min(1).nullable().optional(),
+  verifierAgentId: z.string().min(1).nullable().optional(),
+  deadline: z.number().int().nonnegative().nullable().optional(),
+});
+
+export const updateWorkOrderInputSchema = z.object({
+  status: workOrderStatusSchema.optional(),
+  toAgentId: z.string().min(1).optional(),
+  priority: taskPrioritySchema.optional(),
+  acceptanceCriteria: z.array(z.string().min(1)).optional(),
+  checkpointJson: z.string().nullable().optional(),
+  verifierAgentId: z.string().min(1).nullable().optional(),
+  deadline: z.number().int().nonnegative().nullable().optional(),
+});
+
+export const workResultInputSchema = z.object({
+  agentId: z.string().min(1),
+  status: workResultStatusSchema,
+  summary: z.string().min(1).max(500),
+  errorDetail: z.string().nullable().optional(),
+  changesJson: z.string().optional(),
+  evidenceJson: z.string().optional(),
+  metricsJson: z.string().optional(),
+  followUp: z.array(z.string().min(1)).optional(),
+  startedAt: z.number().int().nonnegative().nullable().optional(),
+});
+
+export const workOrderCheckpointInputSchema = z.object({
+  checkpointJson: z.string().min(1).max(1_000_000).refine(
+    (s) => { try { JSON.parse(s); return true; } catch { return false; } },
+    { message: "유효한 JSON이어야 합니다" },
+  ),
+});
+
+export type CreateWorkOrderInput = z.infer<typeof createWorkOrderInputSchema>;
+export type UpdateWorkOrderInput = z.infer<typeof updateWorkOrderInputSchema>;
+export type WorkResultInput = z.infer<typeof workResultInputSchema>;
+export type WorkOrderCheckpointInput = z.infer<typeof workOrderCheckpointInputSchema>;
+
 export type IngestPayload = z.infer<typeof ingestPayloadSchema>;
 export type TaskLanePatchInput = z.infer<typeof taskLanePatchSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskInputSchema>;

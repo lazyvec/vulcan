@@ -381,6 +381,64 @@ export const approvalsPgTable = pgTable(
   }),
 );
 
+// ── WorkOrder / WorkResult (Phase 3) ────────────────────────────────────────
+
+export const workOrdersPgTable = pgTable(
+  "work_orders",
+  {
+    id: text("id").primaryKey(),
+    type: text("type").notNull(),
+    summary: text("summary").notNull(),
+    fromAgentId: text("from_agent_id").notNull(),
+    toAgentId: text("to_agent_id").notNull(),
+    project: text("project"),
+    priority: text("priority").notNull().default("medium"),
+    status: text("status").notNull().default("pending"),
+    acceptanceCriteria: jsonb("acceptance_criteria").notNull().default([]),
+    inputsJson: jsonb("inputs_json").notNull().default({}),
+    timeoutSeconds: integer("timeout_seconds").notNull().default(600),
+    parentWorkOrderId: text("parent_work_order_id"),
+    linkedTaskId: text("linked_task_id"),
+    linkedCommandId: text("linked_command_id"),
+    checkpointJson: jsonb("checkpoint_json"),
+    verifierAgentId: text("verifier_agent_id"),
+    retryCount: integer("retry_count").notNull().default(0),
+    deadline: integer("deadline"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    completedAt: timestamp("completed_at"),
+  },
+  (table) => ({
+    idxWorkOrdersStatus: index("idx_work_orders_status").on(table.status, table.updatedAt),
+    idxWorkOrdersTo: index("idx_work_orders_to").on(table.toAgentId, table.status),
+    idxWorkOrdersFrom: index("idx_work_orders_from").on(table.fromAgentId, table.createdAt),
+    idxWorkOrdersProject: index("idx_work_orders_project").on(table.project),
+    idxWorkOrdersParent: index("idx_work_orders_parent").on(table.parentWorkOrderId),
+  }),
+);
+
+export const workResultsPgTable = pgTable(
+  "work_results",
+  {
+    id: text("id").primaryKey(),
+    workOrderId: text("work_order_id").notNull().references(() => workOrdersPgTable.id),
+    agentId: text("agent_id").notNull(),
+    status: text("status").notNull(),
+    summary: text("summary").notNull(),
+    errorDetail: text("error_detail"),
+    changesJson: jsonb("changes_json").notNull().default([]),
+    evidenceJson: jsonb("evidence_json").notNull().default({}),
+    metricsJson: jsonb("metrics_json").notNull().default({}),
+    followUp: jsonb("follow_up").notNull().default([]),
+    startedAt: timestamp("started_at"),
+    completedAt: timestamp("completed_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    idxWorkResultsOrder: index("idx_work_results_order").on(table.workOrderId),
+    idxWorkResultsAgent: index("idx_work_results_agent").on(table.agentId, table.completedAt),
+  }),
+);
+
 // ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
 
 export const tracesPgTable = pgTable(

@@ -21,6 +21,7 @@ import {
   Wifi,
   WifiOff,
   DollarSign,
+  ClipboardList,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { href: "/office", label: "오피스", icon: Building2 },
   { href: "/skills", label: "스킬", icon: Sparkles },
   { href: "/activity", label: "활동", icon: BarChart3 },
+  { href: "/work-orders", label: "작업지시", icon: ClipboardList },
   { href: "/costs", label: "비용", icon: DollarSign },
   { href: "/approvals", label: "승인", icon: ShieldCheck },
   { href: "/notifications", label: "알림", icon: Bell },

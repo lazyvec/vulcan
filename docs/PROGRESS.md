@@ -2,6 +2,57 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-13 | 브랜치: `main`
 
+## 2026-03-13: Phase 3 (WorkOrder 실전 적용) — 에이전트 간 구조화된 통신
+
+### 요약
+마스터 플랜 Phase 3: WorkOrder/WorkResult 기반 에이전트 간 핸드오프 시스템 구현.
+Executor→Verifier(Argus) 2단계 검증 루프, 상태 전이 머신, CEO 에스컬레이션.
+
+### 변경 내용
+- **타입**: `WorkOrder`, `WorkResult`, `WorkOrderStatus`, `WorkOrderType` (shared/types.ts)
+- **Zod**: `createWorkOrderInputSchema`, `updateWorkOrderInputSchema`, `workResultInputSchema`, `workOrderCheckpointInputSchema` (shared/schemas.ts)
+- **DB**: `work_orders`, `work_results` 테이블 (schema.ts + db.ts + pg-schema.ts, 7개 인덱스)
+- **Store**: `createWorkOrder`, `getWorkOrder`, `listWorkOrders`, `updateWorkOrder`, `createWorkResult`, `getWorkResultsByOrderId`, `saveWorkOrderCheckpoint`, `getWorkOrderStats`
+- **API 7개**: `POST/GET /api/work-orders`, `GET/PATCH /api/work-orders/:id`, `POST /api/work-orders/:id/result`, `POST /api/work-orders/:id/checkpoint`, `POST /api/work-orders/:id/verify`
+- **검증 루프**: result 제출 → Argus 자동 검증 → 실패 시 1회 재시도 → CEO Telegram 에스컬레이션
+- **상태 머신**: pending→accepted→in_progress→review→completed, 역방향 차단, 종료 상태 보호
+- **UI**: `WorkOrderDashboard.tsx` (목록 + 필터 + 상세 확장), `/work-orders` 페이지, Sidebar "작업지시" 네비
+- **OpenClaw**: work-order.schema.json + work-result.schema.json 10인 에이전트 enum 업데이트
+
+### 교차검증 수정 (8건)
+1. pg-schema.ts deadline 타입 timestamp→integer 정합
+2. getWorkOrderStats 전체 풀스캔→GROUP BY SQL
+3. PATCH 상태 전이 머신 검증 추가
+4. result 제출 시 완료/취소 상태 가드
+5. /verify 상태 가드 (in_progress/review만)
+6. toAgentId 존재 검증
+7. checkpointJson 크기 상한 + JSON 검증
+8. inputsJson JSON 유효성 검증
+
+### 검증
+- TypeScript 타입체크: shared + api + web 전부 통과
+- 빌드: `pnpm -r build` 성공 (/work-orders 라우트 확인)
+- 테스트: 66개 전부 통과
+
+### 변경 파일 (13개)
+| 파일 | 변경 |
+|------|------|
+| `packages/shared/src/types.ts` | 수정 (WorkOrder/WorkResult 타입) |
+| `packages/shared/src/schemas.ts` | 수정 (Zod 스키마 4개) |
+| `apps/api/src/schema.ts` | 수정 (2개 테이블) |
+| `apps/api/src/db.ts` | 수정 (bootstrap SQL) |
+| `apps/api/src/pg-schema.ts` | 수정 (PG 포워드호환) |
+| `apps/api/src/store.ts` | 수정 (8개 함수) |
+| `apps/api/src/server.ts` | 수정 (7개 엔드포인트 + 상태 머신) |
+| `apps/web/lib/api-server.ts` | 수정 (fetch 함수) |
+| `apps/web/components/WorkOrderDashboard.tsx` | 신규 |
+| `apps/web/app/(layout)/work-orders/page.tsx` | 신규 |
+| `apps/web/components/Sidebar.tsx` | 수정 (네비 추가) |
+| `~/.openclaw/schemas/work-order.schema.json` | 수정 (10인 enum) |
+| `~/.openclaw/schemas/work-result.schema.json` | 수정 (10인 enum) |
+
+---
+
 ## 2026-03-13: Phase 2 (Observability) — Trace 수집 + FinOps + Lightpanda
 
 ### 요약

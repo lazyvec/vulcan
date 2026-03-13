@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: Phase 0~10 완료 → Phase 11~12 백로그
+> **현재 Phase**: Phase 0~11+ 완료 (Observability + WorkOrder) → Phase 12 백로그
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -38,8 +38,11 @@
 - **CI/CD**: Vitest 63개+ Playwright 16개+ Husky + lint-staged
 - **인프라**: Docker Compose (PostgreSQL+Redis), PM2 (web+api+adapter)
 
-### 목표 (Phase 11~12)
-- **Phase 11**: 고급 분석 대시보드 (에이전트 성과, 태스크 통계, 트렌드)
+### Phase 11 완료 (Observability + WorkOrder)
+- **Trace/FinOps**: traces 테이블, Circuit Breaker, CostDashboard, Telegram 일별 비용 알림
+- **WorkOrder**: work_orders/work_results 테이블, 7개 API, 상태 머신, Executor→Verifier 검증 루프, WorkOrderDashboard
+
+### 목표 (Phase 12+)
 - **Phase 12**: 외부 연동 확장 (GitHub, Linear 등 서드파티 통합)
 
 ### 일관된 원칙
@@ -87,5 +90,6 @@
 | 8 | 승인/거버넌스 (Telegram 인라인 키보드) | 완료 |
 | 9 | 테스트 + CI/CD (Vitest + Playwright + Husky) | 완료 |
 | 10 | Docker 배포 (인프라 Docker, App PM2 유지) | 완료 |
-| 11 | Observability + Governance 고도화 | 백로그 |
+| 11 | Observability + Governance 고도화 | 완료 |
+| 11+ | WorkOrder 실전 적용 (마스터 플랜 Phase 3) | 완료 |
 | 12 | agency-agents 레퍼런스 트랙 | 백로그 |

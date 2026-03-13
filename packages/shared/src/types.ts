@@ -310,6 +310,67 @@ export interface DailyCostSummary {
   callCount: number;
 }
 
+// ── WorkOrder / WorkResult (Phase 3) ────────────────────────────────────────
+
+export type WorkOrderType =
+  | "research"
+  | "code"
+  | "review"
+  | "content"
+  | "infra"
+  | "strategy"
+  | "analysis";
+
+export type WorkOrderStatus =
+  | "pending"
+  | "accepted"
+  | "in_progress"
+  | "review"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type WorkResultStatus = "completed" | "partial" | "failed" | "blocked";
+
+export interface WorkOrder {
+  id: string;
+  type: WorkOrderType;
+  summary: string;
+  fromAgentId: string;
+  toAgentId: string;
+  project: string | null;
+  priority: TaskPriority;
+  status: WorkOrderStatus;
+  acceptanceCriteria: string[];
+  inputsJson: string;
+  timeoutSeconds: number;
+  parentWorkOrderId: string | null;
+  linkedTaskId: string | null;
+  linkedCommandId: string | null;
+  checkpointJson: string | null;
+  verifierAgentId: string | null;
+  retryCount: number;
+  deadline: number | null;
+  createdAt: number;
+  updatedAt: number;
+  completedAt: number | null;
+}
+
+export interface WorkResult {
+  id: string;
+  workOrderId: string;
+  agentId: string;
+  status: WorkResultStatus;
+  summary: string;
+  errorDetail: string | null;
+  changesJson: string;
+  evidenceJson: string;
+  metricsJson: string;
+  followUp: string[];
+  startedAt: number | null;
+  completedAt: number;
+}
+
 // ── Activity Stats ──────────────────────────────────────────────────────────
 
 export interface ActivityStats {

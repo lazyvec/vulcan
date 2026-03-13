@@ -23,6 +23,10 @@ import {
   installSkillInputSchema,
   realtimeClientMessageSchema,
   circuitBreakerConfigInputSchema,
+  createWorkOrderInputSchema,
+  updateWorkOrderInputSchema,
+  workResultInputSchema,
+  workOrderCheckpointInputSchema,
   resolveApprovalInputSchema,
   taskLanePatchSchema,
   traceIngestPayloadSchema,
@@ -111,6 +115,14 @@ import {
   getAllCircuitBreakerConfigs,
   upsertCircuitBreakerConfig,
   checkCircuitBreaker,
+  createWorkOrder,
+  getWorkOrder,
+  listWorkOrders,
+  updateWorkOrder,
+  createWorkResult,
+  getWorkResultsByOrderId,
+  saveWorkOrderCheckpoint,
+  getWorkOrderStats,
 } from "./store";
 import { ensureSchema, getSqlite } from "./db";
 import {
@@ -3360,6 +3372,292 @@ app.put("/api/circuit-breaker", async (c) => {
     parsed.data.isActive ?? true,
   );
   return c.json({ ok: true, config });
+});
+
+// ── WorkOrder / WorkResult (Phase 3) ────────────────────────────────────────
+
+const VALID_WO_TRANSITIONS: Record<string, string[]> = {
+  pending: ["accepted", "in_progress", "cancelled"],
+  accepted: ["in_progress", "cancelled"],
+  in_progress: ["review", "completed", "failed", "cancelled"],
+  review: ["completed", "failed", "in_progress"],
+  completed: [],
+  failed: ["pending"],  // retry 시 pending으로 복귀 가능
+  cancelled: [],
+};
+
+function isValidWoTransition(from: string, to: string): boolean {
+  return (VALID_WO_TRANSITIONS[from] ?? []).includes(to);
+}
+
+app.post("/api/work-orders", async (c) => {
+  const body = await c.req.json();
+  const parsed = createWorkOrderInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ ok: false, error: parsed.error.issues }, 400);
+  }
+
+  // toAgentId 존재 검증
+  const toAgent = getAgentById(parsed.data.toAgentId);
+  if (!toAgent) {
+    return c.json({ ok: false, error: `에이전트 없음: ${parsed.data.toAgentId}` }, 400);
+  }
+
+  const order = createWorkOrder(parsed.data);
+
+  appendAuditLog({
+    actor: parsed.data.fromAgentId,
+    action: "work_order.created",
+    entityType: "work_order",
+    entityId: order.id,
+    source: "api",
+    afterJson: JSON.stringify(order),
+  });
+
+  publishEvent({
+    id: randomUUID(),
+    ts: Date.now(),
+    source: "vulcan-api",
+    agentId: parsed.data.toAgentId,
+    projectId: parsed.data.project ?? null,
+    taskId: parsed.data.linkedTaskId ?? null,
+    type: "work_order.created",
+    summary: `WorkOrder 생성: ${parsed.data.summary} (${parsed.data.fromAgentId} → ${parsed.data.toAgentId})`,
+    payloadJson: JSON.stringify({ workOrderId: order.id }),
+  });
+
+  return c.json({ ok: true, workOrder: order }, 201);
+});
+
+app.get("/api/work-orders", (c) => {
+  const { status, toAgentId, fromAgentId, project, limit } = c.req.query();
+  const orders = listWorkOrders({
+    status: status || undefined,
+    toAgentId: toAgentId || undefined,
+    fromAgentId: fromAgentId || undefined,
+    project: project || undefined,
+    limit: limit ? Math.min(Math.max(1, Number(limit) || 100), 500) : 100,
+  });
+  const stats = getWorkOrderStats();
+  return c.json({ ok: true, workOrders: orders, stats });
+});
+
+app.get("/api/work-orders/:id", (c) => {
+  const order = getWorkOrder(c.req.param("id"));
+  if (!order) {
+    return c.json({ ok: false, error: "not found" }, 404);
+  }
+  const results = getWorkResultsByOrderId(order.id);
+  return c.json({ ok: true, workOrder: order, results });
+});
+
+app.patch("/api/work-orders/:id", async (c) => {
+  const id = c.req.param("id");
+  const existing = getWorkOrder(id);
+  if (!existing) {
+    return c.json({ ok: false, error: "not found" }, 404);
+  }
+  const body = await c.req.json();
+  const parsed = updateWorkOrderInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ ok: false, error: parsed.error.issues }, 400);
+  }
+
+  // 상태 전이 검증
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    if (!isValidWoTransition(existing.status, parsed.data.status)) {
+      return c.json({
+        ok: false,
+        error: `상태 전이 불가: ${existing.status} → ${parsed.data.status}`,
+      }, 400);
+    }
+  }
+
+  const updates: Record<string, unknown> = { ...parsed.data };
+  if (parsed.data.status === "completed" || parsed.data.status === "failed") {
+    updates.completedAt = Date.now();
+  }
+  const updated = updateWorkOrder(id, updates);
+
+  appendAuditLog({
+    actor: "human",
+    action: `work_order.${parsed.data.status ?? "updated"}`,
+    entityType: "work_order",
+    entityId: id,
+    source: "api",
+    beforeJson: JSON.stringify(existing),
+    afterJson: JSON.stringify(updated),
+  });
+
+  if (parsed.data.status && parsed.data.status !== existing.status) {
+    publishEvent({
+      id: randomUUID(),
+      ts: Date.now(),
+      source: "vulcan-api",
+      agentId: existing.toAgentId,
+      projectId: existing.project ?? null,
+      taskId: existing.linkedTaskId ?? null,
+      type: `work_order.${parsed.data.status}`,
+      summary: `WorkOrder [${existing.summary}] → ${parsed.data.status}`,
+      payloadJson: JSON.stringify({ workOrderId: id }),
+    });
+  }
+
+  return c.json({ ok: true, workOrder: updated });
+});
+
+app.post("/api/work-orders/:id/result", async (c) => {
+  const id = c.req.param("id");
+  const order = getWorkOrder(id);
+  if (!order) {
+    return c.json({ ok: false, error: "work order not found" }, 404);
+  }
+
+  // 완료/취소 상태에서는 result 제출 불가
+  if (order.status === "completed" || order.status === "cancelled") {
+    return c.json({ ok: false, error: `${order.status} 상태에서는 결과를 제출할 수 없습니다` }, 400);
+  }
+
+  const body = await c.req.json();
+  const parsed = workResultInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ ok: false, error: parsed.error.issues }, 400);
+  }
+
+  const result = createWorkResult({ ...parsed.data, workOrderId: id });
+
+  // WorkOrder 상태 업데이트
+  if (parsed.data.status === "completed") {
+    updateWorkOrder(id, { status: "completed", completedAt: Date.now() });
+  } else if (parsed.data.status === "failed" || parsed.data.status === "blocked") {
+    // 자동 재시도 (1회)
+    if (order.retryCount < 1 && parsed.data.status === "failed") {
+      updateWorkOrder(id, {
+        status: "pending",
+        retryCount: order.retryCount + 1,
+      });
+
+      publishEvent({
+        id: randomUUID(),
+        ts: Date.now(),
+        source: "vulcan-api",
+        agentId: order.toAgentId,
+        projectId: order.project ?? null,
+        taskId: order.linkedTaskId ?? null,
+        type: "work_order.retry",
+        summary: `WorkOrder [${order.summary}] 자동 재시도 (${order.retryCount + 1}/1)`,
+        payloadJson: JSON.stringify({ workOrderId: id, retryCount: order.retryCount + 1 }),
+      });
+    } else {
+      // 재시도 초과 또는 blocked → CEO 에스컬레이션
+      updateWorkOrder(id, { status: "failed", completedAt: Date.now() });
+
+      const escalationMsg = `🚨 WorkOrder 실패 에스컬레이션\n` +
+        `작업: ${order.summary}\n` +
+        `담당: ${order.toAgentId}\n` +
+        `상태: ${parsed.data.status}\n` +
+        `사유: ${parsed.data.errorDetail ?? "N/A"}\n` +
+        `재시도: ${order.retryCount}회`;
+
+      // Telegram CEO 에스컬레이션 알림
+      try {
+        const chatId = getDefaultNotificationChatId();
+        if (chatId) {
+          const { sendTelegramMessage } = await import("./telegram");
+          await sendTelegramMessage(chatId, escalationMsg);
+        }
+      } catch {
+        console.error("[vulcan-api] Telegram 에스컬레이션 전송 실패");
+      }
+
+      publishEvent({
+        id: randomUUID(),
+        ts: Date.now(),
+        source: "vulcan-api",
+        agentId: order.toAgentId,
+        projectId: order.project ?? null,
+        taskId: order.linkedTaskId ?? null,
+        type: "work_order.escalated",
+        summary: `WorkOrder [${order.summary}] CEO 에스컬레이션 (${parsed.data.status})`,
+        payloadJson: JSON.stringify({ workOrderId: id, errorDetail: parsed.data.errorDetail }),
+      });
+    }
+  } else if (parsed.data.status === "partial") {
+    updateWorkOrder(id, { status: "in_progress" });
+  }
+
+  appendAuditLog({
+    actor: parsed.data.agentId,
+    action: "work_result.submitted",
+    entityType: "work_result",
+    entityId: result.id,
+    source: "api",
+    afterJson: JSON.stringify(result),
+    metadataJson: JSON.stringify({ workOrderId: id }),
+  });
+
+  return c.json({ ok: true, result });
+});
+
+app.post("/api/work-orders/:id/checkpoint", async (c) => {
+  const id = c.req.param("id");
+  const order = getWorkOrder(id);
+  if (!order) {
+    return c.json({ ok: false, error: "not found" }, 404);
+  }
+  const body = await c.req.json();
+  const parsed = workOrderCheckpointInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ ok: false, error: parsed.error.issues }, 400);
+  }
+  const updated = saveWorkOrderCheckpoint(id, parsed.data.checkpointJson);
+  return c.json({ ok: true, workOrder: updated });
+});
+
+app.post("/api/work-orders/:id/verify", async (c) => {
+  const id = c.req.param("id");
+  const order = getWorkOrder(id);
+  if (!order) {
+    return c.json({ ok: false, error: "not found" }, 404);
+  }
+
+  // in_progress 또는 review 상태에서만 검증 요청 가능
+  if (order.status !== "in_progress" && order.status !== "review") {
+    return c.json({
+      ok: false,
+      error: `${order.status} 상태에서는 검증을 요청할 수 없습니다`,
+    }, 400);
+  }
+
+  const verifierId = order.verifierAgentId ?? "argus";
+  updateWorkOrder(id, { status: "review" });
+
+  publishEvent({
+    id: randomUUID(),
+    ts: Date.now(),
+    source: "vulcan-api",
+    agentId: verifierId,
+    projectId: order.project ?? null,
+    taskId: order.linkedTaskId ?? null,
+    type: "work_order.verify_requested",
+    summary: `WorkOrder [${order.summary}] 검증 요청 → ${verifierId}`,
+    payloadJson: JSON.stringify({
+      workOrderId: id,
+      acceptanceCriteria: order.acceptanceCriteria,
+      verifierId,
+    }),
+  });
+
+  appendAuditLog({
+    actor: "system",
+    action: "work_order.verify_requested",
+    entityType: "work_order",
+    entityId: id,
+    source: "api",
+    metadataJson: JSON.stringify({ verifierId }),
+  });
+
+  return c.json({ ok: true, message: `검증 요청 전송: ${verifierId}` });
 });
 
 // 직접 실행 시에만 서버 시작 (테스트에서 import할 때는 실행하지 않음)

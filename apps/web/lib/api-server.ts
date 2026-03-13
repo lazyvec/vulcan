@@ -20,6 +20,8 @@ import type {
   TaskLane,
   TaskPriority,
   VaultNoteSummary,
+  WorkOrder,
+  WorkResult,
 } from "@vulcan/shared/types";
 
 const API_BASE_URL = process.env.VULCAN_API_BASE_URL ?? "http://127.0.0.1:8787";
@@ -191,6 +193,39 @@ export async function getCircuitBreakerConfigs() {
     "/api/circuit-breaker",
   );
   return data.configs;
+}
+
+// ── WorkOrder / WorkResult (Phase 3) ────────────────────────────────────────
+
+export async function getWorkOrders(filters?: {
+  status?: string;
+  toAgentId?: string;
+  fromAgentId?: string;
+  project?: string;
+  limit?: number;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.status) params.set("status", filters.status);
+  if (filters?.toAgentId) params.set("toAgentId", filters.toAgentId);
+  if (filters?.fromAgentId) params.set("fromAgentId", filters.fromAgentId);
+  if (filters?.project) params.set("project", filters.project);
+  if (filters?.limit) params.set("limit", String(filters.limit));
+  const suffix = params.toString();
+  const data = await requestJson<{
+    ok: boolean;
+    workOrders: WorkOrder[];
+    stats: { total: number; byStatus: Record<string, number>; byAgent: Record<string, number> };
+  }>(suffix ? `/api/work-orders?${suffix}` : "/api/work-orders");
+  return data;
+}
+
+export async function getWorkOrderDetail(id: string) {
+  const data = await requestJson<{
+    ok: boolean;
+    workOrder: WorkOrder;
+    results: WorkResult[];
+  }>(`/api/work-orders/${id}`);
+  return data;
 }
 
 // ── Approval / Governance (Phase 8) ──────────────────────────────────────────

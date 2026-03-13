@@ -282,6 +282,64 @@ export const approvalsTable = sqliteTable(
   }),
 );
 
+// ── WorkOrder / WorkResult (Phase 3) ────────────────────────────────────────
+
+export const workOrdersTable = sqliteTable(
+  "work_orders",
+  {
+    id: text("id").primaryKey(),
+    type: text("type").notNull(),
+    summary: text("summary").notNull(),
+    fromAgentId: text("from_agent_id").notNull(),
+    toAgentId: text("to_agent_id").notNull(),
+    project: text("project"),
+    priority: text("priority").notNull().default("medium"),
+    status: text("status").notNull().default("pending"),
+    acceptanceCriteria: text("acceptance_criteria").notNull().default("[]"),
+    inputsJson: text("inputs_json").notNull().default("{}"),
+    timeoutSeconds: integer("timeout_seconds").notNull().default(600),
+    parentWorkOrderId: text("parent_work_order_id"),
+    linkedTaskId: text("linked_task_id"),
+    linkedCommandId: text("linked_command_id"),
+    checkpointJson: text("checkpoint_json"),
+    verifierAgentId: text("verifier_agent_id"),
+    retryCount: integer("retry_count").notNull().default(0),
+    deadline: integer("deadline"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    completedAt: integer("completed_at"),
+  },
+  (table) => ({
+    idxWorkOrdersStatus: index("idx_work_orders_status").on(table.status, table.updatedAt),
+    idxWorkOrdersTo: index("idx_work_orders_to").on(table.toAgentId, table.status),
+    idxWorkOrdersFrom: index("idx_work_orders_from").on(table.fromAgentId, table.createdAt),
+    idxWorkOrdersProject: index("idx_work_orders_project").on(table.project),
+    idxWorkOrdersParent: index("idx_work_orders_parent").on(table.parentWorkOrderId),
+  }),
+);
+
+export const workResultsTable = sqliteTable(
+  "work_results",
+  {
+    id: text("id").primaryKey(),
+    workOrderId: text("work_order_id").notNull(),
+    agentId: text("agent_id").notNull(),
+    status: text("status").notNull(),
+    summary: text("summary").notNull(),
+    errorDetail: text("error_detail"),
+    changesJson: text("changes_json").notNull().default("[]"),
+    evidenceJson: text("evidence_json").notNull().default("{}"),
+    metricsJson: text("metrics_json").notNull().default("{}"),
+    followUp: text("follow_up").notNull().default("[]"),
+    startedAt: integer("started_at"),
+    completedAt: integer("completed_at").notNull(),
+  },
+  (table) => ({
+    idxWorkResultsOrder: index("idx_work_results_order").on(table.workOrderId),
+    idxWorkResultsAgent: index("idx_work_results_agent").on(table.agentId, table.completedAt),
+  }),
+);
+
 // ── Trace / FinOps (Phase 11) ────────────────────────────────────────────────
 
 export const tracesTable = sqliteTable(
