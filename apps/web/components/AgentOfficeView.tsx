@@ -6,6 +6,7 @@ import { useAgentStatus } from "@/hooks/useAgentStatus";
 import type { Agent, AgentStatus, WorkOrder } from "@/lib/types";
 import { Wifi, WifiOff, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMounted } from "@/hooks/useMounted";
 
 const STATUS_SEQUENCE: AgentStatus[] = ["researching", "executing", "writing", "syncing", "idle", "error"];
 
@@ -140,6 +141,7 @@ function AgentPopover({
 }
 
 export function AgentOfficeView({ initialAgents, agentWorkOrders: initialWorkOrders, agentTokenUsage: initialTokenUsage }: AgentOfficeViewProps) {
+  const mounted = useMounted();
   const { agents, agentWorkOrders, agentTokenUsage, wsConnected } = useAgentStatus({
     initialAgents,
     initialWorkOrders,
@@ -226,7 +228,7 @@ export function AgentOfficeView({ initialAgents, agentWorkOrders: initialWorkOrd
                       onClick={() => setSelectedAgentId(prev => prev === agent.id ? null : agent.id)}
                     />
                     <AnimatePresence>
-                      {selectedAgentId === agent.id && (
+                      {mounted && selectedAgentId === agent.id && (
                         <AgentPopover
                           agent={agent}
                           workOrder={agentWorkOrders[agent.id] ?? null}

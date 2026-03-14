@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMounted } from "@/hooks/useMounted";
 
 interface ModalProps {
   open: boolean;
@@ -14,6 +15,7 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, footer, maxWidth = "max-w-2xl" }: ModalProps) {
+  const mounted = useMounted();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
@@ -57,7 +59,7 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = "max-
 
   return (
     <AnimatePresence>
-      {open && (
+      {mounted && open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4">
           {/* Backdrop */}
           <motion.div

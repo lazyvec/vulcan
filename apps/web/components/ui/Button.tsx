@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useMounted } from "@/hooks/useMounted";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
 type ButtonSize = "sm" | "md" | "lg";
@@ -36,6 +37,23 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     { variant = "secondary", size = "md", loading, icon, children, className = "", disabled, type = "button", ...rest },
     ref,
   ) {
+    const mounted = useMounted();
+
+    if (!mounted) {
+      return (
+        <button
+          ref={ref}
+          type={type}
+          className={`inline-flex items-center justify-center rounded-[var(--radius-control)] border font-semibold tracking-tight transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+          disabled={disabled || loading}
+          {...rest}
+        >
+          {loading ? <Loader2 size={size === "sm" ? 14 : 16} className="animate-spin opacity-80" /> : icon}
+          <span className="truncate">{children}</span>
+        </button>
+      );
+    }
+
     return (
       <motion.button
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */

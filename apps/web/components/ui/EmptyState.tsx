@@ -2,6 +2,7 @@
 
 import { Inbox } from "lucide-react";
 import { motion } from "framer-motion";
+import { useMounted } from "@/hooks/useMounted";
 
 interface EmptyStateProps {
   icon?: React.ReactNode;
@@ -11,6 +12,10 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ icon, message, action, className = "" }: EmptyStateProps) {
+  const mounted = useMounted();
+
+  if (!mounted) return <div className={`flex flex-col items-center justify-center py-16 px-6 text-center ${className}`} />;
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}

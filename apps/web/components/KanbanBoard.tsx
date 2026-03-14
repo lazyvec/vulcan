@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { TaskDetailModal } from "./TaskDetailModal";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMounted } from "@/hooks/useMounted";
 
 const LANES: Array<{ key: TaskLane; label: string; note: string }> = [
   { key: "backlog", label: "백로그", note: "정리 대기" },
@@ -262,6 +263,7 @@ function DroppableLane({
 }
 
 export function KanbanBoard({ initialTasks, agents, initialQuery = "", workOrdersByTaskId = {} }: KanbanBoardProps) {
+  const mounted = useMounted();
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [query, setQuery] = useState(initialQuery);
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
@@ -453,7 +455,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "", workOrder
 
       {/* Modals with AnimatePresence handled inside the component */}
       <AnimatePresence>
-        {(detailTask || showCreateModal) && (
+        {mounted && (detailTask || showCreateModal) && (
           <TaskDetailModal
             task={detailTask}
             agents={agents}

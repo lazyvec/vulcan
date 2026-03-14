@@ -26,6 +26,7 @@ import {
   Plug,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useMounted } from "@/hooks/useMounted";
 
 type ActivityRange = "1h" | "today" | "all";
 
@@ -123,6 +124,7 @@ export function LiveActivityPanel({
   title = "라이브 활동",
   onEvent,
 }: LiveActivityPanelProps) {
+  const mounted = useMounted();
   const { paused } = useMissionControl();
   const [events, setEvents] = useState<EventItem[]>(initialEvents);
   const [range, setRange] = useState<ActivityRange>("1h");
@@ -322,7 +324,7 @@ export function LiveActivityPanel({
           </div>
         ) : (
           <AnimatePresence initial={false}>
-            {grouped.map(({ group, items }) => {
+            {mounted && grouped.map(({ group, items }) => {
               const isActive = (now - (items[0]?.ts ?? 0)) < 15_000;
               return (
                 <motion.section
