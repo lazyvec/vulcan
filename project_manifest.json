@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "id": "vulcan",
+  "id": "vulcan-mc",
   "name": "Vulcan Mission Control",
   "description": "OpenClaw 에이전트 팀의 개인 전용 Mission Control. 에이전트 모니터링, 태스크 관리, 실시간 WebSocket, 승인/거버넌스.",
   "type": "monorepo",
-  "path": "/home/linuxuser/projects/vulcan",
+  "path": "/home/linuxuser/projects/vulcan-mc",
   "packageManager": "pnpm@9.15.9",
   "stack": {
     "framework": ["Next.js 16", "Hono"],

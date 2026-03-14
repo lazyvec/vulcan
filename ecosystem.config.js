@@ -34,7 +34,7 @@ module.exports = {
   apps: [
     {
       name: "vulcan-api",
-      cwd: "/home/linuxuser/projects/vulcan",
+      cwd: "/home/linuxuser/projects/vulcan-mc",
       script: "pnpm",
       args: "api:start",
       autorestart: true,
@@ -75,7 +75,7 @@ module.exports = {
     },
     {
       name: "vulcan-mc",
-      cwd: "/home/linuxuser/projects/vulcan",
+      cwd: "/home/linuxuser/projects/vulcan-mc",
       script: "pnpm",
       args: "start",
       autorestart: true,
@@ -98,7 +98,7 @@ module.exports = {
     },
     {
       name: "vulcan-adapter",
-      cwd: "/home/linuxuser/projects/vulcan",
+      cwd: "/home/linuxuser/projects/vulcan-mc",
       script: "pnpm",
       args: "adapter",
       autorestart: true,

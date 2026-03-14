@@ -2,8 +2,8 @@
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
 > **현재 Phase**: Phase 0~11+++ 완료 (잔여 항목 포함, Memory 검색 강화) → Phase 12 백로그
-> **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
-> **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
+> **SSOT**: `docs/PRODUCT_MASTER.md` (제품) · `docs/BRAND_MASTER.md` (브랜드) · `docs/DECISIONS.md` (결정)
+> **실행**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
 ## 세션 시작 시 반드시 확인
 

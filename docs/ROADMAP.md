@@ -1,17 +1,20 @@
-# Vulcan Roadmap
+# Vulcan Mission Control Roadmap
 
-> **현재 상태**: Phase 0~10 완료 → Phase 11~12 백로그
+> **현재 상태**: Phase 0~11+++ 완료 → Phase 12 백로그
 > **실행 체크리스트**: `docs/WORK_PLAN.md`
-> **갱신일**: 2026-03-10
+> **갱신일**: 2026-03-14
+
+> **문서 맵**: [PRODUCT_MASTER](PRODUCT_MASTER.md) · [BRAND_MASTER](BRAND_MASTER.md) · [ROADMAP](ROADMAP.md) · [WORK_PLAN](WORK_PLAN.md) · [PROGRESS](PROGRESS.md) · [DECISIONS](DECISIONS.md)
 
 ## 목표 아키텍처
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌────────────┐
 │  Next.js (web)  │────▶│   Hono (api)     │────▶│ PostgreSQL │
-│  UI + SSR       │     │  REST + WebSocket│     └────────────┘
-└─────────────────┘     │  + BullMQ Worker │────▶┌────────────┐
-                        └──────┬───────────┘     │   Redis    │
+│  UI + SSR       │     │  REST + WebSocket│     │  + pgvector│
+└─────────────────┘     │  + BullMQ Worker │────▶└────────────┘
+                        └──────┬───────────┘     ┌────────────┐
+                               │            ────▶│   Redis    │
                                │                 └────────────┘
                                │ WebSocket RPC
                                ▼
@@ -19,9 +22,13 @@
                         │ OpenClaw Gateway │
                         │ ws://127.0.0.1:  │
                         │      18789       │
-                        │  Hermes · Vesta  │──── Telegram
-                        │  Atlas · Lyra    │
-                        │  Aegis           │
+                        │                  │
+                        │  Hermes (main)   │──── Telegram
+                        │  Aegis · Metis   │
+                        │  Athena · Themis │
+                        │  Iris · Daedalus │
+                        │  Nike · Calliope │
+                        │  Argus           │
                         └──────────────────┘
 ```
 
@@ -32,124 +39,35 @@ Phase 0 → 1 → 2 → 3 → 4+5 (병렬) → 6 → 8
                            ↘ 7 ↗
               9 (Phase 1부터 점진적)
                               Phase 10 (최종)
+                                 ↓
+                         11 → 11+ → 11++ → 11+++
 ```
 
----
+## 마일스톤
 
-## Phase 0: Foundation — 모노레포 + 공유 패키지 (완료)
+| Phase | 이름 | 핵심 목표 | 상태 |
+|-------|------|----------|------|
+| 0 | Foundation | 모노레포 + 공유 패키지 | ✅ |
+| 1 | PostgreSQL + Redis + Hono | 프로덕션 DB + 독립 백엔드 | ✅ |
+| 2 | WebSocket + Gateway RPC | 양방향 통신 | ✅ |
+| 3 | 에이전트 생명주기 | CRUD + 제어 + 감사 | ✅ |
+| 4 | 태스크 고도화 | 6-lane 칸반 + 의존성 | ✅ |
+| 5 | 스킬 마켓플레이스 | 스킬 카탈로그 + 설치/제거 | ✅ |
+| 6 | Activity/Audit | 28종 이벤트 + 메트릭스 | ✅ |
+| 7 | Telegram 알림 | Herald Bot Long Polling | ✅ |
+| 8 | 승인/거버넌스 | Telegram 인라인 키보드 | ✅ |
+| 9 | 테스트 + CI/CD | Vitest + Playwright + Husky | ✅ |
+| 10 | Docker 배포 | Docker Compose + PM2 | ✅ |
+| 11 | Observability | Trace + FinOps + Feature Flags | ✅ |
+| 11+ | WorkOrder | 구조화된 작업지시 + 검증 루프 | ✅ |
+| 11++ | 메트릭스 강화 | Office View + FinOps + Kanban 연동 | ✅ |
+| 11+++ | Memory 강화 | pgvector + 시맨틱 검색 + Temporal Decay | ✅ |
+| 12 | Agency Agents | 외부 레퍼런스 트랙 | 📋 |
 
-M0을 깨뜨리지 않고 분리 가능 구조로 준비.
+<!-- ✅ 완료, 🔄 진행 중, 📋 백로그 -->
 
-- pnpm 워크스페이스 (`apps/web/`, `apps/api/`, `packages/shared/`)
-- 공유 타입/상수/Zod 스키마 추출
-- Drizzle Kit 마이그레이션 도입
-- Store 인터페이스 추상화
-
-## Phase 1: PostgreSQL + Redis + Hono 백엔드 (완료)
-
-프로덕션급 데이터 인프라 + 독립 백엔드 서비스.
-
-- SQLite → PostgreSQL 전환 (Drizzle pg dialect)
-- Redis Pub/Sub (in-memory 교체)
-- Hono 백엔드 서비스 (기존 12개 API 포팅)
-- Next.js API Routes 제거 → 프론트엔드 전용
-
-## Phase 2: WebSocket + OpenClaw Gateway RPC (완료)
-
-양방향 통신 기반 + OpenClaw 직접 연결.
-
-- SSE → WebSocket 전환 (Hono ↔ 프론트엔드)
-- OpenClaw Gateway RPC 클라이언트 (`ws://127.0.0.1:18789`)
-- 로그 파일 폴링 → Gateway RPC 직접 수신으로 대체
-- Redis Pub/Sub 팬아웃
-
-## Phase 3: 에이전트 생명주기 관리 (완료)
-
-핵심 패러다임 전환: 관찰 → 양방향 제어.
-
-진행 상태: **완료 (Batch 8)** (데이터 모델 확장 + 생명주기 API 기본형 + 감사 로그 + BullMQ 워커 + 커맨드 조회/재시도 API + sessions/config/cron API + Team 제어 패널 + pause/resume + Mission Control UX 리파인)
-
-- 에이전트 CRUD + 제어 API (pause/resume/restart/command)
-- 이중 제어 모드: Hermes 경유 위임 + 직접 제어
-- Gateway RPC 통합 (agents/chat/sessions/config/cron)
-- BullMQ 워커 (커맨드 큐, 헬스체크)
-- 에이전트 관리 UI + 감사 로깅
-
-## Phase 4: 태스크 시스템 고도화 (완료) ← Phase 5와 병렬
-
-- 태스크 모델 확장 (priority, due_at, tags, dependencies, comments)
-- 6-lane 칸반 + 드래그앤드롭 (`@dnd-kit`)
-- 에이전트 할당 → Gateway RPC 연동
-- 태스크 상세 모달
-
-## Phase 5: 스킬 마켓플레이스 (완료) ← Phase 4와 병렬
-
-- 스킬 데이터 모델 (skills/agent_skills/skill_registry) + Gateway 동기화
-- 에이전트별 스킬 설치/제거 (best-effort Gateway sync)
-- 마켓플레이스 UI (2패널: Catalog + Per Agent)
-
-## Phase 6: Activity/Audit + 메트릭스 (완료)
-
-- 이벤트 타입 체계화 (28종 + 7카테고리)
-- Activity API (필터링 + 페이지네이션 + 통계)
-- 메트릭스 대시보드 (recharts BarChart/PieChart + 요약 카드)
-- LiveActivityPanel 강화 (카테고리 필터, 무한 스크롤, 소스 링크)
-
-## Phase 7: Telegram 알림 연동 (완료 — Herald Bot Long Polling 기반 Telegram 알림)
-
-별도 봇 불필요. 기존 Hermes 채널로 알림 전송.
-
-- 알림 서비스 (Bot API 또는 Gateway RPC)
-- 이벤트 타입별 구독/해제
-- BullMQ 알림 큐
-
-## Phase 8: 승인/거버넌스 (완료 — Telegram 인라인 키보드 승인)
-
-- 승인 정책 + 커맨드 파이프라인 연동
-- Telegram 인라인 키보드 승인 (Herald Bot + Long Polling)
-- 자동 승인 타임아웃
-- Vulcan UI 승인 패널
-- 실환경 E2E 검증 완료
-
-## Phase 9: 테스트 + CI/CD (완료 — Vitest 63개 + Playwright 16개 + Husky + lint-staged)
-
-- Vitest + Hono test client + Playwright
-- GitHub Actions CI
-- Husky + lint-staged
-
-## Phase 10: Docker 배포 (완료 — Docker Compose (PostgreSQL+Redis), App은 PM2 유지)
-
-- Docker Compose (PostgreSQL + Redis)
-- App 서비스는 PM2로 유지
-
-## Phase 11: Observability/Governance 업그레이드 (백로그)
-
-> 외부 레퍼런스(Govrix, PM Skills, everything-claude-code)에서 필요한 기능만 선별 흡수.
-
-- Govrix 계열 기능 PoC: LLM 트래픽 계측(cost/token/latency), PII 플래그, 감사 추적 파이프라인
-- Vulcan 통합 원칙: Govrix 대체가 아닌 모듈 병행(ingest/대시보드 연동)
-- PM Skills 기반 기획 워크플로우 표준화 (discover → strategy → PRD 체인)
-- ECC 패턴 선택 도입: hook profile, verification loop, security scan, continuous-learning
-- 운영 가드레일: 토큰비/복잡도 상한, 기능 플래그, 단계별 롤아웃
-- 라이선스/저작권 점검 자동화 문서화
-
-## Phase 12: agency-agents 레퍼런스 트랙 (백로그)
-
-> agency-agents 프로젝트에서 검증된 패턴을 Vulcan에 선별 도입.
-
-- 에이전트 자율 학습/피드백 루프
-- 에이전트 간 협업 프로토콜
-- 멀티 모달 에이전트 지원
-
----
-
-## Out of Scope (유지)
+## Out of Scope
 
 - 멀티테넌시, 팀, RBAC (단일 사용자 시스템)
 - 외부 사용자 인증 (Cloudflare Access로 충분)
 - 범용 프로젝트 관리 도구 (Jira/Linear 대체 아님)
-
-## 총 예상
-
-| 전체 | 56-81 작업일 (3-4개월) |
-|------|----------------------|

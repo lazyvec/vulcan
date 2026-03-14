@@ -12,7 +12,7 @@
 
 ### 1-1. Docker 인프라 (PostgreSQL + Redis)
 ```bash
-cd ~/projects/vulcan && pnpm infra:up    # 시작
+cd ~/projects/vulcan-mc && pnpm infra:up    # 시작
 docker compose ps                          # 상태 확인
 docker compose logs --tail=20             # 최근 로그
 ```
@@ -87,7 +87,7 @@ pm2 restart vulcan-api
 pm2 restart all
 
 # 인프라 재시작 (DB+Redis)
-cd ~/projects/vulcan && pnpm infra:down && pnpm infra:up
+cd ~/projects/vulcan-mc && pnpm infra:down && pnpm infra:up
 ```
 
 ### 3-2. OpenClaw 재시작
@@ -112,7 +112,7 @@ cat ~/logs/vault-bisync.log
 ## 4) 개발 명령어
 
 ```bash
-cd ~/projects/vulcan
+cd ~/projects/vulcan-mc
 
 # 개발 서버
 pnpm dev              # Next.js (localhost:3000)

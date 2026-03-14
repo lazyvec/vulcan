@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/linuxuser/projects/vulcan"
+ROOT="/home/linuxuser/projects/vulcan-mc"
 LOG_DIR="$ROOT/logs"
 mkdir -p "$LOG_DIR"
 
