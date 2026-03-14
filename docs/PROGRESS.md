@@ -7,6 +7,18 @@
 ### 요약
 에이전트 오피스 뷰를 6존 CSS Grid → 2D 탑다운 바닥맵으로 전면 업그레이드. 에이전트 이동 애니메이션, 말풍선, 히트맵, XP 랭킹, 토큰 바, 이벤트 트레일, 메모리 타임라인을 추가하여 한눈에 모든 에이전트 활동을 파악 가능한 대시보드 구현.
 
+### 잔여 이슈 수정 (82c53e1)
+- **#10**: sprite-map 접두사 매칭을 긴 키 우선 정렬로 개선 (정확도 향상)
+- **#11**: 팝오버 뷰포트 경계 초과 방지 — `placement` (위/아래) + `horizontalPct` (좌/우 정렬) 동적 결정
+- **#12**: 말풍선 위/아래 방향 분산 배치로 겹침 완화 (팝오버와 반대 방향)
+- **#13**: EventTrail WebSocket↔초기 fetch 이벤트 id 기반 중복 제거
+- **#14**: 10개 판테온 에이전트 32x32 픽셀아트 스프라이트 PNG 생성
+  - Gemini API 이미지 생성 모델 전체 유료 플랜 전용 → Pillow 프로그래매틱 생성으로 대체
+  - `scripts/generate-sprites.py` — 에이전트별 색상/특징 기반 스프라이트 생성기
+  - `public/sprites/agents/*.png` — 10개 32x32 PNG
+  - `AgentSprite.tsx` — spritePath 있으면 PNG `<Image>` 우선 렌더링, 없으면 SVG 폴백
+  - 향후 AI 생성 고품질 이미지로 교체 시 sprite 파일만 교체하면 됨
+
 ### 변경 내용
 
 #### 신규 컴포넌트 (16개, `components/office-v2/`)
