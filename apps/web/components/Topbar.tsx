@@ -8,17 +8,12 @@ import { Button } from "@/components/ui/Button";
 
 const PAGE_TITLES: Record<string, string> = {
   "/tasks": "태스크",
-  "/calendar": "캘린더",
-  "/projects": "프로젝트",
+  "/work-orders": "작업지시",
   "/memory": "메모리",
-  "/docs": "문서",
   "/vault": "볼트",
   "/team": "팀",
-  "/office": "오피스",
-  "/skills": "스킬",
   "/activity": "활동",
-  "/approvals": "승인",
-  "/notifications": "알림",
+  "/costs": "비용",
 };
 
 export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {

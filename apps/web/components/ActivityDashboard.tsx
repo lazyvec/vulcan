@@ -3,11 +3,10 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, eventCategoryOf } from "@vulcan/shared/constants";
 import type { ActivityStats, Agent, EventItem, AuditLogItem } from "@/lib/types";
-import { Activity, AlertTriangle, Bot, CheckCircle2, Clock, Filter, Loader2 } from "lucide-react";
+import { Activity, AlertTriangle, Clock, Filter, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Tabs } from "@/components/ui/Tabs";
@@ -21,10 +20,11 @@ interface Props {
   agents: Agent[];
 }
 
-const PIE_COLORS = [
-  "var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)",
-  "var(--color-chart-5)", "var(--color-chart-6)", "var(--color-chart-7)", "var(--color-chart-8)",
-];
+const CATEGORY_FILTERS = [
+  { key: "error", label: "에러" },
+  { key: "agent", label: "에이전트" },
+  { key: "task", label: "태스크" },
+] as const;
 
 function formatTime(ts: number) {
   return new Date(ts).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -33,6 +33,13 @@ function formatTime(ts: number) {
 function formatHourLabel(hour: string) {
   const parts = hour.split(" ");
   return parts[1] ?? hour;
+}
+
+function eventCategoryOf(type: string): string {
+  if (type.startsWith("error") || type.includes("failed")) return "error";
+  if (type.startsWith("agent")) return "agent";
+  if (type.startsWith("task")) return "task";
+  return "other";
 }
 
 export function ActivityDashboard({ initialStats, initialEvents, initialTotal, agents }: Props) {
@@ -48,37 +55,9 @@ export function ActivityDashboard({ initialStats, initialEvents, initialTotal, a
 
   const agentMap = useMemo(() => new Map(agents.map((a) => [a.id, a])), [agents]);
 
-  const activeAgentCount = useMemo(() => Object.keys(stats.byAgent).length, [stats.byAgent]);
-
-  const commandSuccessRate = useMemo(() => {
-    const sent = stats.byType["command.sent"] ?? 0;
-    const failed = stats.byType["command.failed"] ?? 0;
-    const t = sent + failed;
-    if (t === 0) return 100;
-    return Math.round((sent / t) * 100);
-  }, [stats.byType]);
-
-  const typeDistribution = useMemo(() =>
-    Object.entries(stats.byType)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10),
-    [stats.byType],
-  );
-
-  const agentDistribution = useMemo(() =>
-    Object.entries(stats.byAgent)
-      .map(([id, value]) => ({ name: agentMap.get(id)?.name ?? id.slice(0, 8), value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8),
-    [stats.byAgent, agentMap],
-  );
-
   const filteredEvents = useMemo(() => {
     if (!categoryFilter) return events;
-    const types = EVENT_CATEGORIES[categoryFilter];
-    if (!types) return events;
-    return events.filter((e) => (types as readonly string[]).includes(e.type));
+    return events.filter((e) => eventCategoryOf(e.type) === categoryFilter);
   }, [events, categoryFilter]);
 
   const loadAudit = useCallback(async () => {
@@ -127,66 +106,24 @@ export function ActivityDashboard({ initialStats, initialEvents, initialTotal, a
 
   return (
     <div className="space-y-6">
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      {/* Metric cards — 2개 */}
+      <div className="grid grid-cols-2 gap-4">
         <MetricCard label="이벤트 (24h)" value={stats.totalEvents} icon={<Activity size={18} />} />
-        <MetricCard label="활성 에이전트" value={activeAgentCount} icon={<Bot size={18} />} />
         <MetricCard label="에러" value={stats.errorCount} icon={<AlertTriangle size={18} />} variant={stats.errorCount > 0 ? "error" : "neutral"} />
-        <MetricCard label="커맨드 성공률" value={`${commandSuccessRate}%`} icon={<CheckCircle2 size={18} />} variant={commandSuccessRate < 80 ? "warning" : "neutral"} />
       </div>
 
-      {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="vulcan-card col-span-full p-4 lg:col-span-2">
-          <h3 className="section-title mb-3">시간대별 이벤트</h3>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.byHour}>
-                <XAxis dataKey="hour" tickFormatter={formatHourLabel} tick={{ fill: "var(--color-tertiary)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "var(--color-tertiary)", fontSize: 11 }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="vulcan-card p-4">
-          <h3 className="section-title mb-3">에이전트별 활동</h3>
-          <div className="h-[200px]">
-            {agentDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={agentDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={35} paddingAngle={2} label={({ name }) => name}>
-                    {agentDistribution.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState message="데이터 없음" className="h-full" />
-            )}
-          </div>
-        </div>
-
-        <div className="vulcan-card col-span-full p-4">
-          <h3 className="section-title mb-3">이벤트 타입 분포 (Top 10)</h3>
-          <div className="h-[220px]">
-            {typeDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={typeDistribution} layout="vertical">
-                  <XAxis type="number" tick={{ fill: "var(--color-tertiary)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fill: "var(--color-tertiary)", fontSize: 11 }} axisLine={false} tickLine={false} width={120} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="value" fill="var(--color-info)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <EmptyState message="데이터 없음" className="h-full" />
-            )}
-          </div>
+      {/* 시간대별 이벤트 차트 */}
+      <div className="vulcan-card p-4">
+        <h3 className="section-title mb-3">시간대별 이벤트</h3>
+        <div className="h-[200px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={stats.byHour}>
+              <XAxis dataKey="hour" tickFormatter={formatHourLabel} tick={{ fill: "var(--color-tertiary)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "var(--color-tertiary)", fontSize: 11 }} axisLine={false} tickLine={false} width={30} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="count" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -214,13 +151,13 @@ export function ActivityDashboard({ initialStats, initialEvents, initialTotal, a
               >
                 전체
               </button>
-              {Object.keys(EVENT_CATEGORIES).map((cat) => (
+              {CATEGORY_FILTERS.map((cat) => (
                 <button
-                  key={cat}
-                  className={`vulcan-chip min-h-[44px] text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${categoryFilter === cat ? "bg-[var(--color-surface-hover)] text-[var(--color-foreground)]" : ""}`}
-                  onClick={() => setCategoryFilter(cat === categoryFilter ? null : cat)}
+                  key={cat.key}
+                  className={`vulcan-chip min-h-[44px] text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${categoryFilter === cat.key ? "bg-[var(--color-surface-hover)] text-[var(--color-foreground)]" : ""}`}
+                  onClick={() => setCategoryFilter(cat.key === categoryFilter ? null : cat.key)}
                 >
-                  {EVENT_CATEGORY_LABELS[cat] ?? cat}
+                  {cat.label}
                 </button>
               ))}
             </div>

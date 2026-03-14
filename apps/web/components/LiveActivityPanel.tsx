@@ -1,29 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useMissionControl } from "@/components/MissionControlProvider";
 import { useVulcanWebSocket } from "@/hooks/useWebSocket";
 import type { EventItem } from "@/lib/types";
-import {
-  EVENT_CATEGORIES,
-  EVENT_CATEGORY_LABELS,
-  eventCategoryOf,
-} from "@vulcan/shared/constants";
+import { eventCategoryOf } from "@vulcan/shared/constants";
 import {
   AlertTriangle,
   MessageSquare,
   RefreshCw,
   TerminalSquare,
   FileText,
-  Search,
   Radio,
-  UserPlus,
-  ListPlus,
-  Clock,
-  Send,
-  Download,
-  Plug,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMounted } from "@/hooks/useMounted";
@@ -44,67 +33,27 @@ function formatTime(ts: number) {
   });
 }
 
-// 아이콘 맵
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-  "agent.create": UserPlus,
-  "agent.update": UserPlus,
-  "agent.deactivate": UserPlus,
-  "agent.pause": Clock,
-  "agent.resume": Clock,
-  "task.create": ListPlus,
-  "task.update": ListPlus,
-  "task.move": ListPlus,
-  "task.delete": ListPlus,
-  "task.comment": MessageSquare,
-  "command.queued": Clock,
-  "command.sent": Send,
-  "command.failed": AlertTriangle,
-  "command.retry": RefreshCw,
-  "skill.install": Download,
-  "skill.remove": Download,
-  "skill.sync": RefreshCw,
-  "system.error": AlertTriangle,
-  "system.sync": RefreshCw,
-  "system.health": Radio,
-  "gateway.connected": Plug,
-  "gateway.disconnected": Plug,
-  message: MessageSquare,
-  tool: TerminalSquare,
-  exec: TerminalSquare,
-  research: Search,
-  search: Search,
-  ping: Radio,
-  sync: RefreshCw,
-  error: AlertTriangle,
-};
-
-const ICON_COLOR: Record<string, string> = {
-  agent: "text-[var(--color-success-text)]",
-  task: "text-[var(--color-info-text)]",
-  command: "text-[var(--color-warning-text)]",
-  skill: "text-[var(--color-researching)]",
-  system: "text-[var(--color-primary)]",
-  gateway: "text-[var(--color-info)]",
-  legacy: "text-[var(--color-tertiary)]",
-};
+const CORE_FILTERS = [
+  { key: "system", label: "에러" },
+  { key: "agent", label: "에이전트" },
+  { key: "task", label: "태스크" },
+] as const;
 
 function IconForType({ type }: { type: string }) {
-  const Icon = ICON_MAP[type];
   const cat = eventCategoryOf(type);
-  const color = ICON_COLOR[cat] ?? "text-[var(--color-tertiary)]";
-
-  if (Icon) {
-    return <Icon size={15} className={`flex-shrink-0 ${color}`} />;
-  }
-
-  // fallback
-  const normalized = type.toLowerCase();
+  const color =
+    cat === "system" ? "text-[var(--color-primary)]" :
+    cat === "agent" ? "text-[var(--color-success-text)]" :
+    cat === "task" ? "text-[var(--color-info-text)]" :
+    cat === "command" ? "text-[var(--color-warning-text)]" :
+    "text-[var(--color-tertiary)]";
   const props = { size: 15, className: `flex-shrink-0 ${color}` };
 
-  if (normalized.includes("error")) return <AlertTriangle {...props} />;
-  if (normalized.includes("tool") || normalized.includes("exec")) return <TerminalSquare {...props} />;
-  if (normalized.includes("sync")) return <RefreshCw {...props} />;
-  if (normalized.includes("message") || normalized.includes("ping")) return <MessageSquare {...props} />;
+  if (type.includes("error") || type === "command.failed") return <AlertTriangle {...props} />;
+  if (type.includes("sync")) return <RefreshCw {...props} />;
+  if (type.includes("message") || type.includes("ping")) return <MessageSquare {...props} />;
+  if (type.includes("tool") || type.includes("exec")) return <TerminalSquare {...props} />;
+  if (type.includes("health") || type === "ping") return <Radio {...props} />;
   return <FileText {...props} />;
 }
 
@@ -131,9 +80,6 @@ export function LiveActivityPanel({
   const [highlighted, setHighlighted] = useState<string[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [categoryFilters, setCategoryFilters] = useState<Set<string>>(new Set());
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -147,7 +93,7 @@ export function LiveActivityPanel({
       setEvents((prev) => {
         if (prev.find((item) => item.id === event.id)) return prev;
         setHighlighted((current) => [...current, event.id]);
-        return [...prev.slice(-149), event];
+        return [...prev.slice(-49), event];
       });
     },
     [onEvent],
@@ -180,15 +126,20 @@ export function LiveActivityPanel({
     });
   }, [events, range, categoryFilters]);
 
-  // 통계 요약
+  // 통계 요약 — 1분 간격 갱신
+  const [statsNow, setStatsNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setStatsNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const summaryStats = useMemo(() => {
-    const oneHourAgo = Date.now() - 60 * 60_000;
+    const oneHourAgo = statsNow - 60 * 60_000;
     const recent = events.filter((e) => e.ts >= oneHourAgo);
     const errors = recent.filter(
       (e) => e.type.includes("error") || e.type === "command.failed",
     );
     return { total: recent.length, errors: errors.length };
-  }, [events]);
+  }, [events, statsNow]);
 
   const grouped = useMemo(() => {
     const groups = new Map<string, EventItem[]>();
@@ -202,48 +153,6 @@ export function LiveActivityPanel({
       .map(([group, items]) => ({ group, items: items.slice().reverse() }))
       .sort((a, b) => (b.items[0]?.ts ?? 0) - (a.items[0]?.ts ?? 0));
   }, [filtered]);
-
-  // 무한 스크롤
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-      const oldestTs = events[0]?.ts;
-      if (!oldestTs) {
-        setHasMore(false);
-        return;
-      }
-      const res = await fetch(`/api/activity?until=${oldestTs}&limit=50`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data.events?.length) {
-        setHasMore(false);
-        return;
-      }
-      setEvents((prev) => {
-        const existingIds = new Set(prev.map((e) => e.id));
-        const newEvents = data.events.filter(
-          (e: EventItem) => !existingIds.has(e.id),
-        );
-        return [...newEvents, ...prev];
-      });
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [events, loadingMore, hasMore]);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) loadMore();
-      },
-      { threshold: 0.1 },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadMore]);
 
   const toggleCategory = (cat: string) => {
     setCategoryFilters((prev) => {
@@ -293,17 +202,17 @@ export function LiveActivityPanel({
 
       {/* 카테고리 필터 칩 */}
       <div className="mb-3 flex flex-wrap gap-1.5">
-        {Object.keys(EVENT_CATEGORIES).map((cat) => (
+        {CORE_FILTERS.map((f) => (
           <button
-            key={cat}
+            key={f.key}
             className={`vulcan-chip min-h-[44px] text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
-              categoryFilters.has(cat)
+              categoryFilters.has(f.key)
                 ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
                 : "opacity-60 hover:opacity-100"
             }`}
-            onClick={() => toggleCategory(cat)}
+            onClick={() => toggleCategory(f.key)}
           >
-            {EVENT_CATEGORY_LABELS[cat] ?? cat}
+            {f.label}
           </button>
         ))}
         {categoryFilters.size > 0 && (
@@ -403,14 +312,6 @@ export function LiveActivityPanel({
               );
             })}
           </AnimatePresence>
-        )}
-
-        {/* 무한 스크롤 센티넬 */}
-        <div ref={sentinelRef} className="h-1" />
-        {loadingMore && (
-          <p className="py-2 text-center text-xs text-[var(--color-tertiary)]">
-            로딩 중...
-          </p>
         )}
       </div>
     </section>

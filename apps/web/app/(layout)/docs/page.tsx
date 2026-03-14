@@ -1,15 +1,7 @@
-import { DocsExplorer } from "@/components/DocsExplorer";
-import { getDocs } from "@/lib/api-server";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function DocsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const params = await searchParams;
-  const query = params.q ?? "";
-  const docs = await getDocs(query);
-  return <DocsExplorer docs={docs} initialQuery={query} />;
+export default function DocsPage() {
+  redirect("/vault?tab=docs");
 }

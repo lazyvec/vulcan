@@ -6,17 +6,9 @@ import { usePathname } from "next/navigation";
 import {
   CheckSquare,
   Users,
-  Building2,
   BarChart3,
-  ShieldCheck,
-  Sparkles,
   BookOpen,
   Brain,
-  FileText,
-  Search,
-  FolderKanban,
-  Bell,
-  Calendar,
   ChevronsLeft,
   ChevronsRight,
   DollarSign,
@@ -25,20 +17,12 @@ import {
 
 const NAV_ITEMS = [
   { href: "/tasks", label: "태스크", icon: CheckSquare },
-  { href: "/calendar", label: "캘린더", icon: Calendar },
-  { href: "/projects", label: "프로젝트", icon: FolderKanban },
+  { href: "/work-orders", label: "작업지시", icon: ClipboardList },
   { href: "/memory", label: "메모리", icon: Brain },
-  { href: "/knowledge", label: "지식", icon: Search },
-  { href: "/docs", label: "문서", icon: FileText },
   { href: "/vault", label: "볼트", icon: BookOpen },
   { href: "/team", label: "팀", icon: Users },
-  { href: "/office", label: "오피스", icon: Building2 },
-  { href: "/skills", label: "스킬", icon: Sparkles },
   { href: "/activity", label: "활동", icon: BarChart3 },
-  { href: "/work-orders", label: "작업지시", icon: ClipboardList },
   { href: "/costs", label: "비용", icon: DollarSign },
-  { href: "/approvals", label: "승인", icon: ShieldCheck },
-  { href: "/notifications", label: "알림", icon: Bell },
 ];
 
 interface SidebarProps {
@@ -127,12 +111,14 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   <Icon size={18} className={`shrink-0 transition-transform ${active ? "scale-110" : "opacity-70 group-hover:opacity-100"}`} />
                   {!isCollapsed && <span className="tracking-tight">{item.label}</span>}
                   
-                  {item.href === "/approvals" && pendingCount > 0 && (
-                    <span
-                      className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1.5 text-[10px] font-bold text-white ${isCollapsed ? "absolute -right-1 -top-1 shadow-md" : "ml-auto"}`}
+                  {item.href === "/activity" && pendingCount > 0 && (
+                    <Link
+                      href="/activity?tab=approvals"
+                      onClick={(e) => e.stopPropagation()}
+                      className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1.5 text-[10px] font-bold text-white hover:opacity-90 ${isCollapsed ? "absolute -right-1 -top-1 shadow-md" : "ml-auto"}`}
                     >
                       {pendingCount}
-                    </span>
+                    </Link>
                   )}
                 </Link>
               );

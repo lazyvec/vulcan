@@ -1,20 +1,7 @@
-import { SkillsMarketplace } from "@/components/SkillsMarketplace";
-import { getAgents, getSkills, getSkillRegistry } from "@/lib/api-server";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function SkillsPage() {
-  const [skills, agents, registry] = await Promise.all([
-    getSkills(),
-    getAgents({ includeInactive: true }),
-    getSkillRegistry(),
-  ]);
-
-  return (
-    <SkillsMarketplace
-      initialSkills={skills}
-      initialAgents={agents}
-      initialRegistry={registry}
-    />
-  );
+export default function SkillsPage() {
+  redirect("/team?tab=skills");
 }

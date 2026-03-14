@@ -2,11 +2,11 @@
 
 import { useCallback, useMemo, useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import type { CircuitBreakerConfig, DailyCostSummary } from "@vulcan/shared/types";
 import type { CBHistoryItem } from "@/lib/api-server";
-import { DollarSign, Cpu, AlertTriangle, Zap, TrendingUp, TrendingDown, Minus, ShieldAlert } from "lucide-react";
+import { DollarSign, Cpu, Zap, TrendingUp, TrendingDown, Minus, ShieldAlert } from "lucide-react";
 
 const PERIOD_OPTIONS = [
   { days: 7, label: "7일" },
@@ -52,9 +52,7 @@ export function CostDashboard({ summaries: initialSummaries, cbConfigs, cbHistor
         const data = await res.json();
         setSummaries(data.summaries ?? []);
       }
-    } catch {
-      // 실패 시 유지
-    } finally {
+    } catch { /* 실패 시 유지 */ } finally {
       setLoading(false);
     }
   }, []);
@@ -72,7 +70,6 @@ export function CostDashboard({ summaries: initialSummaries, cbConfigs, cbHistor
     [summaries],
   );
 
-  // 트렌드: 전반부 vs 후반부 비교
   const trend = useMemo(() => {
     if (summaries.length === 0) return { ratio: 0, direction: "flat" as const };
     const sorted = [...summaries].sort((a, b) => a.date.localeCompare(b.date));
@@ -88,20 +85,16 @@ export function CostDashboard({ summaries: initialSummaries, cbConfigs, cbHistor
     };
   }, [summaries]);
 
-  // 에이전트별 합계 (PieChart)
-  const byAgent = useMemo(() => {
-    const map = new Map<string, { tokens: number; cost: number; calls: number }>();
+  // 에이전트별 합계 → 텍스트 요약
+  const agentSummaryText = useMemo(() => {
+    const map = new Map<string, number>();
     for (const s of summaries) {
-      const prev = map.get(s.agentId) ?? { tokens: 0, cost: 0, calls: 0 };
-      map.set(s.agentId, {
-        tokens: prev.tokens + s.totalInputTokens + s.totalOutputTokens,
-        cost: prev.cost + s.totalCost,
-        calls: prev.calls + s.callCount,
-      });
+      map.set(s.agentId, (map.get(s.agentId) ?? 0) + s.totalCost);
     }
     return Array.from(map.entries())
-      .map(([agentId, data]) => ({ agentId, ...data }))
-      .sort((a, b) => b.cost - a.cost);
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, cost]) => `${id} $${cost.toFixed(2)}`)
+      .join(", ");
   }, [summaries]);
 
   // 일별 합계 (BarChart)
@@ -122,11 +115,12 @@ export function CostDashboard({ summaries: initialSummaries, cbConfigs, cbHistor
     };
   }, [summaries]);
 
-  // CB 상태
   const cbActiveCount = useMemo(
     () => cbConfigs.filter((c) => c.isActive).length,
     [cbConfigs],
   );
+
+  const recentCbHistory = cbHistory.slice(0, 5);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
@@ -170,170 +164,64 @@ export function CostDashboard({ summaries: initialSummaries, cbConfigs, cbHistor
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* 일별 비용 BarChart */}
+      {/* 일별 비용 BarChart */}
+      <div className="vulcan-card rounded-xl p-4">
+        <h3 className="mb-4 text-sm font-semibold text-[var(--color-foreground)]">일별 비용</h3>
+        {byDate.data.length > 0 ? (
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={byDate.data}>
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+              <Tooltip
+                contentStyle={{
+                  background: "var(--color-background)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+                formatter={(value: number) => [`$${value.toFixed(4)}`, ""]}
+              />
+              {byDate.agents.map((agentId) => (
+                <Bar key={agentId} dataKey={agentId} stackId="cost" fill={getAgentColor(agentId)} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">데이터 없음</p>
+        )}
+        {/* 에이전트별 요약 (텍스트) */}
+        {agentSummaryText && (
+          <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">{agentSummaryText}</p>
+        )}
+      </div>
+
+      {/* CB 요약 카드 + 최근 이력 */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <div className="vulcan-card rounded-xl p-4">
-          <h3 className="mb-4 text-sm font-semibold text-[var(--color-foreground)]">일별 비용</h3>
-          {byDate.data.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={byDate.data}>
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--color-background)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  formatter={(value: number) => [`$${value.toFixed(4)}`, ""]}
-                />
-                {byDate.agents.map((agentId) => (
-                  <Bar key={agentId} dataKey={agentId} stackId="cost" fill={getAgentColor(agentId)} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">데이터 없음</p>
-          )}
+          <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
+            <ShieldAlert size={16} className="text-[var(--color-destructive)]" />
+            Circuit Breaker
+          </h3>
+          <p className="text-2xl font-semibold text-[var(--color-foreground)]">{cbActiveCount}개 활성</p>
+          <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+            {cbConfigs.map((c) => `${c.agentId}: ${c.dailyTokenLimit.toLocaleString()}tok`).join(" · ") || "설정 없음"}
+          </p>
         </div>
 
-        {/* 에이전트별 PieChart */}
         <div className="vulcan-card rounded-xl p-4">
-          <h3 className="mb-4 text-sm font-semibold text-[var(--color-foreground)]">에이전트별 비용</h3>
-          {byAgent.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <ResponsiveContainer width="50%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={byAgent}
-                    dataKey="cost"
-                    nameKey="agentId"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={100}
-                    paddingAngle={2}
-                  >
-                    {byAgent.map((entry) => (
-                      <Cell key={entry.agentId} fill={getAgentColor(entry.agentId)} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: "var(--color-background)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                    formatter={(value: number) => [`$${value.toFixed(4)}`, ""]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex-1 space-y-1">
-                {byAgent.map((entry) => (
-                  <div key={entry.agentId} className="flex items-center gap-2 text-xs">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ background: getAgentColor(entry.agentId) }}
-                    />
-                    <span className="flex-1 text-[var(--color-foreground)]">{entry.agentId}</span>
-                    <span className="text-[var(--color-muted-foreground)]">
-                      ${entry.cost.toFixed(4)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          <h3 className="mb-2 text-sm font-semibold text-[var(--color-foreground)]">CB 최근 발동</h3>
+          {recentCbHistory.length === 0 ? (
+            <p className="text-sm text-[var(--color-muted-foreground)]">발동 이력 없음</p>
+          ) : (
+            <div className="space-y-1">
+              {recentCbHistory.map((h, i) => (
+                <div key={`${h.date}-${h.agentId}-${i}`} className="flex items-center justify-between text-xs">
+                  <span className="text-[var(--color-foreground)]">{h.date} · {h.agentId}</span>
+                  <span className="text-[var(--color-destructive)]">{h.count}회 · {h.totalTokens.toLocaleString()}tok</span>
+                </div>
+              ))}
             </div>
-          ) : (
-            <p className="py-12 text-center text-sm text-[var(--color-muted-foreground)]">데이터 없음</p>
           )}
-        </div>
-      </div>
-
-      {/* CB 발동 이력 */}
-      <div className="vulcan-card rounded-xl p-4">
-        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-          <ShieldAlert size={16} className="text-[var(--color-destructive)]" />
-          Circuit Breaker 발동 이력
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] text-[var(--color-muted-foreground)]">
-                <th className="pb-2 font-medium">날짜</th>
-                <th className="pb-2 font-medium">에이전트</th>
-                <th className="pb-2 font-medium">발동 횟수</th>
-                <th className="pb-2 font-medium">차단 토큰</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cbHistory.map((h, i) => (
-                <tr key={`${h.date}-${h.agentId}-${i}`} className="border-b border-[var(--color-border)]/50">
-                  <td className="py-2 text-[var(--color-foreground)]">{h.date}</td>
-                  <td className="py-2 text-[var(--color-foreground)]">{h.agentId}</td>
-                  <td className="py-2 text-[var(--color-destructive)]">{h.count}</td>
-                  <td className="py-2 text-[var(--color-muted-foreground)]">{h.totalTokens.toLocaleString()}</td>
-                </tr>
-              ))}
-              {cbHistory.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-4 text-center text-[var(--color-muted-foreground)]">
-                    발동 이력 없음
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Circuit Breaker Table */}
-      <div className="vulcan-card rounded-xl p-4">
-        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--color-foreground)]">
-          <AlertTriangle size={16} className="text-[var(--color-warning)]" />
-          Circuit Breaker 설정
-          <span className="vulcan-chip text-[10px]">{cbActiveCount}개 활성</span>
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] text-[var(--color-muted-foreground)]">
-                <th className="pb-2 font-medium">에이전트</th>
-                <th className="pb-2 font-medium">일일 상한</th>
-                <th className="pb-2 font-medium">상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cbConfigs.map((c) => (
-                <tr key={c.id} className="border-b border-[var(--color-border)]/50">
-                  <td className="py-2 text-[var(--color-foreground)]">{c.agentId}</td>
-                  <td className="py-2 text-[var(--color-muted-foreground)]">
-                    {c.dailyTokenLimit.toLocaleString()} tok
-                  </td>
-                  <td className="py-2">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        c.isActive
-                          ? "bg-[var(--color-success)]/10 text-[var(--color-success)]"
-                          : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]"
-                      }`}
-                    >
-                      {c.isActive ? "활성" : "비활성"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {cbConfigs.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="py-4 text-center text-[var(--color-muted-foreground)]">
-                    설정 없음
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

@@ -8,22 +8,19 @@ import type {
   MemoryLayer,
   HermesMemoryType,
   MemorySyncResult,
-  MemoryDecayResult,
 } from "@/lib/types";
 import {
   Search,
   RefreshCw,
-  Timer,
   Database,
   FileText,
-  FolderOpen,
+
   Layers,
   Tag,
   Eye,
   ChevronDown,
   ChevronUp,
   Sparkles,
-  Tags,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -124,30 +121,6 @@ function MemoryCard({
   );
 }
 
-function StatsBar({ stats }: { stats: MemoryStats }) {
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {[
-        { label: "전체 문서", value: stats.total, icon: Database },
-        { label: "리소스", value: stats.byLayer.resource ?? 0, icon: FolderOpen },
-        { label: "아이템", value: stats.byLayer.item ?? 0, icon: FileText },
-        { label: "카테고리", value: stats.byLayer.category ?? 0, icon: Layers },
-      ].map((item) => (
-        <div
-          key={item.label}
-          className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3"
-        >
-          <item.icon size={18} className="text-[var(--color-primary)]" />
-          <div>
-            <p className="text-lg font-semibold text-[var(--color-foreground)]">{item.value}</p>
-            <p className="text-[10px] text-[var(--color-muted-foreground)]">{item.label}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function DetailPanel({
   memory,
   onClose,
@@ -228,20 +201,16 @@ export function KnowledgeSearch({ initialStats }: KnowledgeSearchProps) {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [selectedMemory, setSelectedMemory] = useState<HermesMemory | null>(null);
-  const [layerFilter, setLayerFilter] = useState<MemoryLayer | "">("");
-  const [typeFilter, setTypeFilter] = useState<HermesMemoryType | "">("");
   const [semanticMode, setSemanticMode] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
   const doSearch = useCallback(
-    async (q: string, layer: string, type: string, semantic: boolean) => {
+    async (q: string, semantic: boolean) => {
       setLoading(true);
       try {
         const params = new URLSearchParams();
         if (q) params.set("q", q);
-        if (layer) params.set("layer", layer);
-        if (type) params.set("type", type);
 
         const endpoint = semantic && q
           ? `${API_BASE}/api/memories/semantic`
@@ -262,7 +231,7 @@ export function KnowledgeSearch({ initialStats }: KnowledgeSearchProps) {
 
   // 초기 로드: 전체 목록
   useEffect(() => {
-    void doSearch("", "", "", false);
+    void doSearch("", false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -270,12 +239,12 @@ export function KnowledgeSearch({ initialStats }: KnowledgeSearchProps) {
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      void doSearch(query, layerFilter, typeFilter, semanticMode);
+      void doSearch(query, semanticMode);
     }, 300);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [query, layerFilter, typeFilter, semanticMode, doSearch]);
+  }, [query, semanticMode, doSearch]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -294,41 +263,11 @@ export function KnowledgeSearch({ initialStats }: KnowledgeSearchProps) {
       const statsRes = await fetch(`${API_BASE}/api/memories/stats`);
       const statsData = await statsRes.json();
       setStats(statsData.stats);
-      void doSearch(query, layerFilter, typeFilter, semanticMode);
+      void doSearch(query, semanticMode);
     } catch {
       toast("error", "동기화 실패");
     } finally {
       setSyncing(false);
-    }
-  };
-
-  const handleDecay = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/memories/decay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ halfLifeDays: 30 }),
-      });
-      const data = (await res.json()) as { ok: boolean; result: MemoryDecayResult };
-      toast(
-        "success",
-        `Decay 완료: ${data.result.processed}건 처리, ${data.result.expired}건 만료`,
-      );
-    } catch {
-      toast("error", "Decay 실패");
-    }
-  };
-
-  const handleClassifyAll = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/memories/classify-all`, {
-        method: "POST",
-      });
-      const data = (await res.json()) as { ok: boolean; total: number; updated: number };
-      toast("success", `분류 완료: ${data.total}건 중 ${data.updated}건 업데이트`);
-      void doSearch(query, layerFilter, typeFilter, semanticMode);
-    } catch {
-      toast("error", "분류 실패");
     }
   };
 
@@ -339,44 +278,21 @@ export function KnowledgeSearch({ initialStats }: KnowledgeSearchProps) {
         <div>
           <h1 className="text-2xl font-bold text-[var(--color-foreground)]">지식 검색</h1>
           <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Hermes 메모리 파일 인덱스 ({formatBytes(stats.totalFileSize)})
+            {stats.total}개 문서 · {formatBytes(stats.totalFileSize)}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleClassifyAll}
-            title="규칙 기반 자동 분류"
-          >
-            <Tags size={14} />
-            분류
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleDecay}
-            title="Temporal Decay 실행"
-          >
-            <Timer size={14} />
-            Decay
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSync}
-            disabled={syncing}
-          >
-            <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
-            {syncing ? "동기화 중…" : "동기화"}
-          </Button>
-        </div>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleSync}
+          disabled={syncing}
+        >
+          <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+          {syncing ? "동기화 중…" : "동기화"}
+        </Button>
       </div>
 
-      {/* 통계 */}
-      <StatsBar stats={stats} />
-
-      {/* 검색 바 + 필터 */}
+      {/* 검색 바 */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search
@@ -404,25 +320,6 @@ export function KnowledgeSearch({ initialStats }: KnowledgeSearchProps) {
           <Sparkles size={14} />
           {semanticMode ? "시맨틱" : "키워드"}
         </button>
-        <select
-          value={layerFilter}
-          onChange={(e) => setLayerFilter(e.target.value as MemoryLayer | "")}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)]"
-        >
-          <option value="">전체 레이어</option>
-          <option value="resource">리소스</option>
-          <option value="item">아이템</option>
-          <option value="category">카테고리</option>
-        </select>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as HermesMemoryType | "")}
-          className="rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)]"
-        >
-          <option value="">전체 유형</option>
-          <option value="fact">사실</option>
-          <option value="skill">스킬</option>
-        </select>
       </div>
 
       {/* 상세 패널 */}

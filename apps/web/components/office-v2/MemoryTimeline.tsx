@@ -61,7 +61,7 @@ export function MemoryTimeline() {
           Memory Timeline
         </span>
         <Link
-          href="/knowledge"
+          href="/memory?tab=knowledge"
           className="text-[10px] font-bold text-[var(--color-primary)] hover:underline"
         >
           전체보기

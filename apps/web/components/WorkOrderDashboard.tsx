@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { WorkOrder, WorkflowTemplate } from "@vulcan/shared/types";
-import type { WorkflowStatusResponse } from "@/lib/api-server";
+import type { WorkOrder } from "@vulcan/shared/types";
 import {
   ClipboardList,
   CheckCircle2,
@@ -15,7 +14,6 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { WorkflowPanel } from "./WorkflowPanel";
 
 interface Props {
   workOrders: WorkOrder[];
@@ -24,8 +22,6 @@ interface Props {
     byStatus: Record<string, number>;
     byAgent: Record<string, number>;
   };
-  workflowTemplates?: WorkflowTemplate[];
-  activeWorkflows?: WorkflowStatusResponse[];
 }
 
 const STATUS_CONFIG: Record<
@@ -75,7 +71,7 @@ function PriorityDot({ priority }: { priority: string }) {
   );
 }
 
-export function WorkOrderDashboard({ workOrders, stats, workflowTemplates, activeWorkflows }: Props) {
+export function WorkOrderDashboard({ workOrders, stats }: Props) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -100,21 +96,13 @@ export function WorkOrderDashboard({ workOrders, stats, workflowTemplates, activ
   }, [workOrders, statusFilter, agentFilter]);
 
   const activeCount = stats.byStatus["in_progress"] ?? 0;
-  const pendingCount = stats.byStatus["pending"] ?? 0;
   const completedCount = stats.byStatus["completed"] ?? 0;
   const failedCount = stats.byStatus["failed"] ?? 0;
+  const pendingCount = stats.byStatus["pending"] ?? 0;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       <h2 className="section-title text-xl font-semibold">WorkOrder 대시보드</h2>
-
-      {/* Workflow Panel */}
-      {workflowTemplates && workflowTemplates.length > 0 && (
-        <WorkflowPanel
-          templates={workflowTemplates}
-          initialWorkflows={activeWorkflows ?? []}
-        />
-      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -228,12 +216,13 @@ function WorkOrderCard({
       {isExpanded && (
         <div className="border-t border-[var(--color-border)] px-4 pb-4 pt-3 text-sm">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <h4 className="mb-1 text-xs font-medium text-[var(--color-muted-foreground)]">
-                수락 기준
-              </h4>
-              {criteria.length > 0 ? (
-                <ul className="space-y-1">
+            {/* 수락 기준 — 기본 접힘 */}
+            {criteria.length > 0 && (
+              <details>
+                <summary className="cursor-pointer py-2 min-h-[44px] text-xs font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
+                  수락 기준 ({criteria.length})
+                </summary>
+                <ul className="mt-1 space-y-1">
                   {criteria.map((c, i) => (
                     <li key={i} className="flex items-start gap-1.5 text-xs text-[var(--color-foreground)]">
                       <span className="mt-0.5 text-[var(--color-muted-foreground)]">•</span>
@@ -241,10 +230,8 @@ function WorkOrderCard({
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="text-xs text-[var(--color-muted-foreground)]">정의되지 않음</p>
-              )}
-            </div>
+              </details>
+            )}
             <div className="space-y-2">
               <div>
                 <span className="text-xs text-[var(--color-muted-foreground)]">타임아웃: </span>
@@ -254,12 +241,6 @@ function WorkOrderCard({
                 <div>
                   <span className="text-xs text-[var(--color-muted-foreground)]">검증자: </span>
                   <span className="text-xs text-[var(--color-foreground)]">{wo.verifierAgentId}</span>
-                </div>
-              )}
-              {wo.checkpointJson && (
-                <div>
-                  <span className="text-xs text-[var(--color-muted-foreground)]">체크포인트: </span>
-                  <span className="text-xs text-[var(--color-success)]">저장됨</span>
                 </div>
               )}
               {wo.linkedTaskId && (
