@@ -888,7 +888,7 @@ export function VaultExplorer({
         {/* 왼쪽 — 파일 트리 or 검색 결과 */}
         <div
           className={`vulcan-card flex flex-col overflow-hidden p-2 vault-mobile-list ${selectedPath ? "vault-mobile-list--hidden" : ""}`}
-          style={{ "--vault-sidebar-w": `${sidebarWidth}px` } as React.CSSProperties}
+          style={{ width: `${sidebarWidth}px`, minWidth: "180px", maxWidth: "600px", flexShrink: 0 }}
         >
           <div className="vault-sidebar-scroll">
             {searchResults && query.trim() ? (
@@ -920,7 +920,7 @@ export function VaultExplorer({
 
         {/* 리사이즈 핸들 */}
         <div
-          className="vault-resize-handle hidden lg:block"
+          className="vault-resize-handle"
           onMouseDown={handleResizeStart}
         />
 
