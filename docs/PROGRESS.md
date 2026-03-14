@@ -1,6 +1,54 @@
 # PROGRESS
 
-<!-- last-session --> **마지막 세션**: 2026-03-13 | 브랜치: `main`
+<!-- last-session --> **마지막 세션**: 2026-03-14 | 브랜치: `main`
+
+## 2026-03-14: UI/UX 전면 리뉴얼 — Claude의 감성과 편의성 주입
+
+### 요약
+Vulcan Mission Control의 시각적 완성도와 사용성을 글로벌 최고 수준으로 끌어올리기 위한 전면 리뉴얼 완료. Claude 특유의 부드럽고 지능적인 디자인 철학을 이식하여 프리미엄 대시보드 경험 구축.
+
+### 변경 내용
+
+#### 1. 디자인 시스템 개편 (Claude-Style Foundation)
+- **Soft Minimalism**: 전역적으로 부드러운 그림자(`--shadow-claude`)와 미세한 안쪽 그림자 적용.
+- **Glassmorphism**: 사이드바, 상단바, 칸반 레인 등에 `backdrop-blur`와 유리 질감 레이아웃 적용.
+- **Visual Breathing**: 여백 시스템 최적화 및 타이포그래피 위계(font-weight, tracking) 정교화.
+- **Color Polish**: Hearth 포인트 컬러의 농도를 조절하여 시각적 피로도를 낮추고 시각적 위계 명확화.
+
+#### 2. 살아있는 인터랙션 (Living Micro-interactions)
+- **Spring Physics**: `Framer Motion`을 활용하여 모든 버튼, 모달, 카드에 실제 물리 법칙이 적용된 스프링 애니메이션 주입.
+- **Breathing Avatars**: 에이전트 아바타에 상태별 고유 리듬의 박동(`Pulse`) 효과 추가 (생동감 부여).
+- **Interactive Feedback**: 버튼 클릭 시 탄성 피드백 및 호버 시 자연스러운 강조 효과.
+
+#### 3. 모바일 최적화 및 맥락적 편의성
+- **Adaptive Bottom Sheets**: 모바일 환경에서 모든 모달을 하단 바텀 시트로 자동 전환. 한 손 조작성 극대화.
+- **Gesture Support**: 바텀 시트에 상단 드래그 핸들 디자인 추가.
+- **Floating Search**: 상단바 검색창을 배경 위로 떠 있는 스타일로 개선하여 접근성 강화.
+- **Safe Area**: iOS 등 모바일 기기의 Safe Area 대응 및 터치 타겟 48px+ 확보.
+
+#### 4. 인간 중심적 사용자 경험 (Empathetic UX)
+- **Warm Micro-copy**: 기계적인 메시지를 "에이전트가 새로운 지시를 기다리고 있어요"와 같이 친절하고 상황 중심적인 언어로 교체.
+- **Delightful Empty States**: 빈 화면에 은은한 그라데이션 광채와 아이콘을 배치하여 긍정적인 다음 행동 유도.
+
+### 테스트 결과
+- ✅ 린트: `pnpm lint` 통과 (any 타입 우회 및 미사용 변수 제거)
+- ✅ 타입체크: `tsc --noEmit` 통과
+- ✅ 빌드: `pnpm build` 성공 (Next.js 16 최적화 빌드)
+- ✅ 스모크 테스트: 핵심 페이지 13종 정상 렌더링 확인
+
+### 변경 파일 (28개+)
+- `apps/web/styles/tokens.css` — 디자인 토큰 전면 개편
+- `apps/web/app/globals.css` — 전역 스타일 및 유리 질감 유틸리티 추가
+- `apps/web/components/ui/Button.tsx` — 스프링 애니메이션 버튼 구현
+- `apps/web/components/ui/Modal.tsx` — 어댑티브 바텀 시트 구현
+- `apps/web/components/ui/EmptyState.tsx` — 감성적인 엠티 스테이트 구현
+- `apps/web/components/Sidebar.tsx` — 유리 질감 사이드바 및 애니메이션
+- `apps/web/components/Topbar.tsx` — 플로팅 검색바 및 위계 조정
+- `apps/web/components/AgentOfficeView.tsx` — 살아있는 아바타 및 팝오버 리뉴얼
+- `apps/web/components/KanbanBoard.tsx` — 물리적 질감의 드래그 앤 드롭 보드
+- 기타 20여 개 도메인 컴포넌트 접근성 및 터치 타겟 수정 완료
+
+---
 
 ## 2026-03-13: Phase 11 잔여 항목 완료
 
