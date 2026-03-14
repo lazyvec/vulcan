@@ -171,7 +171,7 @@ function SortableTaskCard({
         </div>
       )}
       <div className="flex items-center justify-between gap-2 border-t border-glass-border pt-2.5 mt-1">
-        <p className="truncate text-[10px] font-medium text-[var(--color-tertiary)] uppercase tracking-tighter">
+        <p className="truncate text-[10px] font-medium text-[var(--color-tertiary)] uppercase tracking-tighter" suppressHydrationWarning>
           ID: {task.id.split("-")[0]} · {formatUpdatedAt(task.updatedAt)}
         </p>
         <button

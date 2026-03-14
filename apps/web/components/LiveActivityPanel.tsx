@@ -376,7 +376,7 @@ export function LiveActivityPanel({
                           <div className="flex-1">
                             <p className="text-sm text-[var(--color-foreground)]">{event.summary}</p>
                             <p className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--color-tertiary)]">
-                              <span>{formatTime(event.ts)}</span>
+                              <span suppressHydrationWarning>{formatTime(event.ts)}</span>
                               {event.agentId && (
                                 <Link
                                   href="/team"

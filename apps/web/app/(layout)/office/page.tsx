@@ -1,4 +1,4 @@
-import { AgentOfficeView } from "@/components/AgentOfficeView";
+import { OfficeFloorMap } from "@/components/office-v2/OfficeFloorMap";
 import { getAgents, getDailyCostSummaries, getWorkOrders } from "@/lib/api-server";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function OfficePage() {
   }
 
   return (
-    <AgentOfficeView
+    <OfficeFloorMap
       initialAgents={agents}
       agentWorkOrders={agentWorkOrders}
       agentTokenUsage={agentTokenUsage}

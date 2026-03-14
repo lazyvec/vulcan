@@ -2,6 +2,48 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-14 | 브랜치: `main`
 
+## 2026-03-14: Office View v2 — 2D 픽셀아트 인터랙티브 오피스
+
+### 요약
+에이전트 오피스 뷰를 6존 CSS Grid → 2D 탑다운 바닥맵으로 전면 업그레이드. 에이전트 이동 애니메이션, 말풍선, 히트맵, XP 랭킹, 토큰 바, 이벤트 트레일, 메모리 타임라인을 추가하여 한눈에 모든 에이전트 활동을 파악 가능한 대시보드 구현.
+
+### 변경 내용
+
+#### 신규 컴포넌트 (16개, `components/office-v2/`)
+- **바닥맵**: `OfficeFloorMap.tsx`, `FloorZone.tsx` — 16:9 비율 position:relative/absolute 컨테이너, 6개 존 배경
+- **스프라이트**: `PixelAvatar.tsx`, `AgentSprite.tsx`, `sprite-map.ts` — SVG 8x8 결정론적 픽셀아트 아바타
+- **이동**: `MovingAgent.tsx` — framer-motion spring 물리 기반 존 간 이동 애니메이션
+- **인터랙션**: `SpeechBubble.tsx`, `AgentPopoverV2.tsx` — 말풍선(40자 요약) + 팝오버(역할태그/체류시간/토큰/미션)
+- **대시보드**: `MiniTokenBar.tsx`, `ActivityHeatmap.tsx`, `AgentRanking.tsx`, `EventTrail.tsx`, `MemoryTimeline.tsx`, `OfficeHeader.tsx`
+- **타입/상수**: `types.ts`, `constants.ts` — FloorZoneConfig, SpriteConfig, XP 레벨 공식
+
+#### 수정 파일
+- `app/(layout)/office/page.tsx` — OfficeFloorMap 컴포넌트로 교체
+- `styles/tokens.css` — 바닥 그리드 CSS 변수 + prefers-reduced-motion 지원
+- `AgentOfficeView.tsx` → `AgentOfficeView.legacy.tsx` 리네임 (복원 가능)
+
+#### 핵심 설계 결정
+- **PixiJS/Phaser 없이 framer-motion + DOM** — 에이전트 10명 수준에서 Canvas 불필요, 접근성/SSR 호환
+- **에이전트는 바닥맵의 직접 자식** — 존은 배경 영역, 스프라이트는 absolute로 이동
+- **useSyncExternalStore** — React 19 순수 렌더링 규칙 준수 (체류 시간 타이머)
+- **lg 브레이크포인트** — 1024px부터 사이드 패널 분리 (노트북 최적화)
+
+#### 접근성 (크로스체크 반영)
+- role="dialog" + ESC 닫기 + 포커스 이동 (팝오버)
+- role="application" + aria-label (바닥맵)
+- role="region" + aria-label (FloorZone)
+- aria-hidden (상태 dot, 이모지 뱃지, 아이콘)
+- prefers-reduced-motion: reduce 지원
+- tertiary → muted-foreground 색상 일괄 수정 (WCAG AA 대비비)
+
+#### 검증
+- pnpm lint: 통과
+- tsc --noEmit: 통과
+- pnpm build: 통과
+- 크로스체크: Sonnet 코드리뷰 + Sonnet UX리뷰 (Codex/Gemini 쿼타 초과로 내부 에이전트 사용)
+
+---
+
 ## 2026-03-14: UI/UX 전면 리뉴얼 — Claude의 감성과 편의성 주입
 
 ### 요약

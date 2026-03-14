@@ -69,6 +69,11 @@
 
   /* Spring Physics Constants (For Framer Motion)
      Stiffness: 260, Damping: 26 (Claude Default Style) */
+
+  /* Office Floor Map */
+  --floor-grid-color: var(--color-foreground);
+  --floor-grid-opacity: 0.03;
+  --floor-grid-size: 6.25%;
 }
 
 /* ── Claude-Style Living Animations ──────────────────────────── */
@@ -97,6 +102,14 @@
 
 .agent-processing {
   animation: claude-glow 2s ease-in-out infinite;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .agent-alive-pulse,
+  .agent-processing {
+    animation: none;
+  }
 }
 
 /* Base Utility Classes */
