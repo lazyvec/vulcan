@@ -330,7 +330,7 @@ export function MarkdownEditor({
               type="button"
               title={title}
               onClick={() => viewRef.current && action(viewRef.current)}
-              className="flex shrink-0 items-center justify-center rounded p-2 min-h-[44px] min-w-[44px] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+              className="flex shrink-0 items-center justify-center rounded p-2 min-h-[44px] min-w-[44px] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
             >
               <Icon size={16} />
             </button>

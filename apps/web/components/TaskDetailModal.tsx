@@ -205,7 +205,7 @@ export function TaskDetailModal({
             {!isCreate && onTaskDeleted && (
               <button
                 type="button"
-                className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--color-destructive-text)] hover:bg-[var(--color-destructive-bg)]"
+                className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--color-destructive-text)] hover:bg-[var(--color-destructive-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                 onClick={handleDelete}
                 disabled={deleting}
                 title="Delete task"
@@ -215,7 +215,7 @@ export function TaskDetailModal({
             )}
             <button
               type="button"
-              className="rounded p-1 text-[var(--color-tertiary)] hover:bg-[var(--color-muted)]"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded p-1 text-[var(--color-tertiary)] hover:bg-[var(--color-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
               onClick={onClose}
             >
               <X size={18} />
@@ -228,7 +228,7 @@ export function TaskDetailModal({
           <div className="flex border-b border-[var(--color-border)] px-5">
             <button
               type="button"
-              className={`px-3 py-2 text-xs font-medium transition-colors ${
+              className={`min-h-[44px] px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                 activeTab === "details"
                   ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]"
                   : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
@@ -239,7 +239,7 @@ export function TaskDetailModal({
             </button>
             <button
               type="button"
-              className={`flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors ${
+              className={`flex min-h-[44px] items-center gap-1 px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                 activeTab === "activity"
                   ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]"
                   : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
@@ -268,7 +268,7 @@ export function TaskDetailModal({
               Title
             </label>
             <input
-              className="vulcan-input w-full"
+              className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Task title..."
@@ -281,7 +281,7 @@ export function TaskDetailModal({
               Description
             </label>
             <textarea
-              className="vulcan-input w-full"
+              className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -296,7 +296,7 @@ export function TaskDetailModal({
                 Lane
               </label>
               <select
-                className="vulcan-input w-full"
+                className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                 value={lane}
                 onChange={(e) => setLane(e.target.value as TaskLane)}
               >
@@ -312,7 +312,7 @@ export function TaskDetailModal({
                 Priority
               </label>
               <select
-                className="vulcan-input w-full"
+                className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
               >
@@ -328,7 +328,7 @@ export function TaskDetailModal({
                 Assignee
               </label>
               <select
-                className="vulcan-input w-full"
+                className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                 value={assigneeAgentId}
                 onChange={(e) => setAssigneeAgentId(e.target.value)}
               >
@@ -348,7 +348,7 @@ export function TaskDetailModal({
               Tags (comma-separated)
             </label>
             <input
-              className="vulcan-input w-full"
+              className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
               placeholder="e.g. frontend, bugfix, urgent"
@@ -402,7 +402,7 @@ export function TaskDetailModal({
 
               <div className="mt-3 flex gap-2">
                 <input
-                  className="vulcan-input flex-1"
+                  className="vulcan-input flex-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                   placeholder="Add a comment..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
@@ -415,11 +415,11 @@ export function TaskDetailModal({
                 />
                 <button
                   type="button"
-                  className="flex items-center gap-1 rounded border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 disabled:opacity-50"
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                   onClick={() => void handleAddComment()}
                   disabled={!newComment.trim()}
                 >
-                  <Send size={12} />
+                  <Send size={14} />
                 </button>
               </div>
             </div>
@@ -429,17 +429,17 @@ export function TaskDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] px-5 py-3">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-[var(--color-border)] px-5 py-3">
           <button
             type="button"
-            className="rounded border border-[var(--color-border)] px-4 py-1.5 text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
+            className="flex min-h-[44px] items-center justify-center rounded border border-[var(--color-border)] px-4 py-1.5 text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
             type="button"
-            className="rounded border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
+            className="flex min-h-[44px] items-center justify-center rounded border border-[var(--color-primary)] bg-[var(--color-primary)] px-4 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2"
             onClick={() => void handleSave()}
             disabled={saving || !title.trim()}
           >

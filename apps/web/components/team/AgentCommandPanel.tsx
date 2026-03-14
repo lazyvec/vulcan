@@ -146,7 +146,7 @@ export function AgentCommandPanel({
       <div className="space-y-3">
         <div>
           <label htmlFor={`${fieldId}-agent`} className="mb-1 block caption-text">대상 에이전트</label>
-          <select id={`${fieldId}-agent`} value={selectedAgentId} onChange={(e) => onSelectAgent(e.target.value)} className="vulcan-input w-full">
+          <select id={`${fieldId}-agent`} value={selectedAgentId} onChange={(e) => onSelectAgent(e.target.value)} className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]">
             {agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name} {a.isActive === false ? "(비활성)" : ""}
@@ -156,7 +156,7 @@ export function AgentCommandPanel({
         </div>
         <div>
           <label htmlFor={`${fieldId}-msg`} className="mb-1 block caption-text">메시지</label>
-          <textarea id={`${fieldId}-msg`} value={message} onChange={(e) => setMessage(e.target.value)} className="vulcan-input min-h-[96px] w-full resize-y" />
+          <textarea id={`${fieldId}-msg`} value={message} onChange={(e) => setMessage(e.target.value)} className="vulcan-input min-h-[96px] w-full resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]" />
         </div>
         <div>
           <label htmlFor={`${fieldId}-label`} className="mb-1 block caption-text">태스크 레이블</label>
@@ -165,7 +165,7 @@ export function AgentCommandPanel({
             value={taskLabel}
             onChange={(e) => setTaskLabel(e.target.value)}
             onBlur={() => setTaskLabel((prev) => normalizeTaskLabel(prev))}
-            className="vulcan-input w-full"
+            className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           />
           <p className="mt-1 text-[11px] text-[var(--color-tertiary)]">예: `status-check` (a-z, 0-9, -, _)</p>
         </div>

@@ -113,7 +113,7 @@ export function WorkflowPanel({ templates, initialWorkflows }: Props) {
                 type="button"
                 onClick={() => handleTrigger(tmpl.id)}
                 disabled={triggering}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-50"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2"
                 style={{ background: "var(--color-primary)" }}
               >
                 {triggering ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}

@@ -404,7 +404,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "", workOrder
           <span className="vulcan-chip text-xs">에이전트 {agents.length}</span>
           <button
             type="button"
-            className="flex items-center gap-1 rounded border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-2 py-1 text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20"
+            className="flex min-h-[44px] items-center gap-1 rounded border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 text-sm font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
             onClick={() => setShowCreateModal(true)}
           >
             <Plus size={12} />
@@ -413,13 +413,13 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "", workOrder
         </div>
         <div className="flex flex-col gap-2 lg:flex-row">
           <input
-            className="vulcan-input w-full lg:max-w-sm"
+            className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] lg:max-w-sm"
             placeholder="제목, 설명 또는 ID로 검색..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           <select
-            className="vulcan-input w-full lg:w-44"
+            className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] lg:w-44"
             aria-label="에이전트별 필터"
             value={assigneeFilter}
             onChange={(event) => setAssigneeFilter(event.target.value)}
@@ -432,7 +432,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "", workOrder
             ))}
           </select>
           <select
-            className="vulcan-input w-full lg:w-36"
+            className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] lg:w-36"
             aria-label="우선순위별 필터"
             value={priorityFilter}
             onChange={(event) => setPriorityFilter(event.target.value)}

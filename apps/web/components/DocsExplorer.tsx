@@ -41,7 +41,7 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
     <div>
       <div className="mb-4">
         <input
-          className="vulcan-input max-w-sm"
+          className="vulcan-input max-w-sm min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="문서 검색..."
@@ -54,7 +54,7 @@ export function DocsExplorer({ docs, initialQuery = "" }: DocsExplorerProps) {
               type="button"
               key={doc.id}
               onClick={() => setSelectedId(doc.id)}
-              className={`rounded-lg border p-4 text-left transition-colors ${
+              className={`rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                 doc.id === selected?.id
                   ? "border-[var(--color-primary)] bg-[var(--color-primary-bg)]"
                   : "border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]"

@@ -138,7 +138,7 @@ export function CostDashboard({ summaries: initialSummaries, cbConfigs, cbHistor
             <button
               key={opt.days}
               type="button"
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-md px-3 py-1 min-h-[44px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                 selectedDays === opt.days
                   ? "bg-[var(--color-primary)] text-white"
                   : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"

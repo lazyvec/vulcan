@@ -137,7 +137,7 @@ export function NotificationSettings({ initialPreferences, initialLogs }: Props)
                 type="button"
                 disabled={saving}
                 onClick={() => toggleCategory(cat.key)}
-                className={`rounded-[var(--radius-control)] border px-3 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-[var(--radius-control)] border px-3 py-2 min-h-[44px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                   enabled
                     ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                     : "border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:border-[var(--color-primary)]"
@@ -160,7 +160,7 @@ export function NotificationSettings({ initialPreferences, initialLogs }: Props)
             type="button"
             disabled={saving}
             onClick={toggleSilentHours}
-            className={`rounded-[var(--radius-control)] px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-[var(--radius-control)] px-3 py-1 min-h-[44px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
               silentHours
                 ? "bg-[var(--color-primary)] text-white"
                 : "border border-[var(--color-border)] text-[var(--color-muted-foreground)]"
@@ -174,7 +174,7 @@ export function NotificationSettings({ initialPreferences, initialLogs }: Props)
             <select
               value={silentHours.startHour}
               onChange={(e) => updateSilentHour("startHour", Number(e.target.value))}
-              className="rounded border border-[var(--color-border)] bg-transparent px-2 py-1"
+              className="rounded border border-[var(--color-border)] bg-transparent px-2 py-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
             >
               {Array.from({ length: 24 }, (_, i) => (
                 <option key={i} value={i}>
@@ -199,20 +199,19 @@ export function NotificationSettings({ initialPreferences, initialLogs }: Props)
         )}
       </div>
 
-      {/* 테스트 발송 */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
           disabled={testing}
           onClick={sendTestNotification}
-          className="min-h-[44px] rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          className="min-h-[44px] rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2"
         >
           {testing ? "발송 중..." : "테스트 알림 발송"}
         </button>
         <button
           type="button"
           onClick={refreshLogs}
-          className="min-h-[44px] rounded-[var(--radius-control)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-foreground)] transition-opacity hover:opacity-80"
+          className="min-h-[44px] rounded-[var(--radius-control)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-foreground)] transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
         >
           로그 새로고침
         </button>

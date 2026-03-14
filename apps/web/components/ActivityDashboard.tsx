@@ -209,7 +209,7 @@ export function ActivityDashboard({ initialStats, initialEvents, initialTotal, a
             <div className="ml-auto flex flex-wrap items-center gap-1.5">
               <Filter size={14} className="text-[var(--color-tertiary)]" />
               <button
-                className={`vulcan-chip text-xs ${!categoryFilter ? "bg-[var(--color-surface-hover)] text-[var(--color-foreground)]" : ""}`}
+                className={`vulcan-chip min-h-[44px] text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${!categoryFilter ? "bg-[var(--color-surface-hover)] text-[var(--color-foreground)]" : ""}`}
                 onClick={() => setCategoryFilter(null)}
               >
                 전체
@@ -217,7 +217,7 @@ export function ActivityDashboard({ initialStats, initialEvents, initialTotal, a
               {Object.keys(EVENT_CATEGORIES).map((cat) => (
                 <button
                   key={cat}
-                  className={`vulcan-chip text-xs ${categoryFilter === cat ? "bg-[var(--color-surface-hover)] text-[var(--color-foreground)]" : ""}`}
+                  className={`vulcan-chip min-h-[44px] text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${categoryFilter === cat ? "bg-[var(--color-surface-hover)] text-[var(--color-foreground)]" : ""}`}
                   onClick={() => setCategoryFilter(cat === categoryFilter ? null : cat)}
                 >
                   {EVENT_CATEGORY_LABELS[cat] ?? cat}

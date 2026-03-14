@@ -109,7 +109,7 @@ export function GatewayOpsPanel() {
           id={`${fieldId}-config`}
           value={configText}
           onChange={(e) => setConfigText(e.target.value)}
-          className="vulcan-input min-h-[120px] w-full resize-y font-mono text-[11px]"
+          className="vulcan-input min-h-[120px] w-full resize-y font-mono text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
         />
       </div>
 

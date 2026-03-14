@@ -23,7 +23,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className={`vulcan-input w-full ${error ? "border-[var(--color-destructive)]" : ""} ${className}`}
+          className={`vulcan-input w-full min-h-[44px] md:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${error ? "border-[var(--color-destructive)]" : ""} ${className}`}
           {...rest}
         >
           {children}

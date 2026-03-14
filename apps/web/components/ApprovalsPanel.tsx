@@ -200,17 +200,17 @@ export function ApprovalsPanel({ initialApprovals, initialPolicies, deepLinkActi
           {showPolicyForm && (
             <div className="vulcan-card space-y-3 p-4">
               <h3 className="section-title">{editingPolicy ? "정책 수정" : "새 정책"}</h3>
-              <input className="vulcan-input w-full" placeholder="정책 이름" value={policyForm.name} onChange={(e) => setPolicyForm((p) => ({ ...p, name: e.target.value }))} />
-              <input className="vulcan-input w-full" placeholder="설명 (선택)" value={policyForm.description} onChange={(e) => setPolicyForm((p) => ({ ...p, description: e.target.value }))} />
+              <input className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]" placeholder="정책 이름" value={policyForm.name} onChange={(e) => setPolicyForm((p) => ({ ...p, name: e.target.value }))} />
+              <input className="vulcan-input w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]" placeholder="설명 (선택)" value={policyForm.description} onChange={(e) => setPolicyForm((p) => ({ ...p, description: e.target.value }))} />
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                <input className="vulcan-input" placeholder="에이전트 ID (선택)" value={policyForm.matchAgentId} onChange={(e) => setPolicyForm((p) => ({ ...p, matchAgentId: e.target.value }))} />
-                <select className="vulcan-input" value={policyForm.matchMode} onChange={(e) => setPolicyForm((p) => ({ ...p, matchMode: e.target.value }))}>
+                <input className="vulcan-input min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]" placeholder="에이전트 ID (선택)" value={policyForm.matchAgentId} onChange={(e) => setPolicyForm((p) => ({ ...p, matchAgentId: e.target.value }))} />
+                <select className="vulcan-input min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]" value={policyForm.matchMode} onChange={(e) => setPolicyForm((p) => ({ ...p, matchMode: e.target.value }))}>
                   <option value="">모드 (전체)</option>
                   <option value="delegate">위임</option>
                   <option value="direct">직접</option>
                 </select>
-                <input className="vulcan-input" placeholder="커맨드 패턴 regex (선택)" value={policyForm.matchCommandPattern} onChange={(e) => setPolicyForm((p) => ({ ...p, matchCommandPattern: e.target.value }))} />
-                <input className="vulcan-input" placeholder="자동 승인 (분)" type="number" value={policyForm.autoApproveMinutes} onChange={(e) => setPolicyForm((p) => ({ ...p, autoApproveMinutes: e.target.value }))} />
+                <input className="vulcan-input min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]" placeholder="커맨드 패턴 regex (선택)" value={policyForm.matchCommandPattern} onChange={(e) => setPolicyForm((p) => ({ ...p, matchCommandPattern: e.target.value }))} />
+                <input className="vulcan-input min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]" placeholder="자동 승인 (분)" type="number" value={policyForm.autoApproveMinutes} onChange={(e) => setPolicyForm((p) => ({ ...p, autoApproveMinutes: e.target.value }))} />
               </div>
               <label className="flex items-center gap-2 text-sm text-[var(--color-foreground)]">
                 <input type="checkbox" checked={policyForm.isActive} onChange={(e) => setPolicyForm((p) => ({ ...p, isActive: e.target.checked }))} />

@@ -125,11 +125,11 @@ export function WorkOrderDashboard({ workOrders, stats, workflowTemplates, activ
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-sm text-[var(--color-foreground)]"
+          className="min-h-[44px] rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-sm text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
         >
           <option value="all">모든 상태</option>
           {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
@@ -142,7 +142,7 @@ export function WorkOrderDashboard({ workOrders, stats, workflowTemplates, activ
         <select
           value={agentFilter}
           onChange={(e) => setAgentFilter(e.target.value)}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-sm text-[var(--color-foreground)]"
+          className="min-h-[44px] rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-sm text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
         >
           <option value="all">모든 에이전트</option>
           {agents.map((a) => (
@@ -200,7 +200,7 @@ function WorkOrderCard({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 p-4 text-left"
+        className="flex min-h-[44px] w-full items-center gap-3 p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] rounded-xl"
       >
         <PriorityDot priority={wo.priority} />
         <div className="flex-1 min-w-0">

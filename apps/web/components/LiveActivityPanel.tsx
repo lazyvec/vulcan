@@ -278,7 +278,7 @@ export function LiveActivityPanel({
           {paused ? "일시정지" : wsConnected ? "라이브 · WS" : "라이브 · 폴링"}
         </span>
         <select
-          className="vulcan-input w-auto"
+          className="vulcan-input w-auto min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           aria-label="시간 범위 선택"
           value={range}
           onChange={(event) => setRange(event.target.value as ActivityRange)}
@@ -294,7 +294,7 @@ export function LiveActivityPanel({
         {Object.keys(EVENT_CATEGORIES).map((cat) => (
           <button
             key={cat}
-            className={`vulcan-chip text-[10px] transition-colors ${
+            className={`vulcan-chip min-h-[44px] text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
               categoryFilters.has(cat)
                 ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
                 : "opacity-60 hover:opacity-100"
@@ -306,7 +306,7 @@ export function LiveActivityPanel({
         ))}
         {categoryFilters.size > 0 && (
           <button
-            className="vulcan-chip text-[10px] text-[var(--color-destructive-text)] hover:bg-[var(--color-destructive-bg)]"
+            className="vulcan-chip min-h-[44px] text-[10px] text-[var(--color-destructive-text)] hover:bg-[var(--color-destructive-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-destructive)]"
             onClick={() => setCategoryFilters(new Set())}
           >
             초기화

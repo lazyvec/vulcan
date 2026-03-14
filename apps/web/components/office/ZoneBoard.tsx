@@ -40,7 +40,7 @@ export function ZoneBoard({ agentsByStatus, selectedAgentId, onSelectAgent }: Zo
                     key={agent.id}
                     type="button"
                     onClick={() => onSelectAgent(agent.id)}
-                    className={`flex w-full items-center justify-between rounded border px-2 py-1 text-left text-xs transition-colors ${
+                    className={`flex w-full min-h-[44px] items-center justify-between rounded border px-2 py-1 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                       selectedAgentId === agent.id
                         ? "border-[var(--color-primary)] bg-[var(--color-primary-bg)]"
                         : "border-[var(--color-border)] bg-[var(--color-background)] hover:bg-[var(--color-surface-hover)]"

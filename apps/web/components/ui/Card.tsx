@@ -21,7 +21,7 @@ export function CardBody({ children, className = "" }: CardProps) {
 
 export function CardFooter({ children, className = "" }: CardProps) {
   return (
-    <div className={`flex items-center justify-end gap-2 border-t border-[var(--color-border)] px-4 py-3 ${className}`}>
+    <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-[var(--color-border)] px-4 py-3 ${className}`}>
       {children}
     </div>
   );

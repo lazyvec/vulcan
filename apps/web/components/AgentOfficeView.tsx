@@ -47,7 +47,7 @@ function AgentAvatar({ agent, isSelected, onClick }: { agent: Agent; isSelected:
     <button
       type="button"
       onClick={onClick}
-      className={`group relative flex flex-col items-center gap-1 rounded-lg p-2 transition-all ${
+      className={`group relative flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-lg p-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
         isSelected
           ? "bg-[var(--color-primary-bg)] ring-1 ring-[var(--color-primary)]"
           : "hover:bg-[var(--color-surface-hover)]"
@@ -95,7 +95,7 @@ function AgentPopover({
             </p>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="rounded p-2 text-[var(--color-tertiary)] hover:bg-[var(--color-muted)]">
+        <button type="button" onClick={onClose} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--color-tertiary)] hover:bg-[var(--color-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]">
           <X size={14} />
         </button>
       </div>
