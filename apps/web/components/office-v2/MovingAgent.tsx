@@ -16,6 +16,17 @@ interface MovingAgentProps {
   onClose: () => void;
 }
 
+/** 에이전트 위치에 따라 팝오버/말풍선 방향 결정 */
+function getPopoverPlacement(pos: { left: number; top: number }): "above" | "below" {
+  // 하단 40% 이하에 있으면 위로 표시
+  return pos.top > 60 ? "above" : "below";
+}
+
+/** 말풍선은 팝오버 반대 방향 (겹침 방지) */
+function getBubblePlacement(pos: { left: number; top: number }): "above" | "below" {
+  return pos.top > 60 ? "below" : "above";
+}
+
 export function MovingAgent({
   agent,
   position,
@@ -32,6 +43,9 @@ export function MovingAgent({
       onSelect();
     }
   };
+
+  const popoverPlacement = getPopoverPlacement(position);
+  const bubblePlacement = getBubblePlacement(position);
 
   return (
     <motion.div
@@ -56,7 +70,7 @@ export function MovingAgent({
       {/* 말풍선 (in_progress 작업이 있고 팝오버가 닫혀있을 때만) */}
       <AnimatePresence>
         {workOrder && workOrder.status === "in_progress" && !isSelected && (
-          <SpeechBubble summary={workOrder.summary} />
+          <SpeechBubble summary={workOrder.summary} placement={bubblePlacement} />
         )}
       </AnimatePresence>
 
@@ -68,6 +82,8 @@ export function MovingAgent({
             workOrder={workOrder}
             tokenUsage={tokenUsage}
             onClose={onClose}
+            placement={popoverPlacement}
+            horizontalPct={position.left}
           />
         )}
       </AnimatePresence>

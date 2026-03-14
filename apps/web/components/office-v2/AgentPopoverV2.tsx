@@ -13,6 +13,10 @@ interface AgentPopoverV2Props {
   workOrder: WorkOrder | null;
   tokenUsage: number;
   onClose: () => void;
+  /** 팝오버 위치: 에이전트 기준 위/아래 */
+  placement?: "above" | "below";
+  /** 에이전트의 수평 위치 (0-100%), 좌우 경계 보정에 사용 */
+  horizontalPct?: number;
 }
 
 function formatDuration(ms: number): string {
@@ -47,11 +51,27 @@ function subscribeTs(cb: () => void) {
 function getTsSnapshot() { ensureTimer(); return currentTs; }
 function getServerTsSnapshot() { return 0; }
 
+/** placement + horizontalPct → CSS 클래스 결정 */
+function getPositionClasses(placement: "above" | "below", hPct: number) {
+  const vertical = placement === "above"
+    ? "bottom-full mb-2"
+    : "top-full mt-2";
+
+  // 좌우 경계 보정: 20% 미만 → 왼쪽 정렬, 80% 초과 → 오른쪽 정렬
+  let horizontal = "left-1/2 -translate-x-1/2";
+  if (hPct < 20) horizontal = "left-0";
+  else if (hPct > 80) horizontal = "right-0";
+
+  return `${vertical} ${horizontal}`;
+}
+
 export function AgentPopoverV2({
   agent,
   workOrder,
   tokenUsage,
   onClose,
+  placement = "below",
+  horizontalPct = 50,
 }: AgentPopoverV2Props) {
   const sprite = getSpriteConfig(agent);
   const now = useSyncExternalStore(subscribeTs, getTsSnapshot, getServerTsSnapshot);
@@ -79,11 +99,11 @@ export function AgentPopoverV2({
       role="dialog"
       aria-modal="true"
       aria-label={`${agent.name} 상세 정보`}
-      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+      initial={{ opacity: 0, scale: 0.9, y: placement === "above" ? -10 : 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+      exit={{ opacity: 0, scale: 0.9, y: placement === "above" ? -10 : 10 }}
       transition={{ type: "spring", stiffness: 400, damping: 28 }}
-      className="absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 rounded-xl border border-glass-border bg-[var(--color-surface)] p-4 shadow-2xl backdrop-blur-xl"
+      className={`absolute z-30 w-64 rounded-xl border border-glass-border bg-[var(--color-surface)] p-4 shadow-2xl backdrop-blur-xl ${getPositionClasses(placement, horizontalPct)}`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* 헤더 */}

@@ -28,7 +28,11 @@ export function EventTrail() {
   const initialFetchedRef = useRef(false);
 
   const handleEvent = useCallback((event: EventItem) => {
-    setEvents((prev) => [event, ...prev].slice(0, MAX_EVENTS));
+    setEvents((prev) => {
+      // id 기반 중복 제거
+      if (prev.some((e) => e.id === event.id)) return prev;
+      return [event, ...prev].slice(0, MAX_EVENTS);
+    });
   }, []);
 
   useVulcanWebSocket({ paused: false, onEvent: handleEvent });

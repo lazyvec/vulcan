@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { Agent, AgentStatus } from "@/lib/types";
 import { STATUS_COLORS } from "@/lib/statusMap";
 import { PixelAvatar } from "./PixelAvatar";
@@ -42,12 +43,24 @@ export function AgentSprite({ agent, isSelected, onClick }: AgentSpriteProps) {
         className={`relative rounded-lg transition-shadow ${isActive ? "agent-alive-pulse" : ""}`}
         style={{ boxShadow: aura }}
       >
-        <PixelAvatar
-          name={sprite.name}
-          primaryColor={sprite.primaryColor}
-          secondaryColor={sprite.secondaryColor}
-          size={36}
-        />
+        {sprite.spritePath ? (
+          <Image
+            src={sprite.spritePath}
+            alt={sprite.name}
+            width={36}
+            height={36}
+            className="rounded-lg"
+            style={{ imageRendering: "pixelated" }}
+            unoptimized
+          />
+        ) : (
+          <PixelAvatar
+            name={sprite.name}
+            primaryColor={sprite.primaryColor}
+            secondaryColor={sprite.secondaryColor}
+            size={36}
+          />
+        )}
 
         {/* 상태 인디케이터 dot */}
         <span

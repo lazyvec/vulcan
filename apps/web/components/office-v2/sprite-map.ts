@@ -7,8 +7,8 @@ function extractAgentKey(agent: Agent): string {
   const name = agent.name.toLowerCase();
   // 정확히 매칭하는 스프라이트 확인
   if (AGENT_SPRITES[name]) return name;
-  // 접미사 제거하여 검색
-  for (const key of Object.keys(AGENT_SPRITES)) {
+  // 접미사 제거하여 검색 (긴 키 우선 → 더 정확한 매칭)
+  for (const key of Object.keys(AGENT_SPRITES).sort((a, b) => b.length - a.length)) {
     if (name.startsWith(key)) return key;
   }
   return name;
