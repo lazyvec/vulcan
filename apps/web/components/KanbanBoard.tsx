@@ -198,7 +198,7 @@ function SortableTaskCard({
         </p>
         <button
           type="button"
-          className="rounded border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-0.5 text-[10px] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
+          className="rounded border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-xs min-h-[36px] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onOpenDetail(task)}
         >
@@ -447,7 +447,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "", workOrder
       </div>
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="grid min-h-0 flex-1 gap-3 overflow-x-auto pb-2 lg:snap-x lg:snap-mandatory lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-1 min-h-0 flex-1 gap-3 overflow-x-auto pb-2 lg:snap-x lg:snap-mandatory lg:grid-cols-3 xl:grid-cols-6">
           {LANES.map((lane) => {
             const laneTasks = filtered.filter((task) => task.lane === lane.key);
             return (

@@ -79,7 +79,7 @@ function AgentPopover({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute left-1/2 top-full z-20 mt-2 w-72 -translate-x-1/2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
+    <div className="absolute left-1/2 top-full z-20 mt-2 w-72 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
@@ -95,7 +95,7 @@ function AgentPopover({
             </p>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="rounded p-0.5 text-[var(--color-tertiary)] hover:bg-[var(--color-muted)]">
+        <button type="button" onClick={onClose} className="rounded p-2 text-[var(--color-tertiary)] hover:bg-[var(--color-muted)]">
           <X size={14} />
         </button>
       </div>

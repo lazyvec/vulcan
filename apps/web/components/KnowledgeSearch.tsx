@@ -100,7 +100,7 @@ function MemoryCard({
         <button
           type="button"
           onClick={() => onExpand(memory)}
-          className="shrink-0 rounded p-1 text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+          className="shrink-0 rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
           title="상세 보기"
         >
           <Eye size={16} />

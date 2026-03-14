@@ -205,7 +205,7 @@ export function TaskDetailModal({
             {!isCreate && onTaskDeleted && (
               <button
                 type="button"
-                className="rounded p-1 text-[var(--color-destructive-text)] hover:bg-[var(--color-destructive-bg)]"
+                className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--color-destructive-text)] hover:bg-[var(--color-destructive-bg)]"
                 onClick={handleDelete}
                 disabled={deleting}
                 title="Delete task"
@@ -290,7 +290,7 @@ export function TaskDetailModal({
           </div>
 
           {/* Lane + Priority + Assignee */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-muted-foreground)]">
                 Lane

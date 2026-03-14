@@ -920,7 +920,7 @@ export function VaultExplorer({
 
         {/* 리사이즈 핸들 */}
         <div
-          className="vault-resize-handle"
+          className="vault-resize-handle hidden lg:block"
           onMouseDown={handleResizeStart}
         />
 

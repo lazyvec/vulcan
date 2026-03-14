@@ -406,7 +406,7 @@ function CatalogTab({
                 <span className="text-sm">{agent.name}</span>
                 <button
                   type="button"
-                  className="rounded-[var(--radius-control)] px-2 py-0.5 text-[11px] text-[var(--color-destructive-text)] transition-colors hover:bg-[var(--color-destructive-bg)] disabled:opacity-50"
+                  className="rounded-[var(--radius-control)] px-3 py-1.5 text-xs min-h-[36px] text-[var(--color-destructive-text)] transition-colors hover:bg-[var(--color-destructive-bg)] disabled:opacity-50"
                   onClick={() => onRemove(agent.id, skill.name)}
                   disabled={actionInProgress}
                 >
@@ -430,7 +430,7 @@ function CatalogTab({
                 <span className="text-sm">{agent.name}</span>
                 <button
                   type="button"
-                  className="rounded-[var(--radius-control)] bg-[var(--color-primary)] px-2 py-0.5 text-[11px] text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+                  className="rounded-[var(--radius-control)] bg-[var(--color-primary)] px-3 py-1.5 text-xs min-h-[36px] text-white transition-opacity hover:opacity-80 disabled:opacity-50"
                   onClick={() => onInstall(agent.id, skill.name)}
                   disabled={actionInProgress}
                 >
@@ -507,7 +507,7 @@ function AgentTab({
                       </div>
                       <button
                         type="button"
-                        className="rounded-[var(--radius-control)] px-2 py-0.5 text-[11px] text-[var(--color-destructive-text)] transition-colors hover:bg-[var(--color-destructive-bg)] disabled:opacity-50"
+                        className="rounded-[var(--radius-control)] px-3 py-1.5 text-xs min-h-[36px] text-[var(--color-destructive-text)] transition-colors hover:bg-[var(--color-destructive-bg)] disabled:opacity-50"
                         onClick={() => onRemove(selectedAgentId, skillName)}
                         disabled={actionInProgress}
                       >
@@ -540,7 +540,7 @@ function AgentTab({
                     </div>
                     <button
                       type="button"
-                      className="rounded-[var(--radius-control)] bg-[var(--color-primary)] px-2 py-0.5 text-[11px] text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+                      className="rounded-[var(--radius-control)] bg-[var(--color-primary)] px-3 py-1.5 text-xs min-h-[36px] text-white transition-opacity hover:opacity-80 disabled:opacity-50"
                       onClick={() => onInstall(selectedAgentId, skill.name)}
                       disabled={actionInProgress}
                     >
