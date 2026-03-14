@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8787";
+const API_BASE = "";
 
 interface KnowledgeSearchProps {
   initialStats: MemoryStats;

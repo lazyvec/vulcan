@@ -361,7 +361,7 @@ export function KanbanBoard({ initialTasks, agents, initialQuery = "", workOrder
 
       try {
         const response = await fetch(`/api/tasks/${taskId}`, {
-          method: "PUT",
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lane: targetLane }),
         });

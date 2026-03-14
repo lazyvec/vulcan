@@ -142,7 +142,7 @@ export function TaskDetailModal({
         onTaskUpdated?.(data.task);
       }
     } catch {
-      // 실패 시 무시
+      alert("저장에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -167,7 +167,7 @@ export function TaskDetailModal({
       if (!res.ok) throw new Error("delete failed");
       onTaskDeleted?.(task.id);
     } catch {
-      // 실패 시 무시
+      alert("삭제에 실패했습니다.");
     } finally {
       setDeleting(false);
     }
@@ -186,7 +186,7 @@ export function TaskDetailModal({
       setComments((prev) => [...prev, data.comment]);
       setNewComment("");
     } catch {
-      // 실패 시 무시
+      alert("댓글 등록에 실패했습니다.");
     }
   }, [task, newComment]);
 

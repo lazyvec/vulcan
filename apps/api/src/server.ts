@@ -163,12 +163,15 @@ import {
   enqueueCommandJob,
   enqueueHealthcheckJob,
   enqueueNotificationJob,
+  enqueueWoDispatchJob,
   getCommandQueue,
   getHealthcheckQueue,
   startQueueWorkers,
   type CommandQueueJobData,
   type NotificationQueueJobData,
+  type WoDispatchJobData,
 } from "./queue";
+import { executeWoDispatch } from "./wo-dispatcher";
 import {
   answerCallbackQuery,
   editTelegramMessage,
@@ -633,6 +636,16 @@ try {
     command: executeCommandQueueJob,
     healthcheck: executeHealthcheckQueueJob,
     notification: executeNotificationQueueJob,
+    woDispatch: async (payload: WoDispatchJobData) => {
+      const result = await executeWoDispatch(payload.workOrderId, {
+        resolveGatewaySessionKeyForAgent,
+        gatewayRpcChatSend: (params) => gatewayRpcClient.chatSend(params),
+        extractGatewayCommandId,
+      });
+      if (!result.ok) {
+        console.warn(`[wo-dispatch] ${payload.workOrderId}: ${result.error}`);
+      }
+    },
   });
 } catch (error) {
   queueWorkersReady = false;
@@ -2679,11 +2692,6 @@ app.get("/api/audit", (c) => {
   const limit = Number(c.req.query("limit") ?? "80") || undefined;
   const offset = Number(c.req.query("offset") ?? "0") || undefined;
 
-  if (!action && !entityType && !entityId && !since && !until && !offset) {
-    const safeLimit = typeof limit === "number" && Number.isFinite(limit) && limit > 0 ? Math.min(limit, 300) : 80;
-    return c.json({ logs: getAuditLogs(safeLimit) });
-  }
-
   const result = getAuditLogsFiltered({ action, entityType, entityId, since, until, limit, offset });
   return c.json(result);
 });
@@ -2749,6 +2757,11 @@ app.post("/api/workflows/trigger", async (c) => {
     entityId: instance.workflowId,
     source: "api",
     afterJson: JSON.stringify(instance),
+  });
+
+  // 첫 번째 WO 자동 디스패치
+  void enqueueWoDispatchJob({ workOrderId: instance.firstWorkOrderId }).catch((err) => {
+    console.error("[wo-dispatch] 워크플로우 트리거 enqueue 실패:", err);
   });
 
   return c.json({ ok: true, workflow: instance });
@@ -3821,6 +3834,13 @@ app.post("/api/work-orders", async (c) => {
     payloadJson: JSON.stringify({ workOrderId: order.id }),
   });
 
+  // 자동 디스패치: pm-skills-workflow 활성화 시 큐에 추가
+  if (isFeatureEnabled("pm-skills-workflow")) {
+    void enqueueWoDispatchJob({ workOrderId: order.id }).catch((err) => {
+      console.error("[wo-dispatch] enqueue 실패:", err);
+    });
+  }
+
   return c.json({ ok: true, workOrder: order }, 201);
 });
 
@@ -3913,6 +3933,10 @@ app.patch("/api/work-orders/:id", async (c) => {
           type: "workflow.step_advanced",
           summary: `워크플로우 다음 단계 생성: ${nextWO.summary}`,
           payloadJson: JSON.stringify({ workOrderId: nextWO.id }),
+        });
+        // 다음 단계 WO 자동 디스패치
+        void enqueueWoDispatchJob({ workOrderId: nextWO.id }).catch((err) => {
+          console.error("[wo-dispatch] 워크플로우 다음 단계 enqueue 실패:", err);
         });
         // Telegram 알림 (마지막 단계 완료 시)
         try {

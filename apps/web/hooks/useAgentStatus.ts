@@ -26,8 +26,8 @@ export function useAgentStatus({
   initialTokenUsage = {},
 }: UseAgentStatusOptions): UseAgentStatusReturn {
   const [agents, setAgents] = useState<Agent[]>(initialAgents);
-  const [agentWorkOrders] = useState<Record<string, WorkOrder | null>>(initialWorkOrders);
-  const [agentTokenUsage] = useState<Record<string, number>>(initialTokenUsage);
+  const [agentWorkOrders, setAgentWorkOrders] = useState<Record<string, WorkOrder | null>>(initialWorkOrders);
+  const [agentTokenUsage, setAgentTokenUsage] = useState<Record<string, number>>(initialTokenUsage);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleEvent = useCallback((event: EventItem) => {
@@ -77,10 +77,25 @@ export function useAgentStatus({
 
     pollTimerRef.current = setInterval(async () => {
       try {
-        const res = await fetch("/api/agents");
-        if (res.ok) {
-          const data = await res.json();
+        const [agentsRes, woRes] = await Promise.all([
+          fetch("/api/agents"),
+          fetch("/api/work-orders?status=in_progress&limit=50"),
+        ]);
+        if (agentsRes.ok) {
+          const data = await agentsRes.json();
           if (data.agents) setAgents(data.agents);
+        }
+        if (woRes.ok) {
+          const woData = await woRes.json();
+          if (woData.workOrders) {
+            const woMap: Record<string, WorkOrder | null> = {};
+            const tokenMap: Record<string, number> = {};
+            for (const wo of woData.workOrders as WorkOrder[]) {
+              woMap[wo.toAgentId] = wo;
+            }
+            setAgentWorkOrders(woMap);
+            setAgentTokenUsage(tokenMap);
+          }
         }
       } catch {
         // 네트워크 오류 무시
