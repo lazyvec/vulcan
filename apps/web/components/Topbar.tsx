@@ -103,52 +103,53 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-background)_80%,transparent)] px-4 py-3 backdrop-blur-lg sm:px-6">
+    <header className="topbar-glass px-4 py-3 sm:px-6">
       <div className="flex items-center gap-4">
         {/* Mobile menu */}
         <button
           type="button"
           onClick={onMenuClick}
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--color-tertiary)] transition-all hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] lg:hidden"
         >
-          <MenuIcon size={22} />
+          <MenuIcon size={20} />
           <span className="sr-only">사이드바 열기</span>
         </button>
 
         {/* Page title + breadcrumb */}
-        <div className="hidden sm:flex min-w-0 items-center gap-2">
-          <span className="text-xs text-[var(--color-tertiary)]">Vulcan</span>
-          <span className="text-xs text-[var(--color-tertiary)]">/</span>
-          <h1 className="truncate text-sm font-semibold text-[var(--color-foreground)]">{pageTitle}</h1>
+        <div className="hidden sm:flex min-w-0 items-center gap-2.5">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-tertiary)] opacity-60">Vulcan</span>
+          <span className="h-3 w-[1px] rotate-[25deg] bg-[var(--color-border)] opacity-40"></span>
+          <h1 className="truncate text-sm font-bold tracking-tight text-[var(--color-foreground)]">{pageTitle}</h1>
         </div>
 
         {/* Search */}
-        <div className="relative mx-auto flex max-w-md flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]" />
+        <div className="relative mx-auto flex max-w-md flex-1 group">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)] transition-colors group-focus-within:text-[var(--color-primary)]" />
           <input
-            className="vulcan-input w-full pl-9"
-            placeholder="검색... (Cmd+K)"
+            className="vulcan-input w-full pl-10 h-10 bg-[var(--color-background)]/50 border-transparent hover:border-glass-border focus:bg-[var(--color-background)]"
+            placeholder="Search commands... (Cmd+K)"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Button
             variant={paused ? "primary" : "ghost"}
             size="sm"
             icon={paused ? <Play size={14} /> : <Pause size={14} />}
             onClick={togglePause}
+            className="h-9 px-3"
           >
-            <span className="hidden sm:inline">{paused ? "재개" : "일시정지"}</span>
+            <span className="hidden md:inline">{paused ? "재개" : "일시정지"}</span>
           </Button>
           <Button
             variant="primary"
             size="sm"
             icon={<Radio size={14} />}
             onClick={pingHermes}
-            className="hidden sm:inline-flex status-pulse"
+            className="hidden sm:inline-flex h-9 px-3 status-pulse shadow-sm"
           >
             {pingText}
           </Button>

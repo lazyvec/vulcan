@@ -37,15 +37,6 @@
   --color-researching: var(--color-researching);
   --color-executing: var(--color-executing);
   --color-focus-ring: var(--color-focus-ring);
-  --color-chart-1: var(--color-chart-1);
-  --color-chart-2: var(--color-chart-2);
-  --color-chart-3: var(--color-chart-3);
-  --color-chart-4: var(--color-chart-4);
-  --color-chart-5: var(--color-chart-5);
-  --color-chart-6: var(--color-chart-6);
-  --color-chart-7: var(--color-chart-7);
-  --color-chart-8: var(--color-chart-8);
-  --color-destructive-hover: var(--color-destructive-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -53,7 +44,9 @@
 * {
   box-sizing: border-box;
   border-color: var(--color-border);
-  -webkit-tap-highlight-color: rgba(224, 122, 64, 0.15);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html,
@@ -62,21 +55,23 @@ body {
   min-height: 100%;
   background: var(--color-background);
   color: var(--color-foreground);
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: var(--font-geist-sans), sans-serif;
-  background: var(--gradient-bg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-relaxed);
 }
 
+/* ── Custom Scrollbar (Claude Style) ── */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 20px;
-  border: 2px solid var(--color-background);
+  background: var(--color-muted);
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-tertiary);
@@ -85,36 +80,28 @@ body {
   background: transparent;
 }
 
-
 a {
   color: inherit;
   text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* 포커스 링 — 접근성 (WCAG 2.4.7) */
+/* ── Claude Focus State ── */
 :focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
-.vulcan-input:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 0;
-  border-color: var(--color-primary);
-}
-
-::selection {
-  background: var(--color-primary-bg);
-}
-
+/* ── Global Shell ── */
 .vulcan-shell {
   min-height: 100dvh;
   display: grid;
   grid-template-columns: 260px 1fr;
+  background: var(--color-background);
 }
 
 .vulcan-shell[data-collapsed="true"] {
-  grid-template-columns: 64px 1fr;
+  grid-template-columns: 72px 1fr;
 }
 
 @media (max-width: 1023px) {
@@ -124,797 +111,130 @@ a {
   }
 }
 
+/* ── Claude-Style Components ── */
+
 .vulcan-card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
-  background: color-mix(in oklab, var(--color-surface) 88%, black 12%);
-  box-shadow: var(--shadow-soft);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-inner);
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.vulcan-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--radius-control);
-  border: 1px solid var(--color-border);
-  background: color-mix(in oklab, var(--color-muted) 80%, black 20%);
-  color: var(--color-muted-foreground);
-  font-size: 12px;
+.vulcan-card:hover {
+  box-shadow: var(--shadow-claude);
 }
 
 .vulcan-button {
-  border: 1px solid color-mix(in oklab, var(--color-primary) 50%, var(--color-border) 50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--color-primary-bg);
   color: var(--color-primary);
+  border: 1px solid var(--color-primary-border, transparent);
   border-radius: var(--radius-control);
-  padding: 8px 12px;
+  padding: 10px 16px;
   font-weight: 600;
-  transition: 160ms ease;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: var(--shadow-inner);
 }
 
 .vulcan-button:hover {
-  background: color-mix(in oklab, var(--color-primary) 20%, transparent 80%);
-  color: var(--color-primary-hover);
-  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(224, 122, 64, 0.24);
 }
 
-.vulcan-button-ghost {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-control);
-  color: var(--color-muted-foreground);
-  cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
-}
-
-.vulcan-button-ghost:hover {
-  background: var(--color-muted);
-  color: var(--color-foreground);
-  border-color: var(--color-border);
+.vulcan-button:active {
+  transform: translateY(0);
+  filter: brightness(0.9);
 }
 
 .vulcan-input {
   width: 100%;
   border-radius: var(--radius-control);
   border: 1px solid var(--color-border);
-  background: color-mix(in oklab, var(--color-muted) 72%, black 28%);
+  background: var(--color-background);
   color: var(--color-foreground);
-  padding: 10px 12px;
-  font-size: 1rem; /* iOS 자동 줌 방지: 16px 미만이면 포커스 시 페이지 확대됨 */
+  padding: 12px 14px;
+  font-size: 1rem;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: var(--shadow-inner);
 }
 
-.vulcan-input.has-icon {
-  padding-left: 40px;
+.vulcan-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+  outline: none;
 }
 
-.fade-in-up {
-  animation: fadeInUp 360ms ease both;
-}
-
-@keyframes fadeInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulseWarm {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 32%, transparent 68%);
-  }
-  50% {
-    box-shadow: 0 0 0 6px transparent;
-  }
-}
-
-.status-pulse {
-  animation: pulseWarm 2.6s infinite;
-}
-
-.sidebar-nav-item {
-  color: var(--color-muted-foreground);
-  background: transparent;
-}
-
-.sidebar-nav-item:hover {
-  color: var(--color-foreground);
-  background: var(--color-muted);
-}
-
-.sidebar-nav-active {
-  color: var(--color-primary) !important;
-  background: var(--color-primary-bg) !important;
-}
-
-.sidebar-nav-active:hover {
-  background: color-mix(in oklab, var(--color-primary) 16%, transparent 84%) !important;
-}
-
-.status-glow {
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--color-primary) 35%, transparent 65%),
-    0 0 18px color-mix(in oklab, var(--color-primary) 40%, transparent 60%);
-}
-
-.activity-group {
-  transition: border-color 220ms ease, box-shadow 220ms ease;
-}
-
-.activity-group-active {
-  border-color: color-mix(in oklab, var(--color-primary) 46%, var(--color-border) 54%);
-  box-shadow: 0 0 18px color-mix(in oklab, var(--color-primary) 14%, transparent 86%);
-}
-
-/* 페이지 전환 fade-in */
-@keyframes pageEnter {
-  0% { opacity: 0; transform: translateY(4px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-.page-enter {
-  animation: pageEnter 280ms ease both;
-}
-
-/* 터치 기기 hover sticky 방지 */
-@media (hover: none) {
-  .vulcan-button:hover,
-  .vulcan-button-ghost:hover,
-  .sidebar-nav-item:hover,
-  .vault-tree-item:hover,
-  .vault-tag:hover,
-  .vault-back-btn:hover {
-    background: unset;
-    color: unset;
-    border-color: unset;
-  }
-  .sidebar-nav-active:hover {
-    background: var(--color-primary-bg) !important;
-  }
-}
-
-/* 터치 기기 타겟 확보 */
-@media (pointer: coarse) {
-  .vulcan-chip {
-    padding: 8px 12px;
-    min-height: 44px;
-  }
-  .sidebar-nav-item {
-    min-height: 44px;
-  }
-  /* 공용 Button 컴포넌트 최소 터치 타겟 */
-  button:not([role="tab"]) {
-    min-height: 44px;
-  }
-}
-
-/* Safe area insets */
-@supports (padding: env(safe-area-inset-top)) {
-  .vulcan-shell > header,
-  .vulcan-shell > div > header {
-    padding-top: max(0.75rem, env(safe-area-inset-top));
-  }
-  .vulcan-shell > aside {
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-  }
-}
-
-/* prefers-reduced-motion 존중 */
-@media (prefers-reduced-motion: reduce) {
-  .fade-in-up,
-  .page-enter,
-  .status-pulse {
-    animation: none !important;
-  }
-
-  .activity-group,
-  .activity-group-active {
-    transition: none !important;
-  }
-}
-
-/* 스켈레톤 로딩 */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-muted) 25%,
-    var(--color-surface-hover) 50%,
-    var(--color-muted) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: var(--radius-control);
-}
-
-/* 페이지 타이포그래피 표준 */
-.page-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-foreground);
-  line-height: 1.4;
-}
-
-.section-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--color-foreground);
-  letter-spacing: -0.01em;
-}
-
-.card-title {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--color-muted-foreground);
-}
-
-.body-text {
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: var(--color-muted-foreground);
-}
-
-.caption-text {
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: var(--color-tertiary);
-}
-
-/* ═══════════════════════════════════════════════════
-   Vault 뷰어 — Obsidian 네이티브 스타일
-   ═══════════════════════════════════════════════════ */
-
-/* ── 마크다운 타이포그래피 (.vault-prose) ───────── */
-
-.vault-prose {
-  font-size: var(--vault-font-size);
-  line-height: var(--vault-line-height);
-  color: var(--color-foreground);
-  max-width: var(--vault-max-width);
-}
-
-.vault-prose > * + * {
-  margin-top: 1em;
-}
-
-.vault-prose h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--color-foreground);
-  padding-bottom: 0.4em;
-  border-bottom: 2px solid var(--vault-heading-border);
-  margin-top: 1.6em;
-  margin-bottom: 0.6em;
-}
-
-.vault-prose h2 {
-  font-size: 1.3rem;
-  font-weight: 650;
-  line-height: 1.35;
-  color: var(--color-foreground);
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--vault-heading-border-subtle);
-  margin-top: 1.4em;
-  margin-bottom: 0.5em;
-}
-
-.vault-prose h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--color-foreground);
-  padding-left: 0.75em;
-  border-left: 3px solid var(--color-primary);
-  margin-top: 1.2em;
-  margin-bottom: 0.4em;
-}
-
-.vault-prose h4,
-.vault-prose h5,
-.vault-prose h6 {
-  font-weight: 600;
-  color: var(--color-foreground);
-  margin-top: 1em;
-  margin-bottom: 0.3em;
-}
-
-/* 코드블록 */
-.vault-prose pre {
-  position: relative;
-  background: var(--vault-code-bg);
-  border: 1px solid var(--vault-code-border);
-  border-radius: var(--radius-card);
-  padding: 1em 1.25em;
-  overflow-x: auto;
-  font-size: 0.875em;
-  line-height: 1.6;
-  margin-top: 1em;
-  margin-bottom: 1em;
-}
-
-.vault-prose pre[data-language]::before {
-  content: attr(data-language);
-  position: absolute;
-  top: 0;
-  right: 0;
-  padding: 2px 10px;
-  font-size: 0.7em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--vault-code-badge-text);
-  background: var(--vault-code-badge-bg);
-  border-bottom-left-radius: var(--radius-control);
-  border-top-right-radius: calc(var(--radius-card) - 1px);
-}
-
-.vault-prose pre code {
-  background: transparent;
-  padding: 0;
-  border: none;
-  color: inherit;
-  font-size: inherit;
-}
-
-/* 인라인 코드 */
-.vault-prose :not(pre) > code {
-  background: var(--vault-inline-code-bg);
-  color: var(--vault-inline-code-text);
-  padding: 0.15em 0.4em;
-  border-radius: 4px;
-  font-size: 0.9em;
-}
-
-/* Blockquote */
-.vault-prose blockquote {
-  border-left: 3px solid var(--vault-blockquote-border);
-  background: var(--vault-blockquote-bg);
-  padding: 0.75em 1em;
-  border-radius: 0 var(--radius-control) var(--radius-control) 0;
-  color: var(--color-muted-foreground);
-  margin-top: 1em;
-  margin-bottom: 1em;
-}
-
-.vault-prose blockquote p {
-  margin: 0;
-}
-
-/* 테이블 */
-.vault-prose .vault-table-wrap {
-  overflow-x: auto;
-  margin-top: 1em;
-  margin-bottom: 1em;
-  border-radius: var(--radius-control);
-  border: 1px solid var(--color-border);
-}
-
-.vault-prose table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9em;
-}
-
-.vault-prose thead th {
-  background: var(--vault-table-header-bg);
-  font-weight: 600;
-  text-align: left;
-  padding: 0.6em 0.75em;
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.vault-prose tbody td {
-  padding: 0.5em 0.75em;
-  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 50%, transparent 50%);
-}
-
-.vault-prose tbody tr:nth-child(even) {
-  background: var(--vault-table-stripe-bg);
-}
-
-.vault-prose tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* HR */
-.vault-prose hr {
-  border: none;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--vault-hr-color), transparent);
-  opacity: 0.4;
-  margin: 2em 0;
-}
-
-/* 리스트 */
-.vault-prose ul {
-  padding-left: 1.5em;
-  list-style: disc;
-}
-
-.vault-prose ol {
-  padding-left: 1.5em;
-  list-style: decimal;
-}
-
-.vault-prose li {
-  padding-left: 0.25em;
-}
-
-.vault-prose li::marker {
-  color: var(--color-primary);
-}
-
-/* mark (하이라이트) */
-.vault-prose mark {
-  background: rgba(250, 204, 21, 0.2);
-  color: var(--color-foreground);
-  padding: 0.05em 0.25em;
-  border-radius: 2px;
-  border-bottom: 2px solid rgba(250, 204, 21, 0.5);
-}
-
-/* 이미지 */
-.vault-prose img {
-  border-radius: var(--radius-card);
-  border: 1px solid var(--color-border);
-  max-width: 100%;
-  display: block;
-  margin: 1.25em auto;
-}
-
-/* 링크 */
-.vault-prose a {
-  color: var(--color-primary);
-  text-decoration: underline;
-  text-decoration-color: color-mix(in oklab, var(--color-primary) 40%, transparent 60%);
-  text-underline-offset: 2px;
-  transition: color var(--vault-ease), text-decoration-color var(--vault-ease);
-}
-
-.vault-prose a:hover {
-  color: var(--color-primary-hover);
-  text-decoration-color: var(--color-primary-hover);
-}
-
-/* Callout */
-.vault-prose .callout {
-  word-break: break-word;
-  overflow-wrap: break-word;
-  max-width: 100%;
-}
-
-/* 강조 */
-.vault-prose strong {
-  color: var(--color-foreground);
-  font-weight: 650;
-}
-
-.vault-prose p {
-  margin: 0;
-}
-
-.vault-prose p + p {
-  margin-top: 0.75em;
-}
-
-/* ── 사이드바 트리 ──────────────────────────────── */
-
-.vault-tree-item {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 8px;
-  border-radius: var(--radius-control);
-  padding: 6px 8px;
-  font-size: 0.8125rem;
-  color: var(--color-muted-foreground);
-  transition: background var(--vault-ease), color var(--vault-ease);
-  cursor: pointer;
-  border: 1px solid transparent;
-  text-align: left;
-}
-
-.vault-tree-item:hover {
-  background: var(--color-muted);
-  color: var(--color-foreground);
-}
-
-.vault-tree-item--selected {
-  background: var(--color-primary-bg);
-  color: var(--color-primary);
-  border-color: color-mix(in oklab, var(--color-primary) 40%, transparent 60%);
-}
-
-.vault-tree-item--selected:hover {
-  background: color-mix(in oklab, var(--color-primary) 14%, transparent 86%);
-}
-
-.vault-tree-item--folder {
-  font-weight: 500;
-}
-
-.vault-tree-children {
-  position: relative;
-  padding-left: 8px;
-}
-
-.vault-tree-children::before {
-  content: "";
-  position: absolute;
-  left: 14px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--vault-tree-indent-guide);
-}
-
-/* 사이드바 너비 (CSS 변수 — 인라인 스타일 충돌 방지) */
-.vault-mobile-list {
-  width: var(--vault-sidebar-w, 280px);
-  min-width: 180px;
-  max-width: 600px;
-  flex-shrink: 0;
-}
-
-.vault-sidebar-scroll {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
-}
-
-.vault-sidebar-scroll::-webkit-scrollbar {
-  width: 5px;
-}
-
-.vault-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 20px;
-  border: none;
-}
-
-.vault-sidebar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* ── UI 요소 ────────────────────────────────────── */
-
-.vault-tag {
+.vulcan-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
-  border-radius: 9999px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  background: var(--vault-tag-bg);
-  color: var(--vault-tag-text);
-  border: 1px solid var(--vault-tag-border);
-  transition: background var(--vault-ease);
-}
-
-.vault-tag::before {
-  content: "#";
-  opacity: 0.6;
-}
-
-.vault-tag:hover {
-  background: color-mix(in oklab, var(--color-primary) 16%, transparent 84%);
-}
-
-.vault-note-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--color-border);
-  background: linear-gradient(180deg, color-mix(in oklab, var(--color-surface) 95%, var(--color-primary) 5%) 0%, var(--color-surface) 100%);
-}
-
-.vault-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.7rem;
-  color: var(--color-tertiary);
-  margin-top: 6px;
-}
-
-.vault-breadcrumb span {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.vault-breadcrumb .vault-breadcrumb-sep {
-  opacity: 0.4;
-  flex-shrink: 0;
-}
-
-.vault-content-pane {
-  overflow-y: auto;
-  padding: 24px 36px;
-  flex: 1;
-  min-height: 0;
-}
-
-.vault-empty-state {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-tertiary);
-}
-
-.vault-empty-icon {
-  opacity: 0.2;
-  margin-bottom: 12px;
-}
-
-.vault-empty-text {
-  font-size: 0.9rem;
-}
-
-.vault-empty-hint {
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: var(--color-muted);
+  color: var(--color-muted-foreground);
   font-size: 0.75rem;
-  margin-top: 4px;
-  opacity: 0.6;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
-/* ── 리사이즈 핸들 ──────────────────────────────── */
-
-.vault-resize-handle {
-  width: 6px;
-  cursor: col-resize;
-  position: relative;
-  flex-shrink: 0;
-  z-index: 10;
+.vulcan-chip[aria-pressed="true"] {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
-.vault-resize-handle::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 2px;
-  height: 32px;
-  border-radius: 2px;
-  background: var(--color-border);
-  transition: background var(--vault-ease), height var(--vault-ease);
+/* ── Sidebar & Topbar Glass ── */
+.sidebar-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-claude));
+  border-right: 1px solid var(--glass-border);
 }
 
-.vault-resize-handle:hover::after,
-.vault-resize-handle:active::after {
-  background: var(--color-primary);
-  height: 48px;
+.topbar-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-claude));
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
 
-/* ── Vault 뒤로가기 버튼 (모바일) ──────────────── */
-
-.vault-back-btn {
-  display: none;
+/* ── Typography Utility ── */
+.text-balance {
+  text-wrap: balance;
 }
 
-/* ── 모바일 반응형 ──────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-foreground) 0%, var(--color-tertiary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 
-@media (max-width: 1023px) {
-  /* 사이드바: 노트 미선택 시 전체화면 */
-  .vault-mobile-list {
-    display: flex !important;
-    flex-direction: column;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    flex-shrink: 1 !important;
-  }
+/* ── Animations ── */
+.fade-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
 
-  /* 사이드바: 노트 선택 시 숨김 */
-  .vault-mobile-list--hidden {
-    display: none !important;
-  }
+.fade-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.4s cubic-bezier(0.2, 0, 0, 1), transform 0.4s cubic-bezier(0.2, 0, 0, 1);
+}
 
-  /* 콘텐츠: 기본 숨김 */
-  .vault-mobile-content {
-    display: none !important;
-  }
-
-  /* 콘텐츠: 노트 선택 시 전체화면 */
-  .vault-mobile-content--visible {
-    display: flex !important;
-    flex-direction: column;
-    width: 100% !important;
-    min-width: 0 !important;
-    flex: 1 1 0% !important;
-  }
-
-  /* 상단 바: URL 클리핑 숨김 */
-  .vault-clip-area {
-    display: none !important;
-  }
-
-  /* 뒤로가기 버튼 표시 */
-  .vault-back-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 12px;
-    min-height: 44px;
-    min-width: 44px;
-    border-radius: var(--radius-control);
-    font-size: 0.875rem;
-    color: var(--color-muted-foreground);
-    cursor: pointer;
-    transition: background var(--vault-ease);
-    border: none;
-    background: none;
-    flex-shrink: 0;
-  }
-
-  .vault-back-btn:hover {
-    background: var(--color-muted);
-    color: var(--color-foreground);
-  }
-
-  /* 리사이즈 핸들 숨김 */
-  .vault-resize-handle {
-    display: none !important;
-  }
-
-  /* 콘텐츠 패딩 축소 */
-  .vault-content-pane {
-    padding: 16px;
-  }
-
-  .vault-note-header {
-    padding: 12px 16px;
-  }
-
-  /* 트리 아이템 터치 타겟 확보 */
-  .vault-tree-item {
-    padding: 10px 12px;
-    min-height: 44px;
-    font-size: 0.875rem;
-  }
-
-  /* vault-prose 모바일 보강 */
-  .vault-prose {
-    max-width: 100%;
-    word-break: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .vault-prose pre {
-    max-width: 100%;
-    font-size: 0.8em;
-    padding: 0.75em 1em;
-  }
-
-  /* 테이블 스크롤 힌트 */
-  .vault-prose .vault-table-wrap {
-    /* overflow: auto inherits momentum scrolling on modern iOS */
-  }
-
-  /* 중첩 스크롤 격리 */
-  .vault-content-pane,
-  .vault-sidebar-scroll {
-    overscroll-behavior: contain;
-    /* overflow: auto inherits momentum scrolling on modern iOS */
-  }
-
-  /* breadcrumb 오버플로우 방지 */
-  .vault-breadcrumb {
-    overflow: hidden;
-    flex-wrap: nowrap;
+/* Safe area & Mobile optimization */
+@media (pointer: coarse) {
+  .vulcan-button, 
+  .vulcan-input, 
+  .sidebar-nav-item {
+    min-height: 48px; /* Slightly larger for Claude comfort */
   }
 }
