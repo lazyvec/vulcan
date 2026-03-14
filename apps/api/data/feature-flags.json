@@ -1,20 +1,20 @@
 {
   "gateway-trace-bridge": {
     "id": "gateway-trace-bridge",
-    "enabled": false,
+    "enabled": true,
     "description": "Gateway 이벤트에서 자동으로 trace를 생성합니다",
-    "updatedAt": 0
+    "updatedAt": 1773446724869
   },
   "audit-hash-chain": {
     "id": "audit-hash-chain",
-    "enabled": false,
+    "enabled": true,
     "description": "감사 로그에 SHA-256 해시 체인을 적용합니다",
-    "updatedAt": 0
+    "updatedAt": 1773446723936
   },
   "pm-skills-workflow": {
     "id": "pm-skills-workflow",
-    "enabled": false,
+    "enabled": true,
     "description": "PM Skills 워크플로우 체인 (Discover → Strategy → Write-PRD)을 활성화합니다",
-    "updatedAt": 0
+    "updatedAt": 1773446730831
   }
 }
