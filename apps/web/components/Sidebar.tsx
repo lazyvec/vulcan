@@ -126,7 +126,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
                   href={item.href}
                   onClick={onClose}
                   title={isCollapsed ? item.label : undefined}
-                  className={`sidebar-nav-item fade-in-up relative flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`sidebar-nav-item fade-in-up relative flex min-h-[44px] items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                     active ? "sidebar-nav-active" : ""
                   } ${isCollapsed ? "justify-center px-2" : ""}`}
                   style={{ animationDelay: `${index * 35}ms` }}

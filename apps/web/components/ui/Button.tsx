@@ -23,9 +23,9 @@ const variantStyles: Record<ButtonVariant, string> = {
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "px-2 py-1 text-xs gap-1",
-  md: "px-3 py-2 text-xs gap-1.5",
-  lg: "px-4 py-2.5 text-sm gap-2",
+  sm: "px-3 py-2 text-xs gap-1 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:px-2 md:py-1",
+  md: "px-4 py-2 text-xs gap-1.5 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:px-3 md:py-2",
+  lg: "px-5 py-3 text-sm gap-2 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 md:px-4 md:py-2.5",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -36,7 +36,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={`inline-flex items-center justify-center rounded-[var(--radius-control)] border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+        className={`inline-flex items-center justify-center rounded-[var(--radius-control)] border font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
         disabled={disabled || loading}
         {...rest}
       >

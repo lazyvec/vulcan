@@ -40,7 +40,7 @@ export function Tabs({ items, activeKey, onChange, className = "" }: TabsProps) 
           tabIndex={activeKey === item.key ? 0 : -1}
           onClick={() => onChange(item.key)}
           onKeyDown={(e) => handleKeyDown(e, i)}
-          className={`min-h-[44px] shrink-0 cursor-pointer whitespace-nowrap rounded-t-[var(--radius-control)] px-4 py-2 text-sm font-medium transition-colors ${
+          className={`min-h-[44px] shrink-0 cursor-pointer whitespace-nowrap rounded-t-[var(--radius-control)] px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-inset ${
             activeKey === item.key
               ? "border-b-2 border-[var(--color-primary)] bg-[var(--color-surface)] text-[var(--color-foreground)]"
               : "text-[var(--color-tertiary)] hover:text-[var(--color-foreground)]"

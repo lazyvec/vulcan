@@ -21,6 +21,7 @@ import type {
   TaskLane,
   TaskPriority,
   VaultNoteSummary,
+  WorkflowTemplate,
   WorkOrder,
   WorkResult,
 } from "@vulcan/shared/types";
@@ -305,4 +306,57 @@ export async function getAuditLogs(filters?: {
     suffix ? `/api/audit?${suffix}` : "/api/audit",
   );
   return data;
+}
+
+// ── Workflow (PM Skills) ────────────────────────────────────────────────────
+
+export async function getWorkflowTemplates() {
+  const data = await requestJson<{ ok: boolean; templates: WorkflowTemplate[] }>(
+    "/api/workflows/templates",
+  );
+  return data.templates;
+}
+
+export interface WorkflowStatusResponse {
+  workflowId: string;
+  templateId: string;
+  templateName: string;
+  steps: Array<{
+    index: number;
+    name: string;
+    toAgentId: string;
+    workOrderId: string | null;
+    status: string;
+  }>;
+  currentStep: number;
+  completed: boolean;
+}
+
+export async function getActiveWorkflows(workOrders: WorkOrder[]): Promise<WorkflowStatusResponse[]> {
+  // workflowId를 가진 WO에서 고유 workflowId 추출
+  const workflowIds = new Set<string>();
+  for (const wo of workOrders) {
+    try {
+      const inputs = JSON.parse(wo.inputsJson);
+      if (inputs.workflowId) {
+        workflowIds.add(inputs.workflowId as string);
+      }
+    } catch {
+      // 무시
+    }
+  }
+
+  const results: WorkflowStatusResponse[] = [];
+  for (const wfId of workflowIds) {
+    try {
+      const data = await requestJson<{ ok: boolean; workflow: WorkflowStatusResponse }>(
+        `/api/workflows/${wfId}/status`,
+      );
+      results.push(data.workflow);
+    } catch {
+      // 워크플로우 없으면 무시
+    }
+  }
+
+  return results;
 }

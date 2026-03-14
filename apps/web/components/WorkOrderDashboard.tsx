@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { WorkOrder } from "@vulcan/shared/types";
+import type { WorkOrder, WorkflowTemplate } from "@vulcan/shared/types";
+import type { WorkflowStatusResponse } from "@/lib/api-server";
 import {
   ClipboardList,
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { WorkflowPanel } from "./WorkflowPanel";
 
 interface Props {
   workOrders: WorkOrder[];
@@ -22,6 +24,8 @@ interface Props {
     byStatus: Record<string, number>;
     byAgent: Record<string, number>;
   };
+  workflowTemplates?: WorkflowTemplate[];
+  activeWorkflows?: WorkflowStatusResponse[];
 }
 
 const STATUS_CONFIG: Record<
@@ -71,7 +75,7 @@ function PriorityDot({ priority }: { priority: string }) {
   );
 }
 
-export function WorkOrderDashboard({ workOrders, stats }: Props) {
+export function WorkOrderDashboard({ workOrders, stats, workflowTemplates, activeWorkflows }: Props) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -103,6 +107,14 @@ export function WorkOrderDashboard({ workOrders, stats }: Props) {
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       <h2 className="section-title text-xl font-semibold">WorkOrder 대시보드</h2>
+
+      {/* Workflow Panel */}
+      {workflowTemplates && workflowTemplates.length > 0 && (
+        <WorkflowPanel
+          templates={workflowTemplates}
+          initialWorkflows={activeWorkflows ?? []}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

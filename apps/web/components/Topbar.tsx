@@ -109,24 +109,24 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         <button
           type="button"
           onClick={onMenuClick}
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] lg:hidden"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-[var(--color-tertiary)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] lg:hidden"
         >
           <MenuIcon size={22} />
           <span className="sr-only">사이드바 열기</span>
         </button>
 
         {/* Page title + breadcrumb */}
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="hidden sm:flex min-w-0 items-center gap-2">
           <span className="text-xs text-[var(--color-tertiary)]">Vulcan</span>
           <span className="text-xs text-[var(--color-tertiary)]">/</span>
           <h1 className="truncate text-sm font-semibold text-[var(--color-foreground)]">{pageTitle}</h1>
         </div>
 
         {/* Search */}
-        <div className="relative mx-auto hidden max-w-md flex-1 sm:block">
+        <div className="relative mx-auto flex max-w-md flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-tertiary)]" />
           <input
-            className="vulcan-input pl-9"
+            className="vulcan-input w-full pl-9"
             placeholder="검색... (Cmd+K)"
             value={query}
             onChange={(event) => setQuery(event.target.value)}

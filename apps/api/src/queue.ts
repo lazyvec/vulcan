@@ -4,6 +4,7 @@ import { Queue, Worker } from "bullmq";
 const COMMAND_QUEUE_NAME = "vulcan-commands";
 const HEALTHCHECK_QUEUE_NAME = "vulcan-healthchecks";
 const NOTIFICATION_QUEUE_NAME = "vulcan-notifications";
+const WO_DISPATCH_QUEUE_NAME = "vulcan-wo-dispatch";
 
 export type CommandQueueJobData = {
   commandId: string;
@@ -25,18 +26,25 @@ export type NotificationQueueJobData = {
   message: string;
 };
 
+export type WoDispatchJobData = {
+  workOrderId: string;
+};
+
 type QueueWorkerHandlers = {
   command: (payload: CommandQueueJobData) => Promise<void>;
   healthcheck: (payload: HealthcheckQueueJobData) => Promise<void>;
   notification: (payload: NotificationQueueJobData) => Promise<void>;
+  woDispatch: (payload: WoDispatchJobData) => Promise<void>;
 };
 
 let commandQueue: Queue<CommandQueueJobData> | null = null;
 let healthcheckQueue: Queue<HealthcheckQueueJobData> | null = null;
 let notificationQueue: Queue<NotificationQueueJobData> | null = null;
+let woDispatchQueue: Queue<WoDispatchJobData> | null = null;
 let commandWorker: Worker<CommandQueueJobData> | null = null;
 let healthcheckWorker: Worker<HealthcheckQueueJobData> | null = null;
 let notificationWorker: Worker<NotificationQueueJobData> | null = null;
+let woDispatchWorker: Worker<WoDispatchJobData> | null = null;
 
 type RedisConnectionOptions = {
   host: string;
@@ -121,6 +129,19 @@ export function getNotificationQueue() {
   return notificationQueue;
 }
 
+export function getWoDispatchQueue() {
+  const connection = getRedisConnectionOptions();
+  if (!connection) {
+    return null;
+  }
+
+  if (!woDispatchQueue) {
+    woDispatchQueue = new Queue<WoDispatchJobData>(WO_DISPATCH_QUEUE_NAME, { connection });
+  }
+
+  return woDispatchQueue;
+}
+
 export function startQueueWorkers(handlers: QueueWorkerHandlers) {
   const connection = getRedisConnectionOptions();
   if (!connection) {
@@ -187,6 +208,26 @@ export function startQueueWorkers(handlers: QueueWorkerHandlers) {
     });
   }
 
+  if (!woDispatchWorker) {
+    woDispatchWorker = new Worker<WoDispatchJobData>(
+      WO_DISPATCH_QUEUE_NAME,
+      async (job) => {
+        await handlers.woDispatch(job.data);
+      },
+      {
+        connection,
+        concurrency: 1,
+      },
+    );
+
+    woDispatchWorker.on("failed", (job, error) => {
+      console.error("[vulcan-api] wo-dispatch queue worker failed", {
+        jobId: job?.id ?? null,
+        error: error.message,
+      });
+    });
+  }
+
   return true;
 }
 
@@ -244,6 +285,26 @@ export async function enqueueNotificationJob(payload: NotificationQueueJobData) 
   return true;
 }
 
+export async function enqueueWoDispatchJob(payload: WoDispatchJobData) {
+  const queue = getWoDispatchQueue();
+  if (!queue) {
+    return false;
+  }
+
+  await queue.add("wo-dispatch", payload, {
+    jobId: `wo-dispatch-${payload.workOrderId}`,
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 2_000,
+    },
+    removeOnComplete: 200,
+    removeOnFail: 500,
+  });
+
+  return true;
+}
+
 export async function closeQueueResources() {
   if (commandWorker) {
     await commandWorker.close();
@@ -273,5 +334,15 @@ export async function closeQueueResources() {
   if (notificationQueue) {
     await notificationQueue.close();
     notificationQueue = null;
+  }
+
+  if (woDispatchWorker) {
+    await woDispatchWorker.close();
+    woDispatchWorker = null;
+  }
+
+  if (woDispatchQueue) {
+    await woDispatchQueue.close();
+    woDispatchQueue = null;
   }
 }

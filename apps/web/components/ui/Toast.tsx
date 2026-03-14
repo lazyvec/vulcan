@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           role="region"
           aria-label="알림"
           aria-live="polite"
-          className="fixed bottom-4 right-4 z-50 flex flex-col-reverse gap-2"
+          className="fixed bottom-4 left-4 right-4 z-50 flex flex-col-reverse gap-2 md:left-auto md:w-96"
         >
           {toasts.map((t) => (
             <div
@@ -72,7 +72,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 type="button"
                 aria-label="닫기"
                 onClick={() => removeToast(t.id)}
-                className="shrink-0 rounded p-0.5 opacity-60 transition-opacity hover:opacity-100"
+                className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded p-0.5 opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
               >
                 <X size={14} aria-hidden="true" />
               </button>
