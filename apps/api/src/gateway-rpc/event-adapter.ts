@@ -177,6 +177,94 @@ export function mapGatewayEventToIngest(frame: GatewayEventFrame): IngestEventIn
   };
 }
 
+// ── Trace 변환 ──────────────────────────────────────────────────────────────
+
+const COMPLETION_EVENT_PATTERNS = [
+  "completion",
+  "response",
+  "chat.reply",
+  "agent.reply",
+  "llm.response",
+  "llm.completion",
+];
+
+export interface TraceFromGateway {
+  agentId: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+  type: string;
+  metaJson: string;
+}
+
+function isCompletionEvent(eventName: string): boolean {
+  const normalized = eventName.toLowerCase();
+  return COMPLETION_EVENT_PATTERNS.some(
+    (pattern) => normalized.includes(pattern),
+  );
+}
+
+export function mapGatewayEventToTrace(
+  frame: GatewayEventFrame,
+): TraceFromGateway | null {
+  const eventName = frame.event.trim();
+  if (!eventName || !isCompletionEvent(eventName)) {
+    return null;
+  }
+
+  const payloadRecord = payloadToObject(frame.payload);
+  if (!payloadRecord) {
+    return null;
+  }
+
+  // usage 블록 추출 (usage.input_tokens 또는 최상위)
+  const usageRecord =
+    payloadToObject(payloadRecord.usage) ?? payloadRecord;
+
+  const inputTokens =
+    (typeof usageRecord.input_tokens === "number" && usageRecord.input_tokens) ||
+    (typeof usageRecord.inputTokens === "number" && usageRecord.inputTokens) ||
+    (typeof usageRecord.prompt_tokens === "number" && usageRecord.prompt_tokens) ||
+    0;
+
+  const outputTokens =
+    (typeof usageRecord.output_tokens === "number" && usageRecord.output_tokens) ||
+    (typeof usageRecord.outputTokens === "number" && usageRecord.outputTokens) ||
+    (typeof usageRecord.completion_tokens === "number" && usageRecord.completion_tokens) ||
+    0;
+
+  if (inputTokens === 0 && outputTokens === 0) {
+    return null; // 토큰 정보 없으면 스킵
+  }
+
+  const model =
+    extractFirstString(payloadRecord, ["model", "modelId", "model_id"]) ??
+    "unknown";
+
+  const latencyMs =
+    (typeof payloadRecord.latencyMs === "number" && payloadRecord.latencyMs) ||
+    (typeof payloadRecord.latency_ms === "number" && payloadRecord.latency_ms) ||
+    (typeof payloadRecord.durationMs === "number" && payloadRecord.durationMs) ||
+    0;
+
+  const agentId =
+    detectAgentIdFromGatewayEvent(eventName, frame.payload) ?? "unknown";
+
+  return {
+    agentId,
+    model,
+    inputTokens,
+    outputTokens,
+    latencyMs,
+    type: "llm_call",
+    metaJson: safeStringify({
+      event: eventName,
+      seq: frame.seq ?? null,
+    }),
+  };
+}
+
 export function buildEventFingerprint(event: IngestEventInput): string {
   return crypto
     .createHash("sha1")

@@ -1,7 +1,7 @@
 # Vulcan Mission Control — OpenClaw 에이전트 팀의 개인 전용 Mission Control
 
 > **핵심 원칙**: "The human commands through Vulcan. Hermes orchestrates. Agents execute."
-> **현재 Phase**: Phase 0~11+++ 완료 (Memory 검색 강화) → Phase 12 백로그
+> **현재 Phase**: Phase 0~11+++ 완료 (잔여 항목 포함, Memory 검색 강화) → Phase 12 백로그
 > **SSOT**: `docs/Vulcan_PRODUCT_MASTER.md` (제품 정의) · `docs/Vulcan_BRAND_MASTER.md` (브랜드 정체성)
 > **실행 체크리스트**: `docs/WORK_PLAN.md` | **로드맵**: `docs/ROADMAP.md`
 
@@ -39,9 +39,13 @@
 - **CI/CD**: Vitest 63개+ Playwright 16개+ Husky + lint-staged
 - **인프라**: Docker Compose (PostgreSQL+Redis), PM2 (web+api+adapter)
 
-### Phase 11 완료 (Observability + WorkOrder)
+### Phase 11 완료 (Observability + WorkOrder + 잔여 항목)
 - **Trace/FinOps**: traces 테이블, Circuit Breaker, CostDashboard, Telegram 일별 비용 알림
 - **WorkOrder**: work_orders/work_results 테이블, 7개 API, 상태 머신, Executor→Verifier 검증 루프, WorkOrderDashboard
+- **Feature Flags**: JSON 파일 기반, `isFeatureEnabled()` 헬퍼, 3개 플래그 (gateway-trace-bridge, audit-hash-chain, pm-skills-workflow)
+- **Gateway-to-Trace 브릿지**: Gateway completion 이벤트 → trace 자동 변환, 모델별 비용 계산
+- **감사 로그 Hash Chain**: SHA-256 선형 해시 체인, `verifyAuditChain()`, `/api/audit-log/integrity`
+- **PM Skills 워크플로우**: Discover(Metis) → Strategy(Athena) → Write-PRD(Themis) 자동 체인, 완료 시 Telegram 알림
 
 ### 마스터 플랜 Phase 4 완료 (Mission Control 메트릭스 강화)
 - **에이전트 오피스 뷰**: AgentOfficeView (6존 CSS Grid + 상태 애니메이션 + 팝오버)

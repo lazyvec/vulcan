@@ -2,6 +2,70 @@
 
 <!-- last-session --> **마지막 세션**: 2026-03-13 | 브랜치: `main`
 
+## 2026-03-13: Phase 11 잔여 항목 완료
+
+### 요약
+Phase 11의 7개 미완료 항목 중 4개 구현 + 2개 문서 완료. (2개 스킵: Govrix UI, ECC — 기존 기능으로 대체됨)
+
+### 변경 내용
+
+#### A1. Feature Flags 시스템
+- **신규**: `apps/api/src/feature-flags.ts` — JSON 파일 기반 플래그 관리 (인메모리 Map + 파일 persist)
+- **신규**: `apps/api/data/feature-flags.json` — 3개 기본 플래그 (`gateway-trace-bridge`, `audit-hash-chain`, `pm-skills-workflow`)
+- **API**: `GET /api/feature-flags`, `PUT /api/feature-flags/:id`
+- **타입**: `FeatureFlag` 인터페이스 (`packages/shared/src/types.ts`)
+
+#### A2. Gateway-to-Trace 자동 브릿지
+- **신규**: `apps/api/src/model-pricing.ts` — 모델별 토큰 단가 (GPT-5.4, Gemini 3.1 Pro, Gemini 3 Flash, Claude)
+- **수정**: `event-adapter.ts`에 `mapGatewayEventToTrace()` 추가 — completion/response 이벤트에서 토큰 사용량 자동 추출
+- **수정**: `server.ts` — Gateway RPC `onEvent` 콜백에서 feature flag 확인 후 `appendTrace()` 자동 호출
+- **동작**: `gateway-trace-bridge` 플래그 활성화 시 자동 trace 수집
+
+#### A3. 감사 로그 Hash Chain
+- **수정**: `auditLogTable`/`auditLogPgTable`에 `prevHash` 컬럼 추가
+- **수정**: `appendAuditLog()` — SHA-256 해시 체인 (`GENESIS → SHA-256(prevHash + rowData)`)
+- **신규**: `verifyAuditChain()` — 체인 무결성 검증 (ts 오름차순 순회, 해시 재계산)
+- **API**: `GET /api/audit-log/integrity` — 변조 감지
+- **동작**: `audit-hash-chain` 플래그 활성화 시 적용. 기존 레코드는 prevHash=''
+
+#### A4. PM Skills WorkOrder 체인 워크플로우
+- **신규**: `apps/api/src/workflows.ts` — 워크플로우 템플릿 + 체인 실행 엔진
+- **PM Skills 템플릿**: Discover(Metis) → Strategy(Athena) → Write-PRD(Themis)
+- **API**: `GET /api/workflows/templates`, `POST /api/workflows/trigger`, `GET /api/workflows/:workflowId/status`
+- **자동 체인**: WO 완료 시 다음 단계 자동 생성, 마지막 단계 완료 시 Telegram 알림
+- **타입**: `WorkflowTemplate`, `WorkflowStep` + `WorkOrderType`에 `"discover"`, `"prd"` 추가
+- **동작**: `pm-skills-workflow` 플래그 활성화 시 적용
+
+#### B1. 라이선스 체크리스트
+- **신규**: `docs/LICENSE_CHECKLIST.md` — 전체 의존성 라이선스 전수 조사 (MIT/Apache 2.0/ISC/BSD, copyleft 없음)
+
+#### B2. 가드레일 정책
+- **신규**: `docs/GUARDRAILS.md` — 토큰 비용 상한, 복잡도 상한 (PR당 15파일), feature flag 필수 정책
+
+### 테스트
+- ✅ 빌드: `pnpm -r build` 통과
+- ✅ 테스트: `pnpm test` 66개 전체 통과
+- ✅ 타입체크: `tsc --noEmit` 통과
+
+### 변경 파일 (신규 5개 + 수정 9개 + 문서 2개 = 16개)
+1. `packages/shared/src/types.ts` — FeatureFlag, AuditLogItem.prevHash, WorkflowTemplate, WorkOrderType 확장
+2. `packages/shared/src/schemas.ts` — workOrderTypeSchema 확장, triggerWorkflowInputSchema 추가
+3. `apps/api/src/feature-flags.ts` (신규)
+4. `apps/api/data/feature-flags.json` (신규)
+5. `apps/api/src/model-pricing.ts` (신규)
+6. `apps/api/src/workflows.ts` (신규)
+7. `apps/api/src/gateway-rpc/event-adapter.ts` — mapGatewayEventToTrace()
+8. `apps/api/src/schema.ts` — auditLogTable prevHash
+9. `apps/api/src/pg-schema.ts` — auditLogPgTable prevHash
+10. `apps/api/src/db.ts` — ensureColumn audit_log prev_hash
+11. `apps/api/src/store.ts` — appendAuditLog hash chain, verifyAuditChain()
+12. `apps/api/src/server.ts` — 10개+ 엔드포인트 추가, gateway onEvent, workflow 훅
+13. `docs/LICENSE_CHECKLIST.md` (신규)
+14. `docs/GUARDRAILS.md` (신규)
+15. `docs/PROGRESS.md`
+
+---
+
 ## 2026-03-13: Phase 5 (Memory 검색 강화) — Hermes 지식 인덱싱
 
 ### 요약

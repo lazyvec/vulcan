@@ -1,3 +1,12 @@
+// ── Feature Flags ────────────────────────────────────────────────────────────
+
+export interface FeatureFlag {
+  id: string;
+  enabled: boolean;
+  description: string;
+  updatedAt: number;
+}
+
 export type AgentStatus =
   | "idle"
   | "writing"
@@ -201,6 +210,7 @@ export interface AuditLogItem {
   beforeJson: string;
   afterJson: string;
   metadataJson: string;
+  prevHash: string;
 }
 
 export type RealtimeMessageType = "event" | "command" | "ack" | "error";
@@ -319,7 +329,25 @@ export type WorkOrderType =
   | "content"
   | "infra"
   | "strategy"
-  | "analysis";
+  | "analysis"
+  | "discover"
+  | "prd";
+
+// ── Workflow Templates (Phase 11) ────────────────────────────────────────────
+
+export interface WorkflowStep {
+  name: string;
+  workOrderType: WorkOrderType;
+  toAgentId: string;
+  description: string;
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  steps: WorkflowStep[];
+}
 
 export type WorkOrderStatus =
   | "pending"

@@ -301,7 +301,7 @@ export type CircuitBreakerConfigInput = z.infer<typeof circuitBreakerConfigInput
 // ── WorkOrder / WorkResult (Phase 3) ────────────────────────────────────────
 
 export const workOrderTypeSchema = z.enum([
-  "research", "code", "review", "content", "infra", "strategy", "analysis",
+  "research", "code", "review", "content", "infra", "strategy", "analysis", "discover", "prd",
 ]);
 
 export const workOrderStatusSchema = z.enum([
@@ -362,6 +362,17 @@ export type CreateWorkOrderInput = z.infer<typeof createWorkOrderInputSchema>;
 export type UpdateWorkOrderInput = z.infer<typeof updateWorkOrderInputSchema>;
 export type WorkResultInput = z.infer<typeof workResultInputSchema>;
 export type WorkOrderCheckpointInput = z.infer<typeof workOrderCheckpointInputSchema>;
+
+// ── Workflow Templates (Phase 11) ────────────────────────────────────────────
+
+export const triggerWorkflowInputSchema = z.object({
+  templateId: z.string().min(1),
+  project: z.string().min(1).nullable().optional(),
+  inputsJson: z.string().refine((s) => { try { JSON.parse(s); return true; } catch { return false; } }, { message: "유효한 JSON이어야 합니다" }).optional(),
+  fromAgentId: z.string().min(1).optional(),
+});
+
+export type TriggerWorkflowInput = z.infer<typeof triggerWorkflowInputSchema>;
 
 // ── Hermes Memory (Phase 5) ─────────────────────────────────────────────────
 

@@ -1,0 +1,20 @@
+{
+  "gateway-trace-bridge": {
+    "id": "gateway-trace-bridge",
+    "enabled": false,
+    "description": "Gateway 이벤트에서 자동으로 trace를 생성합니다",
+    "updatedAt": 0
+  },
+  "audit-hash-chain": {
+    "id": "audit-hash-chain",
+    "enabled": false,
+    "description": "감사 로그에 SHA-256 해시 체인을 적용합니다",
+    "updatedAt": 0
+  },
+  "pm-skills-workflow": {
+    "id": "pm-skills-workflow",
+    "enabled": false,
+    "description": "PM Skills 워크플로우 체인 (Discover → Strategy → Write-PRD)을 활성화합니다",
+    "updatedAt": 0
+  }
+}

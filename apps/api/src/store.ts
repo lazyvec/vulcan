@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { and, desc, eq, gt, like, or, sql } from "drizzle-orm";
 import { statusFromEventType } from "@vulcan/shared/constants";
 import type {
@@ -30,6 +30,7 @@ import type {
   TaskPriority,
 } from "@vulcan/shared/types";
 import { db, ensureSchema, getSqlite } from "./db";
+import { isFeatureEnabled } from "./feature-flags";
 import type {
   CircuitBreakerConfig,
   DailyCostSummary,
@@ -270,6 +271,7 @@ function mapAuditLog(row: typeof auditLogTable.$inferSelect): AuditLogItem {
     beforeJson: row.beforeJson,
     afterJson: row.afterJson,
     metadataJson: row.metadataJson,
+    prevHash: row.prevHash,
   };
 }
 
@@ -1032,6 +1034,20 @@ export function getAgentCommands(filters?: {
     .map(mapAgentCommand);
 }
 
+function computeAuditHash(prevHash: string, rowData: string): string {
+  return createHash("sha256")
+    .update(prevHash + rowData)
+    .digest("hex");
+}
+
+function getLastAuditPrevHash(): string {
+  const sqlite = getSqlite();
+  const row = sqlite
+    .prepare("SELECT prev_hash FROM audit_log WHERE prev_hash != '' ORDER BY ts DESC LIMIT 1")
+    .get() as { prev_hash: string } | undefined;
+  return row?.prev_hash ?? "GENESIS";
+}
+
 export function appendAuditLog(input: {
   id?: string;
   actor?: string;
@@ -1044,6 +1060,23 @@ export function appendAuditLog(input: {
   metadataJson?: string;
 }): AuditLogItem {
   ensureSchema();
+
+  let prevHash = "";
+  if (isFeatureEnabled("audit-hash-chain")) {
+    const lastHash = getLastAuditPrevHash();
+    const rowData = JSON.stringify({
+      actor: input.actor ?? "human",
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId ?? null,
+      source: input.source ?? "api",
+      beforeJson: input.beforeJson ?? "{}",
+      afterJson: input.afterJson ?? "{}",
+      metadataJson: input.metadataJson ?? "{}",
+    });
+    prevHash = computeAuditHash(lastHash, rowData);
+  }
+
   const row: typeof auditLogTable.$inferInsert = {
     id: input.id ?? randomUUID(),
     ts: Date.now(),
@@ -1055,6 +1088,7 @@ export function appendAuditLog(input: {
     beforeJson: input.beforeJson ?? "{}",
     afterJson: input.afterJson ?? "{}",
     metadataJson: input.metadataJson ?? "{}",
+    prevHash,
   };
   db.insert(auditLogTable).values(row).run();
   const created = db.select().from(auditLogTable).where(eq(auditLogTable.id, row.id)).get();
@@ -1062,6 +1096,57 @@ export function appendAuditLog(input: {
     throw new Error("failed to append audit log");
   }
   return mapAuditLog(created);
+}
+
+export function verifyAuditChain(limit = 500): {
+  valid: boolean;
+  checked: number;
+  brokenAt?: string;
+} {
+  ensureSchema();
+  const sqlite = getSqlite();
+  const rows = sqlite
+    .prepare(
+      "SELECT id, ts, actor, action, entity_type, entity_id, source, before_json, after_json, metadata_json, prev_hash FROM audit_log WHERE prev_hash != '' ORDER BY ts ASC LIMIT ?",
+    )
+    .all(limit) as Array<{
+    id: string;
+    ts: number;
+    actor: string;
+    action: string;
+    entity_type: string;
+    entity_id: string | null;
+    source: string;
+    before_json: string;
+    after_json: string;
+    metadata_json: string;
+    prev_hash: string;
+  }>;
+
+  if (rows.length === 0) {
+    return { valid: true, checked: 0 };
+  }
+
+  let expectedPrev = "GENESIS";
+  for (const row of rows) {
+    const rowData = JSON.stringify({
+      actor: row.actor,
+      action: row.action,
+      entityType: row.entity_type,
+      entityId: row.entity_id,
+      source: row.source,
+      beforeJson: row.before_json,
+      afterJson: row.after_json,
+      metadataJson: row.metadata_json,
+    });
+    const expected = computeAuditHash(expectedPrev, rowData);
+    if (expected !== row.prev_hash) {
+      return { valid: false, checked: rows.indexOf(row) + 1, brokenAt: row.id };
+    }
+    expectedPrev = row.prev_hash;
+  }
+
+  return { valid: true, checked: rows.length };
 }
 
 export function getAuditLogs(limit = 80): AuditLogItem[] {

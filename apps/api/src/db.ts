@@ -445,6 +445,9 @@ function ensureLegacyBootstrap() {
   ensureColumn("memory_items", "expires_at", "expires_at INTEGER");
   ensureColumn("memory_items", "memory_type", "memory_type TEXT");
 
+  // Phase 11: 감사 로그 Hash Chain
+  ensureColumn("audit_log", "prev_hash", "prev_hash TEXT NOT NULL DEFAULT ''");
+
   // ensureColumn으로 추가된 컬럼에 의존하는 인덱스는 여기서 생성
   sqlite.exec(`
     CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);

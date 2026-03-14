@@ -137,6 +137,7 @@ import {
   getHermesMemoryExisting,
   getHermesMemoryStats,
   applyTemporalDecay,
+  verifyAuditChain,
 } from "./store";
 import { scanAllMemoryFiles, syncMemories, startAutoFlush, stopAutoFlush } from "./memory-sync";
 import { classifyMemory, classifyAll, buildClassifyPrompt } from "./memory-classify";
@@ -196,11 +197,55 @@ import {
   uploadToVault,
 } from "./vault";
 import { runVaultSync } from "./vault-sync";
+import {
+  getAllFeatureFlags,
+  updateFeatureFlag,
+  isFeatureEnabled,
+} from "./feature-flags";
+import { mapGatewayEventToTrace } from "./gateway-rpc/event-adapter";
+import { calculateCost } from "./model-pricing";
+import {
+  getWorkflowTemplates,
+  triggerWorkflow,
+  getWorkflowStatus,
+  advanceWorkflow,
+} from "./workflows";
+import { triggerWorkflowInputSchema } from "@vulcan/shared/schemas";
 
 const app = new Hono();
 const WS_PATH = "/api/ws";
 let wsClientCount = 0;
-const gatewayRpcClient = getGatewayRpcClient();
+const gatewayRpcClient = getGatewayRpcClient({
+  onEvent(frame) {
+    if (!isFeatureEnabled("gateway-trace-bridge")) {
+      return;
+    }
+    try {
+      const traceData = mapGatewayEventToTrace(frame);
+      if (!traceData) {
+        return;
+      }
+      const cost = calculateCost(
+        traceData.model,
+        traceData.inputTokens,
+        traceData.outputTokens,
+      );
+      appendTrace({
+        traceId: randomUUID(),
+        agentId: traceData.agentId,
+        type: traceData.type,
+        model: traceData.model,
+        inputTokens: traceData.inputTokens,
+        outputTokens: traceData.outputTokens,
+        cost,
+        latencyMs: traceData.latencyMs,
+        metaJson: traceData.metaJson,
+      });
+    } catch (error) {
+      console.error("[gateway-trace-bridge] trace 변환 실패:", error);
+    }
+  },
+});
 const applyApiCors = cors({
   origin: process.env.VULCAN_CORS_ORIGIN ?? "*",
   allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -2643,6 +2688,81 @@ app.get("/api/audit", (c) => {
   return c.json(result);
 });
 
+// ── Audit Log Integrity ────────────────────────────────────────────────────
+
+app.get("/api/audit-log/integrity", (c) => {
+  const limit = Number(c.req.query("limit") ?? "500") || 500;
+  const result = verifyAuditChain(Math.min(limit, 5000));
+  return c.json({ ok: true, ...result });
+});
+
+// ── Feature Flags ──────────────────────────────────────────────────────────
+
+app.get("/api/feature-flags", (c) => {
+  return c.json({ ok: true, flags: getAllFeatureFlags() });
+});
+
+app.put("/api/feature-flags/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json<{ enabled?: boolean; description?: string }>();
+  const updated = updateFeatureFlag(id, body);
+  if (!updated) {
+    return c.json({ ok: false, error: "flag not found" }, 404);
+  }
+  appendAuditLog({
+    actor: "human",
+    action: "feature_flag.update",
+    entityType: "feature_flag",
+    entityId: id,
+    source: "api",
+    afterJson: JSON.stringify(updated),
+  });
+  return c.json({ ok: true, flag: updated });
+});
+
+// ── Workflow Templates ─────────────────────────────────────────────────────
+
+app.get("/api/workflows/templates", (c) => {
+  return c.json({ ok: true, templates: getWorkflowTemplates() });
+});
+
+app.post("/api/workflows/trigger", async (c) => {
+  const body = await c.req.json();
+  const parsed = triggerWorkflowInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ ok: false, error: parsed.error.issues }, 400);
+  }
+
+  if (!isFeatureEnabled("pm-skills-workflow")) {
+    return c.json({ ok: false, error: "pm-skills-workflow feature flag is disabled" }, 400);
+  }
+
+  const instance = triggerWorkflow(parsed.data);
+  if (!instance) {
+    return c.json({ ok: false, error: "template not found or workflow disabled" }, 404);
+  }
+
+  appendAuditLog({
+    actor: "human",
+    action: "workflow.trigger",
+    entityType: "workflow",
+    entityId: instance.workflowId,
+    source: "api",
+    afterJson: JSON.stringify(instance),
+  });
+
+  return c.json({ ok: true, workflow: instance });
+});
+
+app.get("/api/workflows/:workflowId/status", (c) => {
+  const workflowId = c.req.param("workflowId");
+  const status = getWorkflowStatus(workflowId);
+  if (!status) {
+    return c.json({ ok: false, error: "workflow not found" }, 404);
+  }
+  return c.json({ ok: true, workflow: status });
+});
+
 app.get("/api/gateway/status", (c) => {
   const gateway = gatewayRpcClient.getStatus();
   const gatewayRow = upsertGateway({
@@ -3776,6 +3896,46 @@ app.patch("/api/work-orders/:id", async (c) => {
       summary: `WorkOrder [${existing.summary}] → ${parsed.data.status}`,
       payloadJson: JSON.stringify({ workOrderId: id }),
     });
+  }
+
+  // 워크플로우 체인: 완료 시 다음 단계 자동 생성
+  if (parsed.data.status === "completed" && updated) {
+    try {
+      const nextWO = advanceWorkflow(updated);
+      if (nextWO) {
+        publishEvent({
+          id: randomUUID(),
+          ts: Date.now(),
+          source: "vulcan-api",
+          agentId: nextWO.toAgentId,
+          projectId: nextWO.project ?? null,
+          taskId: null,
+          type: "workflow.step_advanced",
+          summary: `워크플로우 다음 단계 생성: ${nextWO.summary}`,
+          payloadJson: JSON.stringify({ workOrderId: nextWO.id }),
+        });
+        // Telegram 알림 (마지막 단계 완료 시)
+        try {
+          const inputs = JSON.parse(updated.inputsJson);
+          if (inputs.workflowId) {
+            const wfStatus = getWorkflowStatus(inputs.workflowId as string);
+            if (wfStatus?.completed) {
+              const chatId = process.env.TELEGRAM_CHAT_ID;
+              if (chatId) {
+                void sendTelegramMessage(
+                  chatId,
+                  `✅ 워크플로우 [${wfStatus.templateName}] 전체 완료`,
+                ).catch(() => {});
+              }
+            }
+          }
+        } catch {
+          // 무시
+        }
+      }
+    } catch (error) {
+      console.error("[workflow] 다음 단계 생성 실패:", error);
+    }
   }
 
   return c.json({ ok: true, workOrder: updated });

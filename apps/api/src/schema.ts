@@ -428,6 +428,7 @@ export const auditLogTable = sqliteTable(
     beforeJson: text("before_json").notNull().default("{}"),
     afterJson: text("after_json").notNull().default("{}"),
     metadataJson: text("metadata_json").notNull().default("{}"),
+    prevHash: text("prev_hash").notNull().default(""),
   },
   (table) => ({
     idxAuditLogTs: index("idx_audit_log_ts").on(table.ts),

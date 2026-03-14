@@ -546,6 +546,7 @@ export const auditLogPgTable = pgTable(
     beforeJson: jsonb("before_json").$type<Record<string, unknown>>().notNull().default({}),
     afterJson: jsonb("after_json").$type<Record<string, unknown>>().notNull().default({}),
     metadataJson: jsonb("metadata_json").$type<Record<string, unknown>>().notNull().default({}),
+    prevHash: text("prev_hash").notNull().default(""),
   },
   (table) => ({
     idxAuditLogTs: index("idx_audit_log_ts").on(table.ts),
