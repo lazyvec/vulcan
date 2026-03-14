@@ -192,7 +192,7 @@ export function MarkdownRenderer({
                 <button
                   type="button"
                   onClick={() => onWikiLink(notePath)}
-                  className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] underline decoration-dotted cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] rounded px-0.5"
+                  className="text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] underline decoration-dotted cursor-pointer"
                 >
                   {children}
                 </button>

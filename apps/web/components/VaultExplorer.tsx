@@ -181,19 +181,19 @@ function NewNoteModal({
           onChange={(e) => setPath(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="경로 (예: Oracle/새노트.md)"
-          className="vulcan-input mb-4 w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+          className="vulcan-input mb-4 w-full"
         />
         <p className="mb-4 text-xs text-[var(--color-tertiary)]">
           폴더를 포함한 경로를 입력하세요. 폴더가 없으면 자동 생성됩니다.
         </p>
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="vulcan-button-ghost min-h-[44px] px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]">
+          <button onClick={onClose} className="vulcan-button-ghost">
             취소
           </button>
           <button
             onClick={handleSubmit}
             disabled={!path.trim()}
-            className="vulcan-button min-h-[44px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            className="vulcan-button disabled:opacity-50"
           >
             생성
           </button>
@@ -225,7 +225,7 @@ function DeleteConfirmModal({
           을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
         </p>
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="vulcan-button-ghost min-h-[44px] px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]">
+          <button onClick={onClose} className="vulcan-button-ghost">
             취소
           </button>
           <button
@@ -282,16 +282,16 @@ function RenameNoteModal({
           onChange={(e) => setNewPath(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           placeholder="새 경로"
-          className="vulcan-input mb-4 w-full min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+          className="vulcan-input mb-4 w-full"
         />
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="vulcan-button-ghost min-h-[44px] px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]">
+          <button onClick={onClose} className="vulcan-button-ghost">
             취소
           </button>
           <button
             onClick={handleSubmit}
             disabled={!newPath.trim() || newPath.trim() === currentPath}
-            className="vulcan-button min-h-[44px] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            className="vulcan-button disabled:opacity-50"
           >
             변경
           </button>
